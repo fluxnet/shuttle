@@ -1,0 +1,7 @@
+include README.md
+include LICENSE
+include CONTRIBUTING.md
+recursive-include src *.py
+recursive-include docs *.rst *.py *.bat Makefile
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]

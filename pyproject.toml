@@ -1,0 +1,60 @@
+[build-system]
+# 'setuptools.build_meta' is the modern, PEP 517-compliant build backend for setuptools projects.
+# 'setuptools-git-versioning' is used for dynamic versioning from git tags.
+requires = ["setuptools>=61.0", "wheel", "setuptools-git-versioning"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools-git-versioning]
+# Enables dynamic versioning from git tags.
+# 'template' sets the version format for tagged releases.
+# 'dev_template' sets the version format for commits after the latest tag.
+# 'dirty_template' sets the version format for uncommitted changes.
+enabled = true
+template = "{tag}"
+dev_template = "{tag}.post{ccount}"
+dirty_template = "{tag}.post{ccount}+dirty"
+
+
+[project]
+name = "fluxnet-shuttle-lib"
+# 'dynamic = ["version"]' tells build tools that the version is determined at build time (by setuptools-git-versioning), not statically set here.
+dynamic = ["version"]
+description = "A Python library for FLUXNET shuttle operations."
+authors = [
+    { name = "AMF-FLX" }
+]
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "mypy",
+    "black",
+    "isort",
+    "flake8",
+]
+docs = [
+    "sphinx",
+    "sphinx-autodoc-typehints",
+    "sphinx-rtd-theme",
+]
+
+[tool.mypy]
+ignore_missing_imports = true
+
+[tool.black]
+line-length = 88
+
+[tool.isort]
+profile = "black"
+line_length = 88

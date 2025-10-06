@@ -1,0 +1,9 @@
+extends: ["@commitlint/config-conventional"]
+
+rules:
+  footer-empty: [2, 'never']
+  footer-max-line-length: [2, 'always', 100]
+  # Require an issue reference in the commit message body or footer
+  # Example: 'feat: add new API\n\nRefs: #123'
+  'body-leading-blank': [2, 'always']
+  'footer-leading-blank': [2, 'always']
