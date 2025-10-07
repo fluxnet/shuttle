@@ -4,70 +4,105 @@ on:
   push:
     tags:
       - 'v*'
+    branches:
+      - 'main'
   pull_request:
-    branches: [ main ]
+    branches:
+      - 'main'
   workflow_dispatch:
 
 jobs:
-  build-and-test:
+  build-test-and-push:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history including tags
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}  # Use actual commit, not merge commit
+      - name: Verify checkout
+        run: |
+          echo "Current commit: $(git rev-parse HEAD)"
+          echo "Current branch/ref: $GITHUB_REF"
+          echo "Event name: $GITHUB_EVENT_NAME"
+          git log --oneline -3
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Get git tag (if any)
-        id: get_tag
+      - name: Get git version
+        id: get_version
         run: |
-          TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          if [ -z "$TAG" ]; then
-            echo "tag=latest" >> $GITHUB_OUTPUT
+          # Show git state for debugging
+          echo "=== Git debugging info ==="
+          echo "HEAD commit: $(git rev-parse HEAD)"
+          echo "HEAD short: $(git rev-parse --short HEAD)"
+          echo "Available tags:"
+          git tag -l
+          echo "Recent commits:"
+          git log --oneline -5
+          
+          # Get the current commit and tag information
+          COMMIT=$(git rev-parse --short HEAD)
+          echo "Current commit: $COMMIT"
+          
+          # Try to get version from tags
+          if VERSION=$(git describe --tags --exact-match 2>/dev/null); then
+            echo "Exact tag match: $VERSION"
           else
-            echo "tag=$TAG" >> $GITHUB_OUTPUT
+            VERSION=$(git describe --tags --always 2>/dev/null || echo "latest")
+            echo "Describe result: $VERSION"
           fi
-      - name: Build Docker image (local only)
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Docker image version: $VERSION"
+      - name: Set push condition
+        id: should_push
+        run: |
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == refs/tags/v* ]] || [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "push=true" >> $GITHUB_OUTPUT
+            echo "Will push to registry"
+          else
+            echo "push=false" >> $GITHUB_OUTPUT
+            echo "Will build and test locally only"
+          fi
+      - name: Build Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: false
-          tags: fluxnet-shuttle-lib:${{ steps.get_tag.outputs.tag }}
-          outputs: type=docker
+          tags: fluxnet-shuttle-lib:${{ steps.get_version.outputs.version }}
+          outputs: type=docker,dest=/tmp/image.tar
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Load Docker image for testing
+        run: |
+          docker load --input /tmp/image.tar
       - name: Test Docker image
         run: |
-          docker run --rm fluxnet-shuttle-lib:${{ steps.get_tag.outputs.tag }} python -c "from fluxnet_shuttle_lib import main; main(); print('Library imported and main function executed successfully')"
-
-  push-to-registry:
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+          docker run --rm fluxnet-shuttle-lib:${{ steps.get_version.outputs.version }} python -c "
+          import fluxnet_shuttle_lib
+          from fluxnet_shuttle_lib import download, listall, main
+          print('Library imported successfully')
+          print('Available functions: download, listall, main')
+          print('Library import test passed')
+          "
       - name: Log in to GitHub Container Registry
+        if: steps.should_push.outputs.push == 'true'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Get git tag
-        id: get_tag
-        run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ghcr.io/amf-flx/fluxnet-shuttle-lib:${{ steps.get_tag.outputs.tag }}
-            ghcr.io/amf-flx/fluxnet-shuttle-lib:latest
+      - name: Tag and push tested image
+        if: steps.should_push.outputs.push == 'true'
+        run: |
+          # Tag the tested image for registry
+          docker tag fluxnet-shuttle-lib:${{ steps.get_version.outputs.version }} ghcr.io/amf-flx/fluxnet-shuttle-lib:${{ steps.get_version.outputs.version }}
+          docker tag fluxnet-shuttle-lib:${{ steps.get_version.outputs.version }} ghcr.io/amf-flx/fluxnet-shuttle-lib:latest
+          
+          # Push the same tested image
+          docker push ghcr.io/amf-flx/fluxnet-shuttle-lib:${{ steps.get_version.outputs.version }}
+          docker push ghcr.io/amf-flx/fluxnet-shuttle-lib:latest

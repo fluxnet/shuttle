@@ -1,8 +1,16 @@
 # Sphinx configuration for FLUXNET Shuttle Library
+import os
+import sys
+
+from fluxnet_shuttle_lib.version import __release__
+
+# Add the project root to the Python path
+sys.path.insert(0, os.path.abspath("../src"))
+
 project = "FLUXNET Shuttle Library"
 copyright = "2025, AMF-FLX"
 author = "AMF-FLX"
-release = "0.1.0"
+release = __release__
 
 # Extensions
 extensions = [

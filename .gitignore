@@ -84,3 +84,9 @@ dmypy.json
 # Temporary files
 *.tmp
 *.temp
+
+# data files
+*.csv
+*.json
+*.html
+*.zip

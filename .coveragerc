@@ -1,5 +1,5 @@
 [run]
-source = src/fluxnet_shuttle_lib
+source = fluxnet_shuttle_lib
 omit = 
     */tests/*
     */__pycache__/*
