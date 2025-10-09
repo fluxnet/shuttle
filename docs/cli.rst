@@ -115,15 +115,15 @@ Complete workflow from discovery to download:
 .. code-block:: bash
 
     # Step 1: Discover available data
-    fluxnet-shuttle listall --verbose --output sites.csv
+    fluxnet-shuttle listall --verbose
 
     # Step 2: Review the CSV file (external step)
     # Open sites.csv and identify sites of interest
 
     # Step 3: Download specific sites
-    fluxnet-shuttle download \\
-      -r sites.csv \\
-      -s US-ARc IT-Niv DE-Tha \\
+    fluxnet-shuttle download \
+      -r data_availability_YYYYMMDDTHHMMSS.csv  \
+      -s US-ARc IT-Niv DE-Tha \
       --verbose
 
     # Step 4: Test connectivity if needed

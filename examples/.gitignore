@@ -2,4 +2,5 @@
 *.json
 *.html
 *.ipynb_checkpoints
-*.zip
+*.zip*
+[a-zA-Z0-9_]*

@@ -1,42 +1,45 @@
 """
-FLUXNET Shuttle Library
-=======================
-
 :module: fluxnet_shuttle_lib
-:synopsis: Main library package for FLUXNET Shuttle operations
-:moduleauthor: Gilberto Pastorello <gzpastorello@lbl.gov>
+:synopsis: Main library package for FLUXNET Shuttle operations with plugin system
+:module author: Gilberto Pastorello <gzpastorello@lbl.gov>
+:module author: Valerie Hendrix <vchendrix@lbl.gov>
 :platform: Unix, Windows
 :created: 2024-10-31
+:updated: 2025-01-09
 
 .. currentmodule:: fluxnet_shuttle_lib
 
 .. autosummary::
    :toctree: generated/
 
-   FLUXNETShuttleError
-   format_warning
-   log_config
    add_file_log
+   log_config
    log_trace
+   download
+   listall
+   core
+   plugins
+   shuttle
 
+   FLUXNETShuttleError
 
 FLUXNET Shuttle Library provides functionality for discovering, downloading, and cataloging
 FLUXNET data from multiple networks including AmeriFlux, ICOS, and FLUXNET2015.
 
-The library offers both a Python API and command-line interface for accessing FLUXNET data
-across different networks through a unified interface.
+The library offers both synchronous and asynchronous Python APIs with a plugin-based
+architecture for extending to new FLUXNET networks.
 
-Features
---------
+*Features*
 
-* Data download from AmeriFlux and ICOS networks
-* Data catalog listing from multiple FLUXNET networks
-* Command-line interface for common operations
+* Plugin-based architecture for easy extensibility
+* Both sync and async APIs using decorators to reduce duplication
+* Error collection and isolation across plugins
+* Unified configuration system
+* Type-safe API with Pydantic models
 * Comprehensive logging and error handling
-* Type-safe API with full type hints
 
-License
--------
+
+*License*
 
 Copyright (c) 2023-2025, The Regents of the University of California,
 through Lawrence Berkeley National Laboratory (subject to receipt
@@ -79,18 +82,12 @@ distribute, and sublicense such enhancements or derivative works thereof,
 in binary and source code form.
 
 
-Version
--------
+*Version History*
 
 .. versionadded:: 0.1.0
    Initial release with AmeriFlux and ICOS support.
 
-.. versionchanged:: 0.2.0
-   Planned: Enhanced error handling and improved logging system.
-
-.. versionchanged:: 0.3.0
-   Planned: FLUXNET2015 dataset support and advanced filtering capabilities.
-
+------------------------------------------------------
 """
 
 import logging
@@ -349,17 +346,23 @@ def log_trace(exception, level=logging.ERROR, log=_log, output_fmt="std") -> str
     return message
 
 
+# Import the new plugin-based architecture
+# Import plugins to ensure they're registered
+from . import core, plugins  # noqa: F401
+from .shuttle import download, listall  # noqa: F401
+
 __all__ = [
+    "plugins",
+    "core",
     "download",
     "listall",
-    "main",
     "FLUXNETShuttleError",
     "log_config",
     "add_file_log",
     "log_trace",
 ]
 
-from .main import main
 
-# Import at end to avoid circular imports
-from .shuttle import download, listall
+from .main import main  # noqa: F401
+
+__all__.append("main")

@@ -2,7 +2,7 @@
 
 import os
 import tempfile
-from unittest.mock import mock_open, patch
+from unittest.mock import AsyncMock, MagicMock, call, mock_open, patch
 
 import pytest
 
@@ -44,9 +44,7 @@ class TestDownload:
     @patch("os.path.exists")
     @patch(
         "builtins.open",
-        mock_open(
-            read_data="site_id,network,filename,download_link\n" "US-TEST,AmeriFlux,test.zip,http://example.com\n"
-        ),
+        mock_open(read_data="site_id,network,download_link\n" "US-TEST,AmeriFlux,http://example.com/test.zip\n"),
     )
     def test_download_ameriflux_site_success(self, mock_exists, mock_download):
         """Test successful download of AmeriFlux site."""
@@ -57,14 +55,14 @@ class TestDownload:
 
         assert result == ["test.zip"]
         mock_download.assert_called_once_with(
-            site_id="US-TEST", filename="test.zip", download_link="http://example.com"
+            site_id="US-TEST", filename="test.zip", download_link="http://example.com/test.zip"
         )
 
     @patch("fluxnet_shuttle_lib.shuttle.download_icos_data")
     @patch("os.path.exists")
     @patch(
         "builtins.open",
-        mock_open(read_data="site_id,network,filename,download_link\n" "FI-HYY,ICOS,test.zip,http://example.com\n"),
+        mock_open(read_data="site_id,network,download_link\n" "FI-HYY,ICOS,http://example.com/test.zip\n"),
     )
     def test_download_icos_site_success(self, mock_exists, mock_download):
         """Test successful download of ICOS site."""
@@ -74,14 +72,14 @@ class TestDownload:
         result = download(["FI-HYY"], "test.csv")
 
         assert result == ["test.zip"]
-        mock_download.assert_called_once_with(site_id="FI-HYY", filename="test.zip", download_link="http://example.com")
+        mock_download.assert_called_once_with(
+            site_id="FI-HYY", filename="test.zip", download_link="http://example.com/test.zip"
+        )
 
     @patch("os.path.exists")
     @patch(
         "builtins.open",
-        mock_open(
-            read_data="site_id,network,filename,download_link\n" "US-TEST,AmeriFlux,test.zip,http://example.com\n"
-        ),
+        mock_open(read_data="site_id,network,download_link\n" "US-TEST,AmeriFlux,http://example.com/test.zip\n"),
     )
     def test_download_site_not_in_runfile_raises_error(self, mock_exists):
         """Test that download raises error when site not in run file."""
@@ -94,8 +92,8 @@ class TestDownload:
         """Test download function with real CSV file but missing site."""
         # Create temporary CSV file
         with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as tmp_file:
-            tmp_file.write("site_id,network,filename,download_link\n")
-            tmp_file.write("US-Ha1,AmeriFlux,test.zip,http://example.com\n")
+            tmp_file.write("site_id,network,download_link\n")
+            tmp_file.write("US-Ha1,AmeriFlux,http://example.com/test.zip\n")
             temp_filename = tmp_file.name
 
         try:
@@ -114,48 +112,85 @@ class TestListall:
         """Test that listall function exists and is callable."""
         assert callable(listall)
 
-    def test_listall_basic_functionality(self):
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle_lib.shuttle.aiofiles.open")
+    @patch("fluxnet_shuttle_lib.shuttle.csv.DictWriter.writerow", new_callable=AsyncMock)
+    @patch("fluxnet_shuttle_lib.shuttle.csv.DictWriter.writeheader", new_callable=AsyncMock)
+    @patch("fluxnet_shuttle_lib.shuttle.datetime")
+    async def test_listall_basic_functionality(self, mock_datetime, mock_write_header, mock_write_row, mock_open):
         """Test basic listall functionality without external calls."""
-        # Call with no networks to avoid external API calls
-        ameriflux_patch = "fluxnet_shuttle_lib.shuttle.get_ameriflux_data"
-        icos_patch = "fluxnet_shuttle_lib.shuttle.get_icos_data"
 
-        with (
-            patch(ameriflux_patch) as mock_ameriflux,
-            patch(icos_patch) as mock_icos,
-            patch("builtins.open", mock_open()),
-        ):
+        mock_datetime.now.return_value = MagicMock()
+        mock_datetime.now.return_value.strftime.return_value = "20251013T075248"
+        result = await listall(ameriflux=False, icos=False)
 
-            mock_ameriflux.return_value = {}
-            mock_icos.return_value = {}
+        assert isinstance(result, str)
+        assert result.endswith(".csv")
 
-            result = listall(ameriflux=False, icos=False)
+        assert mock_open.called
+        assert mock_open.call_count == 1
+        assert mock_write_header.called
+        assert mock_write_header.call_count == 1
+        assert mock_write_header.call_args == call()
+        assert not mock_write_row.called  # No rows should be written when no networks are enabled
 
-            assert isinstance(result, str)
-            assert result.endswith(".csv")
-            mock_ameriflux.assert_not_called()
-            mock_icos.assert_not_called()
-
-    def test_listall_with_networks(self):
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle_lib.shuttle.aiofiles.open")
+    @patch("fluxnet_shuttle_lib.shuttle.csv.DictWriter.writerow", new_callable=AsyncMock)
+    @patch("fluxnet_shuttle_lib.shuttle.csv.DictWriter.writeheader", new_callable=AsyncMock)
+    @patch("fluxnet_shuttle_lib.shuttle.datetime")
+    @patch("fluxnet_shuttle_lib.core.FluxnetShuttle.get_all_sites", new_callable=MagicMock)
+    async def test_listall_with_networks(
+        self, mock_get_all_sites, mock_datetime, mock_write_header, mock_write_row, mock_open
+    ):
         """Test listall with both networks enabled."""
-        ameriflux_patch = "fluxnet_shuttle_lib.shuttle.get_ameriflux_data"
-        icos_patch = "fluxnet_shuttle_lib.shuttle.get_icos_data"
+        mock_get_all_sites.return_value = AsyncMock()
+        mock_get_all_sites.return_value.__aiter__.return_value = {
+            MagicMock(
+                site_info=MagicMock(
+                    site_id="US-TEST",
+                    network="AmeriFlux",
+                    location_lat=45.0,
+                    location_long=-120.0,
+                ),
+                product_data=MagicMock(
+                    first_year=2000,
+                    last_year=2020,
+                    download_link="http://example.com/test.zip",
+                ),
+            ),
+            MagicMock(
+                site_info=MagicMock(
+                    site_id="FI-HYY",
+                    network="ICOS",
+                    location_lat=61.85,
+                    location_long=24.29,
+                ),
+                product_data=MagicMock(
+                    first_year=2005,
+                    last_year=2018,
+                    download_link="http://example.com/icos.zip",
+                ),
+            ),
+        }
 
-        with (
-            patch(ameriflux_patch) as mock_ameriflux,
-            patch(icos_patch) as mock_icos,
-            patch("builtins.open", mock_open()),
-        ):
+        mock_datetime.now.return_value = MagicMock()
+        mock_datetime.now.return_value.strftime.return_value = "20251013T075248"
 
-            mock_ameriflux.return_value = {"US-TEST": {"site_id": "US-TEST"}}
-            mock_icos.return_value = {"IT-TEST": {"site_id": "IT-TEST"}}
+        result = await listall(ameriflux=True, icos=True)
 
-            result = listall(ameriflux=True, icos=True)
-
-            assert isinstance(result, str)
-            assert result.endswith(".csv")
-            mock_ameriflux.assert_called_once()
-            mock_icos.assert_called_once()
+        assert isinstance(result, str)
+        assert result.endswith(".csv")
+        assert mock_open.called
+        assert mock_open.call_count == 1
+        assert mock_open.call_args[0][0] == "data_availability_20251013T075248.csv"
+        assert mock_write_header.called
+        assert mock_write_header.call_count == 1
+        assert mock_write_header.call_args == call()
+        assert mock_get_all_sites.called
+        assert mock_get_all_sites.call_count == 1
+        assert mock_write_row.called
+        assert mock_write_row.call_count == 2  # Two rows should be written for two sites
 
 
 class TestModuleFunctions:
@@ -168,6 +203,15 @@ class TestModuleFunctions:
     def test_listall_function_exists(self):
         """Test that listall function exists."""
         assert callable(listall)
+
+    def test_test_connectivity_function_exists(self):
+        """Test that test connectivity function exists."""
+        from fluxnet_shuttle_lib.shuttle import test
+
+        assert callable(test)
+
+        with pytest.raises(NotImplementedError):
+            test()
 
     def test_import_works(self):
         """Test that imports work correctly."""
