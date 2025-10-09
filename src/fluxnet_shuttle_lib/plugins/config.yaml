@@ -1,0 +1,13 @@
+# Default FLUXNET Shuttle Configuration
+# ====================================
+
+# Global settings
+parallel_requests: 2
+
+# Network-specific configurations
+networks:
+  ameriflux:
+    enabled: true
+
+  icos:
+    enabled: true
