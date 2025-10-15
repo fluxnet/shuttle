@@ -9,13 +9,6 @@ Plugin Registry and Error Collection
 :created: 2025-10-09
 
 .. currentmodule:: fluxnet_shuttle_lib.core.registry
-.. autosummary::
-    :toctree: generated/
-
-    PluginErrorInfo
-    PluginRegistry
-    ErrorCollectingIterator
-
 
 
 This module provides the plugin registry for managing network plugins

@@ -8,13 +8,6 @@ Core functionality for FLUXNET Shuttle operations
 
 .. currentmodule:: fluxnet_shuttle_lib.shuttle
 
-.. autosummary::
-   :toctree: generated/
-
-   listall
-   download
-
-
 This module provides the core functionality for FLUXNET Shuttle operations,
 including data discovery, download, and source management across multiple
 FLUXNET networks.
@@ -72,7 +65,6 @@ from typing import Any, Dict, List
 
 import aiofiles
 
-from fluxnet_shuttle_lib import plugins  # noqa: F401
 from fluxnet_shuttle_lib import FLUXNETShuttleError
 from fluxnet_shuttle_lib.core.decorators import async_to_sync
 from fluxnet_shuttle_lib.core.shuttle import FluxnetShuttle

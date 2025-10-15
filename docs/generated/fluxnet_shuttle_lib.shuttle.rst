@@ -13,6 +13,7 @@
       download_ameriflux_data
       download_icos_data
       listall
+      test
    
    .. rubric:: Classes
 

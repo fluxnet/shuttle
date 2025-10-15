@@ -9,10 +9,6 @@ Main Shuttle Orchestrator
 :created: 2025-10-09
 
 .. currentmodule:: fluxnet_shuttle_lib.core.shuttle
-.. autosummary::
-    :toctree: generated/
-
-    FluxnetShuttle
 
 
 This module provides the main FluxnetShuttle class that orchestrates

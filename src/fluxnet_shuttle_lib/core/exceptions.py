@@ -39,7 +39,7 @@ class ConfigurationError(FLUXNETShuttleError):
     pass
 
 
-class NetworkError(FLUXNETShuttleError):
+class NetworkError(PluginError):
     """Exception raised when there's a network-related issue."""
 
     pass

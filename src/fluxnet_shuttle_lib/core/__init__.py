@@ -7,39 +7,41 @@ Core framework components for FLUXNET Shuttle Library
 :created: 2025-10-09
 
 .. currentmodule:: fluxnet_shuttle_lib.core
-.. autosummary::
-    :toctree: generated/
-
-    base.NetworkPlugin
-    config.ShuttleConfig
-    config.NetworkConfig
-    decorators.async_to_sync_generator
-    exceptions.FLUXNETShuttleError
-    exceptions.PluginError
-    registry.PluginRegistry
-    registry.ErrorCollectingIterator
-    shuttle.FluxnetShuttle
 
 
 This module provides the core framework components for the FLUXNET Shuttle
 library including plugin interfaces, decorators, and utilities.
+
+
+.. rubric:: Modules
+
+.. autosummary::
+    :toctree: generated/
+
+    base
+    config
+    decorators
+    exceptions
+    http_utils
+    registry
+    shuttle
+
 """
 
-from .base import NetworkPlugin  # noqa: F401
-from .config import NetworkConfig, ShuttleConfig  # noqa: F401
-from .decorators import async_to_sync_generator  # noqa: F401
-from .exceptions import FLUXNETShuttleError, PluginError  # noqa: F401
-from .registry import ErrorCollectingIterator, PluginRegistry  # noqa: F401
-from .shuttle import FluxnetShuttle  # noqa: F401
+from . import base  # noqa: F401
+from . import config  # noqa: F401
+from . import decorators  # noqa: F401
+from . import exceptions  # noqa: F401
+from . import http_utils  # noqa: F401
+from . import registry  # noqa: F401
+from . import shuttle  # noqa: F401
 
 __all__ = [
-    "NetworkPlugin",
-    "async_to_sync_generator",
-    "FLUXNETShuttleError",
-    "PluginError",
-    "PluginRegistry",
-    "ErrorCollectingIterator",
-    "FluxnetShuttle",
-    "ShuttleConfig",
-    "NetworkConfig",
+    "base",
+    "config",
+    "decorators",
+    "exceptions",
+    "http_utils",
+    "registry",
+    "shuttle",
 ]

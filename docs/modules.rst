@@ -8,9 +8,17 @@ fluxnet_shuttle_lib package
 ---------------------------
 
 .. automodule:: fluxnet_shuttle_lib
-   :members:
-   :undoc-members:
-   :show-inheritance:
+
+   .. rubric:: Overview
+   .. autosummary::
+      :toctree: generated/
+
+      add_file_log
+      log_config
+      log_trace
+      download
+      listall
+
 
 
 

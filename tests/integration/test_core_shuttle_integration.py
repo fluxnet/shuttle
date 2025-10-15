@@ -1,6 +1,8 @@
 """Test the core functionality of the FluxnetShuttle class."""
 
-from fluxnet_shuttle_lib.core import FluxnetShuttle, PluginRegistry, ShuttleConfig
+from fluxnet_shuttle_lib.core.config import ShuttleConfig
+from fluxnet_shuttle_lib.core.registry import PluginRegistry
+from fluxnet_shuttle_lib.core.shuttle import FluxnetShuttle
 
 
 class TestFluxnetShuttle:

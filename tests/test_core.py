@@ -7,7 +7,9 @@ plugin base classes, and configuration.
 """
 
 from collections.abc import AsyncGenerator
+from unittest.mock import AsyncMock, patch
 
+import aiohttp
 import pytest
 
 from fluxnet_shuttle_lib.core.base import NetworkPlugin
@@ -130,6 +132,66 @@ class TestNetworkPlugin:
 
         assert len(sites) == 1
         assert sites[0].site_info.site_id == "US-TEST"
+
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle_lib.core.base.session_request")
+    async def test_session_request_success(self, mock_session_request):
+        """Test successful _session_request call."""
+        plugin = MockNetworkPlugin()
+        url = "https://api.example.com/data"
+
+        # Mock the response
+        mock_response = AsyncMock()
+        mock_response.json.return_value = {"data": "test"}
+        mock_response.raise_for_status.return_value = None
+
+        # Mock the session_request context manager
+        mock_session_request.return_value.__aenter__.return_value = mock_response
+        mock_session_request.return_value.__aexit__.return_value = None
+
+        async with plugin._session_request("GET", url) as response:
+            data = await response.json()
+            assert data["data"] == "test"
+
+        mock_session_request.assert_called_once_with("GET", url)
+
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle_lib.core.base.session_request")
+    async def test_session_request_client_error(self, mock_session_request):
+        """Test _session_request handling of aiohttp.ClientError."""
+        plugin = MockNetworkPlugin()
+        url = "https://api.example.com/data"
+
+        # Make session_request raise a ClientError when entered
+        mock_session_request.return_value.__aenter__.side_effect = aiohttp.ClientConnectionError("Connection failed")
+
+        with pytest.raises(PluginError) as exc_info:
+            async with plugin._session_request("GET", url) as response:  # noqa: F841
+                pass
+
+        error = exc_info.value
+        assert error.plugin_name == "mock"
+        assert "Failed to make HTTP request" in error.message
+        assert isinstance(error.original_error, aiohttp.ClientConnectionError)
+
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle_lib.core.base.session_request")
+    async def test_session_request_unexpected_error(self, mock_session_request):
+        """Test _session_request handling of unexpected errors."""
+        plugin = MockNetworkPlugin()
+        url = "https://api.example.com/data"
+
+        # Make session_request raise a generic exception
+        mock_session_request.side_effect = ValueError("Unexpected error")
+
+        with pytest.raises(PluginError) as exc_info:
+            async with plugin._session_request("GET", url) as response:  # noqa: F841
+                pass
+
+        error = exc_info.value
+        assert error.plugin_name == "mock"
+        assert "Unexpected error during HTTP request" in error.message
+        assert isinstance(error.original_error, ValueError)
 
 
 class TestShuttleConfig:

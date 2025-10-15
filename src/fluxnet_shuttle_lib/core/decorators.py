@@ -9,9 +9,6 @@ Decorators module
 :created: 2025-10-09
 
 .. currentmodule:: fluxnet_shuttle_lib.core.decorators
-.. autosummary::
-    :toctree: generated/
-    async_to_sync
 
 This module provides decorators for converting between sync and async operations.
 """
@@ -30,7 +27,9 @@ def async_to_sync(func):
 
     # check if the function is a coroutine function
     if not asyncio.iscoroutinefunction(func):
-        raise TypeError("The async_to_sync decorator can only be applied to async functions.")
+        raise TypeError(
+            f"The async_to_sync decorator can only be applied to async functions - '{func.__name__}' is not async."
+        )
 
     @functools.wraps(func)
     def function_wrapper(*args, **kwargs):

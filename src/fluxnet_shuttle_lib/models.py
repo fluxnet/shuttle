@@ -10,12 +10,6 @@ Pydantic Schema Models for FLUXNET Shuttle Library
 :created: 2025-10-09
 
 .. currentmodule:: fluxnet_shuttle_lib.models
-.. autosummary::
-    :toctree: generated/
-
-    BadmSiteGeneralInfo
-    DataFluxnetProduct
-    FluxnetDatasetMetadata
 
 This module defines Pydantic models for data validation and serialization
 in the FLUXNET Shuttle Library. These models ensure type safety and provide

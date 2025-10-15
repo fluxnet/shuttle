@@ -139,7 +139,7 @@ class TestListall:
     @patch("fluxnet_shuttle_lib.shuttle.csv.DictWriter.writerow", new_callable=AsyncMock)
     @patch("fluxnet_shuttle_lib.shuttle.csv.DictWriter.writeheader", new_callable=AsyncMock)
     @patch("fluxnet_shuttle_lib.shuttle.datetime")
-    @patch("fluxnet_shuttle_lib.core.FluxnetShuttle.get_all_sites", new_callable=MagicMock)
+    @patch("fluxnet_shuttle_lib.core.shuttle.FluxnetShuttle.get_all_sites", new_callable=MagicMock)
     async def test_listall_with_networks(
         self, mock_get_all_sites, mock_datetime, mock_write_header, mock_write_row, mock_open
     ):
