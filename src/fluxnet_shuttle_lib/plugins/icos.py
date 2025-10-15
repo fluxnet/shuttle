@@ -9,8 +9,6 @@ import asyncio
 import logging
 from typing import Any, AsyncGenerator, Dict, Generator
 
-import aiohttp
-
 from ..core.base import NetworkPlugin
 from ..core.decorators import async_to_sync_generator
 from ..models import BadmSiteGeneralInfo, DataFluxnetProduct, FluxnetDatasetMetadata
@@ -69,18 +67,15 @@ class ICOSPlugin(NetworkPlugin):
         api_url = self.config.get("api_url", ICOS_API_URL)
         timeout = self.config.get("timeout", 45)
 
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout)) as session:
-            # Execute SPARQL query
-            async with session.post(
-                api_url, data={"query": ICOS_SPARQL_QUERY}, headers={"Accept": "application/json"}
-            ) as response:
-                response.raise_for_status()
-                data = await response.json()
+        async with self._session_request(
+            "POST", api_url, data={"query": ICOS_SPARQL_QUERY}, headers={"Accept": "application/json"}, timeout=timeout
+        ) as response:
+            data = await response.json()
 
-                # Parse and yield site metadata
-                for site_data in self._parse_sparql_response(data):
-                    await asyncio.sleep(0.1)  # Yield control to event loop
-                    yield site_data
+            # Parse and yield site metadata
+            for site_data in self._parse_sparql_response(data):
+                await asyncio.sleep(0.1)  # Yield control to event loop
+                yield site_data
 
     def _parse_sparql_response(self, data: Dict[str, Any]) -> Generator[FluxnetDatasetMetadata, None, None]:
         """

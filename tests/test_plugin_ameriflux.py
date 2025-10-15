@@ -1,9 +1,10 @@
 """Test suite for fluxnet_shuttle_lib.sources.ameriflux module."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from fluxnet_shuttle_lib.core.exceptions import PluginError
 from fluxnet_shuttle_lib.plugins import ameriflux
 
 
@@ -167,60 +168,51 @@ class TestAmeriFluxPlugin:
         assert len(sites) == 0  # No valid sites should be returned due to malformed data
 
     @pytest.mark.asyncio
-    @patch("fluxnet_shuttle_lib.plugins.ameriflux.aiohttp.ClientSession")
-    async def test__get_fluxnet_sites(self, mock_client_session):
-        """Test get_sites handles aiohttp.ClientSession failure gracefully."""
-        mock_session_instance = MagicMock()
-        mock_client_session.return_value.__aenter__.return_value = mock_session_instance
-        response = MagicMock()
-        mock_session_instance.get.return_value.__aenter__.return_value = response
-        response.raise_for_status.side_effect = None
-
-        async def mock_json():
-            return [["US-TEST", "Test Site"], ["US-EXM", "Example Site"]]
-
-        response.json = mock_json
+    @patch("fluxnet_shuttle_lib.plugins.ameriflux.NetworkPlugin._session_request")
+    async def test__get_fluxnet_sites(self, mock_request):
+        """Test get_sites handles _session_request correctly."""
+        mock_response = AsyncMock()
+        mock_response.json.return_value = [["US-TEST", "Test Site"], ["US-EXM", "Example Site"]]
+        mock_response.raise_for_status.side_effect = None
+        mock_request.return_value.__aenter__.return_value = mock_response
 
         sites = await ameriflux.AmeriFluxPlugin()._get_fluxnet_sites(api_url="http://example.com", timeout=10)
         assert sites == ["US-TEST", "US-EXM"]
 
     @pytest.mark.asyncio
-    @patch("fluxnet_shuttle_lib.plugins.ameriflux.aiohttp.ClientSession")
-    async def test__get_fluxnet_sites_failure(self, mock_client_session):
-        """Test _get_fluxnet_sites handles aiohttp.ClientSession failure gracefully."""
-        mock_session_instance = MagicMock()
-        mock_client_session.return_value.__aenter__.return_value = mock_session_instance
-        response = MagicMock()
-        mock_session_instance.get.return_value.__aenter__.return_value = response
-        response.raise_for_status.side_effect = Exception("HTTP error")
+    @patch(
+        "fluxnet_shuttle_lib.plugins.ameriflux.NetworkPlugin._session_request",
+        side_effect=PluginError("ameriflux", "Test error"),
+    )
+    async def test__get_fluxnet_sites_failure(self, mock_request):
+        """Test _get_fluxnet_sites handles _session_request failure gracefully."""
 
         sites = await ameriflux.AmeriFluxPlugin()._get_fluxnet_sites(api_url="http://example.com", timeout=10)
         assert sites is None  # Should return None on failure
 
+        assert mock_request.call_count == 1  # Ensure the request was attempted
+
     @pytest.mark.asyncio
-    @patch("fluxnet_shuttle_lib.plugins.ameriflux.aiohttp.ClientSession")
-    async def test__get_download_links_with_failure(self, mock_client_session):
+    @patch(
+        "fluxnet_shuttle_lib.plugins.ameriflux.NetworkPlugin._session_request",
+        side_effect=PluginError("ameriflux", "Test error"),
+    )
+    async def test__get_download_links_with_failure(self, mock_request):
         """Test _get_download_links handles aiohttp.ClientSession failure gracefully."""
-        mock_session_instance = MagicMock()
-        mock_client_session.return_value.__aenter__.return_value = mock_session_instance
-        response = MagicMock()
-        mock_session_instance.post.return_value.__aenter__.return_value = response
-        response.raise_for_status.side_effect = Exception("HTTP error")
 
         links = await ameriflux.AmeriFluxPlugin()._get_download_links(
             base_url="http://example.com", site_ids=["US-TEST"], timeout=10
         )
         assert links is None  # Should return None on failure
+        assert mock_request.call_count == 1  # Ensure the request was attempted
 
     @pytest.mark.asyncio
-    @patch("fluxnet_shuttle_lib.plugins.ameriflux.aiohttp.ClientSession")
-    async def test__get_download_links_success(self, mock_client_session):
+    @patch("fluxnet_shuttle_lib.plugins.ameriflux.NetworkPlugin._session_request")
+    async def test__get_download_links_success(self, mock_request):
         """Test _get_download_links returns expected data on success."""
-        mock_session_instance = MagicMock()
-        mock_client_session.return_value.__aenter__.return_value = mock_session_instance
-        response = MagicMock()
-        mock_session_instance.post.return_value.__aenter__.return_value = response
-        response.raise_for_status.side_effect = None
+        mock_response = MagicMock()
+        mock_request.return_value.__aenter__.return_value = mock_response
+        mock_response.raise_for_status.side_effect = None
 
         async def mock_json():
             return {
@@ -229,7 +221,7 @@ class TestAmeriFluxPlugin:
                 ]
             }
 
-        response.json = mock_json
+        mock_response.json = mock_json
 
         links = await ameriflux.AmeriFluxPlugin()._get_download_links(
             base_url="http://example.com", site_ids=["US-TEST"], timeout=10

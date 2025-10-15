@@ -10,12 +10,6 @@ ICOS Data Source Module
 
 .. currentmodule:: fluxnet_shuttle_lib.sources.icos
 
-.. autosummary::
-   :toctree: generated/
-
-   get_icos_data
-   download_icos_data
-
 This module provides functionality for accessing and downloading data from the
 ICOS (Integrated Carbon Observation System) network through the ICOS Carbon Portal.
 

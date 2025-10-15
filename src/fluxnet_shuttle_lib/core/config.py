@@ -9,10 +9,6 @@ Configuration System
 :created: 2025-10-09
 
 .. currentmodule:: fluxnet_shuttle_lib.core.config
-.. autosummary::
-    :toctree: generated/
-    ShuttleConfig
-    NetworkConfig
 
 
 This module provides the configuration system for the FLUXNET Shuttle

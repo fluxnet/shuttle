@@ -10,17 +10,6 @@ Command Line Interface Module
 
 .. currentmodule:: fluxnet_shuttle_lib.main
 
-.. autosummary::
-   :toctree: generated/
-
-   setup_logging
-   main
-   cmd_listall
-   cmd_download
-   cmd_sources
-   cmd_search
-   cmd_test
-
 
 This module provides the command-line interface for the FLUXNET Shuttle Library,
 allowing users to discover and download FLUXNET data from the command line.

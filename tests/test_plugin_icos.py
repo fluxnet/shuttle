@@ -1,6 +1,6 @@
 """Test suite for fluxnet_shuttle_lib.sources.icos module."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -28,11 +28,9 @@ class TestICOSPlugin:
         assert plugin.config["api_url"] == "https://test.icos-cp.eu"
 
     @pytest.mark.asyncio
-    @patch("fluxnet_shuttle_lib.plugins.icos.aiohttp.ClientSession")
-    async def test_async_get_sites(self, mock_client_session):
+    @patch("fluxnet_shuttle_lib.plugins.icos.NetworkPlugin._session_request")
+    async def test_async_get_sites(self, mock_request):
         """Test async get_sites method."""
-        mock_session_instance = MagicMock()
-        mock_client_session.return_value.__aenter__.return_value = mock_session_instance
         mock_response = AsyncMock()
         mock_response.json.return_value = {
             "results": {
@@ -48,7 +46,7 @@ class TestICOSPlugin:
                 ]
             }
         }
-        mock_session_instance.post.return_value.__aenter__.return_value = mock_response
+        mock_request.return_value.__aenter__.return_value = mock_response
 
         plugin = ICOSPlugin()
 
@@ -67,11 +65,9 @@ class TestICOSPlugin:
         assert str(sites[0].product_data.download_link) == "https://meta.icos-cp.eu/objects/US-ABC"
 
     @pytest.mark.asyncio
-    @patch("fluxnet_shuttle_lib.plugins.icos.aiohttp.ClientSession")
-    async def test_async_get_sites_with_time_errors(self, mock_client_session):
+    @patch("fluxnet_shuttle_lib.plugins.icos.NetworkPlugin._session_request")
+    async def test_async_get_sites_with_time_errors(self, mock_request):
         """Test async get_sites method."""
-        mock_session_instance = MagicMock()
-        mock_client_session.return_value.__aenter__.return_value = mock_session_instance
         mock_response = AsyncMock()
         mock_response.json.return_value = {
             "results": {
@@ -87,7 +83,7 @@ class TestICOSPlugin:
                 ]
             }
         }
-        mock_session_instance.post.return_value.__aenter__.return_value = mock_response
+        mock_request.return_value.__aenter__.return_value = mock_response
 
         plugin = ICOSPlugin()
 
@@ -105,12 +101,12 @@ class TestICOSPlugin:
         assert sites[0].product_data.last_year == 2020
         assert str(sites[0].product_data.download_link) == "https://meta.icos-cp.eu/objects/US-ABC"
 
+        assert mock_request.call_count == 1
+
     @pytest.mark.asyncio
-    @patch("fluxnet_shuttle_lib.plugins.icos.aiohttp.ClientSession")
-    async def test_async_get_sites_with_errors(self, mock_client_session, caplog):
+    @patch("fluxnet_shuttle_lib.plugins.icos.NetworkPlugin._session_request")
+    async def test_async_get_sites_with_errors(self, mock_request, caplog):
         """Test async get_sites method."""
-        mock_session_instance = MagicMock()
-        mock_client_session.return_value.__aenter__.return_value = mock_session_instance
         mock_response = AsyncMock()
         mock_response.json.return_value = {
             "results": {
@@ -126,7 +122,7 @@ class TestICOSPlugin:
                 ]
             }
         }
-        mock_session_instance.post.return_value.__aenter__.return_value = mock_response
+        mock_request.return_value.__aenter__.return_value = mock_response
 
         plugin = ICOSPlugin()
 
@@ -138,3 +134,5 @@ class TestICOSPlugin:
             assert len(sites) == 0
 
             assert "Error parsing ICOS site data: could not convert string to float: '12.34ff'" in caplog.text
+
+        assert mock_request.call_count == 1

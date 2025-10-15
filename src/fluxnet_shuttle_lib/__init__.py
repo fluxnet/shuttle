@@ -9,19 +9,6 @@
 
 .. currentmodule:: fluxnet_shuttle_lib
 
-.. autosummary::
-   :toctree: generated/
-
-   add_file_log
-   log_config
-   log_trace
-   download
-   listall
-   core
-   plugins
-   shuttle
-
-   FLUXNETShuttleError
 
 FLUXNET Shuttle Library provides functionality for discovering, downloading, and cataloging
 FLUXNET data from multiple networks including AmeriFlux, ICOS, and FLUXNET2015.
@@ -86,6 +73,16 @@ in binary and source code form.
 
 .. versionadded:: 0.1.0
    Initial release with AmeriFlux and ICOS support.
+
+.. rubric:: Submodules
+.. autosummary::
+    :toctree: generated/
+
+    core
+    models
+    plugins
+    shuttle
+
 
 ------------------------------------------------------
 """

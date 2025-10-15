@@ -9,7 +9,7 @@ import asyncio
 import logging
 from typing import Any, AsyncGenerator, Dict, Generator, Optional
 
-import aiohttp
+from fluxnet_shuttle_lib.core.exceptions import PluginError
 
 from ..core.base import NetworkPlugin
 from ..core.decorators import async_to_sync_generator
@@ -80,18 +80,18 @@ class AmeriFluxPlugin(NetworkPlugin):
     async def _get_fluxnet_sites(self, api_url: str, timeout: int) -> Optional[list]:
         """Get list of AmeriFlux sites that have FLUXNET data available."""
         try:
-            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout)) as session:
-                async with session.get(f"{api_url}{AMERIFLUX_AVAILABILITY_PATH}") as response:
-                    response.raise_for_status()
-                    site_ids = []
-                    for site in await response.json():
-                        await asyncio.sleep(0.1)  # Yield control to event loop
-                        if isinstance(site, list) and len(site) == 2:
-                            site_ids.append(site[0])
+            async with self._session_request(
+                "GET", f"{api_url}{AMERIFLUX_AVAILABILITY_PATH}", timeout=timeout
+            ) as response:
+                site_ids = []
+                for site in await response.json():
+                    await asyncio.sleep(0.1)  # Yield control to event loop
+                    if isinstance(site, list) and len(site) == 2:
+                        site_ids.append(site[0])
 
-                    return site_ids
+                return site_ids
 
-        except Exception as e:
+        except PluginError as e:
             logger.error(f"Error fetching AmeriFlux FLUXNET sites: {e}")
             return None
 
@@ -112,15 +112,13 @@ class AmeriFluxPlugin(NetworkPlugin):
         }
 
         try:
-            async with aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=None, sock_connect=timeout, sock_read=None)
-            ) as session:
-                async with session.post(url_post_query, headers=AMERIFLUX_HEADERS, json=json_query) as response:
-                    response.raise_for_status()
-                    data: Dict[str, Any] = await response.json()
-                    return data
+            async with self._session_request(
+                "POST", url_post_query, headers=AMERIFLUX_HEADERS, json=json_query
+            ) as response:
+                data: Dict[str, Any] = await response.json()
+                return data
 
-        except Exception as e:
+        except PluginError as e:
             logger.error(f"Error fetching AmeriFlux download links: {e}")
             return None
 

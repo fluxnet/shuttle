@@ -10,12 +10,6 @@ AmeriFlux Data Source Module
 
 .. currentmodule:: fluxnet_shuttle_lib.sources.ameriflux
 
-.. autosummary::
-   :toctree: generated/
-
-   get_ameriflux_data
-   download_ameriflux_data
-
 
 This module provides functionality for accessing and downloading data from the
 AmeriFlux network through the AmeriFlux API.
