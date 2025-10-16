@@ -32,11 +32,15 @@ def ameriflux_api_available():
     """Check if AmeriFlux API is available."""
     import requests
 
-    from fluxnet_shuttle_lib.sources.ameriflux import AMERIFLUX_BASE_URL
+    from fluxnet_shuttle_lib.plugins.ameriflux import (
+        AMERIFLUX_AVAILABILITY_PATH,
+        AMERIFLUX_BASE_PATH,
+        AMERIFLUX_BASE_URL,
+    )
 
     try:
-        # Try to reach AmeriFlux API
-        url = f"{AMERIFLUX_BASE_URL}api/v1/site_availability/AmeriFlux/FLUXNET/CCBY4.0"
+        # Try to reach AmeriFlux v2 API
+        url = f"{AMERIFLUX_BASE_URL}{AMERIFLUX_BASE_PATH}{AMERIFLUX_AVAILABILITY_PATH}"
         response = requests.get(url, timeout=10)
         return response.status_code == 200
     except requests.exceptions.RequestException:
