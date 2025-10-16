@@ -18,9 +18,9 @@ and error collection capabilities.
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, AsyncGenerator, Dict, List, Type
+from typing import AsyncGenerator, Dict, List, Type
 
-from ..models import FluxnetDatasetMetadata
+from ..models import ErrorSummary, FluxnetDatasetMetadata, PluginErrorDetail
 from .base import NetworkPlugin
 
 logger = logging.getLogger(__name__)
@@ -157,26 +157,28 @@ class ErrorCollectingIterator:
         """
         return len(self.errors) > 0
 
-    def get_error_summary(self) -> Dict[str, Any]:
+    def get_error_summary(self) -> ErrorSummary:
         """
         Get summary of all errors.
 
         Returns:
-            Dict containing error summary information
+            ErrorSummary: Pydantic model containing error summary information
         """
-        return {
-            "total_errors": len(self.errors),
-            "total_results": self._results_count,
-            "errors": [
-                {
-                    "network": error.plugin_name,
-                    "operation": error.operation,
-                    "error": str(error.error),
-                    "timestamp": error.timestamp.isoformat(),
-                }
-                for error in self.errors
-            ],
-        }
+        error_details = [
+            PluginErrorDetail(
+                network=error.plugin_name,
+                operation=error.operation,
+                error=str(error.error),
+                timestamp=error.timestamp.isoformat(),
+            )
+            for error in self.errors
+        ]
+
+        return ErrorSummary(
+            total_errors=len(self.errors),
+            total_results=self._results_count,
+            errors=error_details,
+        )
 
 
 class PluginRegistry:

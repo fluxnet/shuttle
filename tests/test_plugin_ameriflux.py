@@ -131,8 +131,7 @@ class TestAmeriFluxPlugin:
         assert sites[0].product_data.last_year == 2012  # Extracted from filename
 
     @patch("fluxnet_shuttle_lib.plugins.ameriflux.AmeriFluxPlugin._get_fluxnet_sites")
-    @patch("fluxnet_shuttle_lib.plugins.ameriflux.AmeriFluxPlugin._get_download_links")
-    def test_get_sites_api_failure(self, mock_get_links, mock_get_sites):
+    def test_get_sites_api_failure(self, mock_get_sites):
         """Test get_sites handles API failure gracefully."""
         mock_get_sites.side_effect = Exception("API failure")
 

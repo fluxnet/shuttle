@@ -113,7 +113,7 @@ class TestFluxnetShuttleIntegration:
 
         # Should have no errors since no plugins were attempted
         errors = shuttle.get_errors()
-        assert errors["total_errors"] == 0
+        assert errors.total_errors == 0
 
     @pytest.mark.asyncio
     async def test_error_collection(self):
@@ -150,9 +150,9 @@ class TestFluxnetShuttleIntegration:
 
         # Should have one error from the failing plugin
         errors = shuttle.get_errors()
-        assert errors["total_errors"] == 1
-        assert "failing" in errors["errors"][0]["network"]
-        assert "Mock plugin failure" in errors["errors"][0]["error"]
+        assert errors.total_errors == 1
+        assert "failing" in errors.errors[0].network
+        assert "Mock plugin failure" in errors.errors[0].error
 
     def test_sync_interface(self):
         """Test synchronous interface works correctly."""

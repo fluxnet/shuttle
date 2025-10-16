@@ -88,9 +88,9 @@ class TestPluginRegistry:
 
         assert results == [{"id": 0, "name": "Site 0"}, {"id": 1, "name": "Site 1"}, {"id": 2, "name": "Site 2"}]
         errors = iterator.get_error_summary()
-        assert errors["total_errors"] == 0
-        assert errors["total_results"] == 3
-        assert errors["errors"] == []
+        assert errors.total_errors == 0
+        assert errors.total_results == 3
+        assert errors.errors == []
         # Test that calling get_errors_summary again returns the same result
         errors_again = iterator.get_error_summary()
         assert errors == errors_again
@@ -119,8 +119,8 @@ class TestPluginRegistry:
 
         assert results == [{"id": 0, "name": "Site 0"}]
         errors = iterator.get_error_summary()
-        assert errors["total_errors"] == 1
-        assert "Test error" in errors["errors"][0]["error"]
+        assert errors.total_errors == 1
+        assert "Test error" in errors.errors[0].error
         # Test that calling get_errors again returns the same result
         errors_again = iterator.get_error_summary()
         assert errors == errors_again
@@ -146,9 +146,9 @@ class TestPluginRegistry:
 
         assert results == []
         errors = iterator.get_error_summary()
-        assert errors["total_errors"] == 0
-        assert errors["total_results"] == 0
-        assert errors["errors"] == []
+        assert errors.total_errors == 0
+        assert errors.total_results == 0
+        assert errors.errors == []
         # Test that calling get_errors again returns the same result
         errors_again = iterator.get_error_summary()
         assert errors == errors_again
@@ -198,6 +198,6 @@ class TestPluginRegistry:
         assert results == []
         errors = iterator.get_error_summary()
         assert iterator.has_errors()
-        assert errors["total_errors"] == 4
-        assert errors["total_results"] == 0
-        assert len(errors["errors"]) == 4
+        assert errors.total_errors == 4
+        assert errors.total_results == 0
+        assert len(errors.errors) == 4

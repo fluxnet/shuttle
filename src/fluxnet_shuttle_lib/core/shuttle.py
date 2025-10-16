@@ -21,7 +21,7 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 from fluxnet_shuttle_lib.core.decorators import async_to_sync_generator
 from fluxnet_shuttle_lib.core.registry import ErrorCollectingIterator, registry
 
-from ..models import FluxnetDatasetMetadata
+from ..models import ErrorSummary, FluxnetDatasetMetadata
 from .config import ShuttleConfig
 
 logger = logging.getLogger(__name__)
@@ -90,20 +90,18 @@ class FluxnetShuttle:
         finally:
             # Log summary after iteration completes
             summary = error_collector.get_error_summary()
-            logger.info(
-                f"Completed get_all_sites: {summary['total_results']} results, " f"{summary['total_errors']} errors"
-            )
+            logger.info(f"Completed get_all_sites: {summary.total_results} results, " f"{summary.total_errors} errors")
 
-    def get_errors(self) -> Dict[str, Any]:
+    def get_errors(self) -> ErrorSummary:
         """
         Get collected errors from last operation.
 
         Returns:
-            Dict containing error summary information
+            ErrorSummary: Pydantic model containing error summary information
         """
         if self._last_error_collector:
             return self._last_error_collector.get_error_summary()
-        return {"total_errors": 0, "total_results": 0, "errors": []}
+        return ErrorSummary(total_errors=0, total_results=0, errors=[])
 
     def list_available_networks(self) -> List[str]:
         """

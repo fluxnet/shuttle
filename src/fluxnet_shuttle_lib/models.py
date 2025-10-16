@@ -19,6 +19,8 @@ Classes:
     BadmSiteGeneralInfo: Site general information from BADM format
     DataFluxnetProduct: FLUXNET product data information
     FluxnetDatasetMetadata: Combined model for complete dataset metadata
+    PluginErrorDetail: Individual plugin error information
+    ErrorSummary: Summary of errors collected during operations
 
 The models are designed to work with the FLUXNET data format and provide
 validation for:
@@ -26,6 +28,7 @@ validation for:
     - Site identifiers and temporal coverage
     - Dataset versions and file metadata
     - Download URLs with validation
+    - Error tracking and reporting
 
 Example:
     >>> from fluxnet_shuttle_lib.models.schema import FluxnetDatasetMetadata
@@ -55,6 +58,8 @@ Note:
 """
 
 import re
+from datetime import datetime
+from typing import List
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
 
@@ -160,3 +165,60 @@ class FluxnetDatasetMetadata(BaseModel):
     site_info: BadmSiteGeneralInfo = Field(..., description="Site general information from BADM")
 
     product_data: DataFluxnetProduct = Field(..., description="FLUXNET product data information")
+
+
+class PluginErrorDetail(BaseModel):
+    """
+    Pydantic model for individual plugin error details.
+
+    This model represents an error that occurred during plugin execution,
+    including context about which network/plugin encountered the error.
+
+    Attributes:
+        network (str): Network/plugin name where the error occurred
+        operation (str): Operation being performed when the error occurred
+        error (str): Error message or description
+        timestamp (str): ISO format timestamp when the error occurred
+    """
+
+    model_config = ConfigDict(str_strip_whitespace=True, validate_assignment=True, extra="forbid")
+
+    network: str = Field(..., description="Network/plugin name where the error occurred", min_length=1)
+
+    operation: str = Field(..., description="Operation being performed when the error occurred", min_length=1)
+
+    error: str = Field(..., description="Error message or description", min_length=1)
+
+    timestamp: str = Field(..., description="ISO format timestamp when the error occurred")
+
+    @field_validator("timestamp")
+    @classmethod
+    def validate_timestamp_format(cls: type, v: str) -> str:
+        """Validate that timestamp is in ISO format."""
+        try:
+            datetime.fromisoformat(v)
+        except ValueError as e:
+            raise ValueError(f"timestamp must be in ISO format: {e}") from e
+        return v
+
+
+class ErrorSummary(BaseModel):
+    """
+    Pydantic model for error summary information.
+
+    This model represents a summary of errors collected during FLUXNET Shuttle
+    operations, including total counts and detailed error information.
+
+    Attributes:
+        total_errors (int): Total number of errors encountered
+        total_results (int): Total number of successful results retrieved
+        errors (List[PluginErrorDetail]): List of detailed error information
+    """
+
+    model_config = ConfigDict(str_strip_whitespace=True, validate_assignment=True, extra="forbid")
+
+    total_errors: int = Field(..., description="Total number of errors encountered", ge=0)
+
+    total_results: int = Field(..., description="Total number of successful results retrieved", ge=0)
+
+    errors: List[PluginErrorDetail] = Field(..., description="List of detailed error information")
