@@ -7,10 +7,18 @@ in the fluxnet_shuttle_service.schema module, ensuring proper validation,
 serialization, and error handling for the minimum requirement models.
 """
 
+from datetime import datetime
+
 import pytest
 from pydantic import ValidationError
 
-from fluxnet_shuttle_lib.models import BadmSiteGeneralInfo, DataFluxnetProduct, FluxnetDatasetMetadata
+from fluxnet_shuttle_lib.models import (
+    BadmSiteGeneralInfo,
+    DataFluxnetProduct,
+    ErrorSummary,
+    FluxnetDatasetMetadata,
+    PluginErrorDetail,
+)
 
 
 # Fixtures for minimum requirement models
@@ -293,3 +301,200 @@ def test_metadata_json_serialization(sample_metadata):
     json_str_no_spaces = json_str.replace(" ", "").replace("\n", "")
     assert '"site_id":"US-ARc"' in json_str_no_spaces
     assert '"first_year":2018' in json_str_no_spaces
+
+
+# Tests for PluginErrorDetail
+def test_plugin_error_detail_valid_creation():
+    """Test creating a valid PluginErrorDetail instance."""
+    timestamp = datetime.now().isoformat()
+    error_detail = PluginErrorDetail(
+        network="ameriflux",
+        operation="get_sites",
+        error="Connection timeout",
+        timestamp=timestamp,
+    )
+    assert error_detail.network == "ameriflux"
+    assert error_detail.operation == "get_sites"
+    assert error_detail.error == "Connection timeout"
+    assert error_detail.timestamp == timestamp
+
+
+def test_plugin_error_detail_timestamp_validation():
+    """Test timestamp format validation."""
+    # Valid ISO format timestamps
+    valid_timestamps = [
+        "2025-10-16T12:00:00",
+        "2025-10-16T12:00:00.123456",
+        "2025-10-16T12:00:00+00:00",
+        "2025-10-16T12:00:00.123456+00:00",
+        datetime.now().isoformat(),
+    ]
+    for timestamp in valid_timestamps:
+        error_detail = PluginErrorDetail(
+            network="ameriflux",
+            operation="get_sites",
+            error="Test error",
+            timestamp=timestamp,
+        )
+        assert error_detail.timestamp == timestamp
+
+    # Invalid timestamp formats
+    invalid_timestamps = [
+        "not-a-timestamp",
+        "12:00:00",  # Missing date component
+        "2025/10/16 12:00:00",  # Wrong separator
+        "invalid-date-format",
+    ]
+    for timestamp in invalid_timestamps:
+        with pytest.raises(ValidationError) as exc_info:
+            PluginErrorDetail(
+                network="ameriflux",
+                operation="get_sites",
+                error="Test error",
+                timestamp=timestamp,
+            )
+        assert "timestamp must be in ISO format" in str(exc_info.value)
+
+    # Empty string should fail with min_length validation
+    with pytest.raises(ValidationError):
+        PluginErrorDetail(
+            network="ameriflux",
+            operation="get_sites",
+            error="Test error",
+            timestamp="",
+        )
+
+
+def test_plugin_error_detail_required_fields():
+    """Test that all required fields are enforced."""
+    with pytest.raises(ValidationError):
+        PluginErrorDetail()
+
+    with pytest.raises(ValidationError):
+        PluginErrorDetail(network="ameriflux")
+
+    with pytest.raises(ValidationError):
+        PluginErrorDetail(network="ameriflux", operation="get_sites")
+
+
+def test_plugin_error_detail_min_length_validation():
+    """Test minimum length validation for string fields."""
+    timestamp = datetime.now().isoformat()
+
+    # Empty strings should fail
+    with pytest.raises(ValidationError):
+        PluginErrorDetail(network="", operation="get_sites", error="Test error", timestamp=timestamp)
+
+    with pytest.raises(ValidationError):
+        PluginErrorDetail(network="ameriflux", operation="", error="Test error", timestamp=timestamp)
+
+    with pytest.raises(ValidationError):
+        PluginErrorDetail(network="ameriflux", operation="get_sites", error="", timestamp=timestamp)
+
+
+# Tests for ErrorSummary
+def test_error_summary_valid_creation():
+    """Test creating a valid ErrorSummary instance."""
+    timestamp = datetime.now().isoformat()
+    error_detail = PluginErrorDetail(
+        network="ameriflux",
+        operation="get_sites",
+        error="Connection timeout",
+        timestamp=timestamp,
+    )
+    error_summary = ErrorSummary(
+        total_errors=1,
+        total_results=10,
+        errors=[error_detail],
+    )
+    assert error_summary.total_errors == 1
+    assert error_summary.total_results == 10
+    assert len(error_summary.errors) == 1
+    assert error_summary.errors[0] == error_detail
+
+
+def test_error_summary_empty_errors():
+    """Test ErrorSummary with no errors."""
+    error_summary = ErrorSummary(
+        total_errors=0,
+        total_results=10,
+        errors=[],
+    )
+    assert error_summary.total_errors == 0
+    assert error_summary.total_results == 10
+    assert len(error_summary.errors) == 0
+
+
+def test_error_summary_multiple_errors():
+    """Test ErrorSummary with multiple errors."""
+    timestamp = datetime.now().isoformat()
+    errors = [
+        PluginErrorDetail(
+            network="ameriflux",
+            operation="get_sites",
+            error="Connection timeout",
+            timestamp=timestamp,
+        ),
+        PluginErrorDetail(
+            network="icos",
+            operation="get_sites",
+            error="API rate limit exceeded",
+            timestamp=timestamp,
+        ),
+    ]
+    error_summary = ErrorSummary(
+        total_errors=2,
+        total_results=5,
+        errors=errors,
+    )
+    assert error_summary.total_errors == 2
+    assert error_summary.total_results == 5
+    assert len(error_summary.errors) == 2
+
+
+def test_error_summary_non_negative_validation():
+    """Test that total_errors and total_results must be non-negative."""
+    timestamp = datetime.now().isoformat()
+    error_detail = PluginErrorDetail(
+        network="ameriflux",
+        operation="get_sites",
+        error="Test error",
+        timestamp=timestamp,
+    )
+
+    # Negative total_errors should fail
+    with pytest.raises(ValidationError):
+        ErrorSummary(total_errors=-1, total_results=10, errors=[error_detail])
+
+    # Negative total_results should fail
+    with pytest.raises(ValidationError):
+        ErrorSummary(total_errors=1, total_results=-1, errors=[error_detail])
+
+
+def test_error_summary_json_serialization():
+    """Test JSON serialization of ErrorSummary."""
+    timestamp = datetime.now().isoformat()
+    error_detail = PluginErrorDetail(
+        network="ameriflux",
+        operation="get_sites",
+        error="Connection timeout",
+        timestamp=timestamp,
+    )
+    error_summary = ErrorSummary(
+        total_errors=1,
+        total_results=10,
+        errors=[error_detail],
+    )
+
+    # Test serialization
+    json_data = error_summary.model_dump()
+    assert json_data["total_errors"] == 1
+    assert json_data["total_results"] == 10
+    assert len(json_data["errors"]) == 1
+    assert json_data["errors"][0]["network"] == "ameriflux"
+
+    # Test round-trip
+    reconstructed = ErrorSummary(**json_data)
+    assert reconstructed.total_errors == error_summary.total_errors
+    assert reconstructed.total_results == error_summary.total_results
+    assert len(reconstructed.errors) == len(error_summary.errors)

@@ -53,6 +53,8 @@ Quick Start
     sites = ['US-ARc', 'IT-Niv']
     downloaded_files = download(site_ids=sites, runfile=csv_filename)
 
+For advanced usage with error handling and the developer API, see :doc:`developer_guide`.
+
 **Command Line Usage:**
 
 .. code-block:: bash
@@ -66,15 +68,16 @@ Quick Start
     # Run connectivity tests
     fluxnet-shuttle test
 
-API Reference
+Documentation
 =============
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
-   modules
+   developer_guide
    cli
+   modules
 
 
 Indices and tables
