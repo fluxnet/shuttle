@@ -22,7 +22,7 @@ prefix cpmeta: <http://meta.icos-cp.eu/ontologies/cpmeta/>
 prefix prov: <http://www.w3.org/ns/prov#>
 prefix xsd: <http://www.w3.org/2001/XMLSchema#>
 prefix geo: <http://www.opengis.net/ont/geosparql#>
-select ?dobj ?hasNextVersion ?spec ?station ?fileName ?size ?submTime ?timeStart ?timeEnd
+select ?dobj ?hasNextVersion ?spec ?station ?fileName ?size ?submTime ?timeStart ?timeEnd ?lat ?lon ?ecosystemType
 where {
     VALUES ?spec {<http://meta.icos-cp.eu/resources/cpmeta/miscFluxnetArchiveProduct>}
     ?dobj cpmeta:hasObjectSpec ?spec .
@@ -33,6 +33,18 @@ where {
     ?dobj cpmeta:wasSubmittedBy/prov:endedAtTime ?submTime .
     ?dobj cpmeta:hasStartTime | (cpmeta:wasAcquiredBy / prov:startedAtTime) ?timeStart .
     ?dobj cpmeta:hasEndTime | (cpmeta:wasAcquiredBy / prov:endedAtTime) ?timeEnd .
+
+    # Get station location
+    OPTIONAL {
+        ?station cpmeta:hasLatitude ?lat .
+        ?station cpmeta:hasLongitude ?lon .
+    }
+
+    # Get ecosystem/vegetation type if available
+    OPTIONAL {
+        ?station cpmeta:hasEcosystemType ?ecosystemType .
+    }
+
     FILTER NOT EXISTS {[] cpmeta:isNextVersionOf ?dobj}
 }
 order by desc(?fileName)
@@ -99,10 +111,26 @@ class ICOSPlugin(NetworkPlugin):
                 time_start = binding.get("timeStart", {}).get("value", "")
                 time_end = binding.get("timeEnd", {}).get("value", "")
 
-                location_lat = binding.get("lat", {}).get("value", 0.0)
-                location_long = binding.get("lon", {}).get("value", 0.0)
-                location_lat = float(location_lat)
-                location_long = float(location_long)
+                # Extract latitude and longitude
+                location_lat = binding.get("lat", {}).get("value")
+                location_long = binding.get("lon", {}).get("value")
+
+                # Convert to float, use 0.0 as fallback
+                try:
+                    location_lat = float(location_lat) if location_lat is not None else 0.0
+                except (ValueError, TypeError):
+                    location_lat = 0.0
+                    logger.warning(f"Invalid latitude for station {station_id}")
+
+                try:
+                    location_long = float(location_long) if location_long is not None else 0.0
+                except (ValueError, TypeError):
+                    location_long = 0.0
+                    logger.warning(f"Invalid longitude for station {station_id}")
+
+                # Extract and map ecosystem type to IGBP
+                ecosystem_type = binding.get("ecosystemType", {}).get("value", "")
+                igbp = self._map_ecosystem_to_igbp(ecosystem_type)
 
                 first_year = 2000  # Default
                 last_year = 2020  # Default
@@ -121,18 +149,22 @@ class ICOSPlugin(NetworkPlugin):
 
                 # Extract download URL from data object URI
                 dobj_uri = binding["dobj"]["value"]
-                download_link = dobj_uri.replace("/meta/", "/objects/")
+                download_id = dobj_uri.split("/")[-1]
+                # URL-encode the brackets and quotes to avoid "Illegal request-target" errors
+                # Format: licence_accept?ids=%5B%22{id}%22%5D where %5B=[, %5D=], %22="
+                download_link = f"https://data.icos-cp.eu/licence_accept?ids=%5B%22{download_id}%22%5D"
 
                 site_info = BadmSiteGeneralInfo(
                     site_id=station_id,
                     network="ICOS",
                     location_lat=location_lat,
                     location_long=location_long,
-                    igbp="UNK",  # ICOS doesn't provide IGBP in this query
+                    igbp=igbp,
                 )
 
+                # Pydantic automatically converts str to HttpUrl during validation
                 product_data = DataFluxnetProduct(
-                    first_year=first_year, last_year=last_year, download_link=download_link
+                    first_year=first_year, last_year=last_year, download_link=download_link  # type: ignore[arg-type]
                 )
 
                 metadata = FluxnetDatasetMetadata(site_info=site_info, product_data=product_data)
@@ -142,6 +174,36 @@ class ICOSPlugin(NetworkPlugin):
             except Exception as e:
                 logger.warning(f"Error parsing ICOS site data: {e}")
                 continue
+
+    def _map_ecosystem_to_igbp(self, ecosystem_type: str) -> str:
+        """
+        Map ICOS ecosystem type to IGBP land cover classification.
+
+        ICOS provides ecosystem types as URIs in the format:
+        http://meta.icos-cp.eu/ontologies/cpmeta/igbp_XXX
+        where XXX is the IGBP code (ENF, GRA, CRO, etc.)
+
+        Args:
+            ecosystem_type: ICOS ecosystem type string (URI)
+
+        Returns:
+            IGBP classification code (e.g., "ENF", "GRA", "CRO", "UNK")
+        """
+        if not ecosystem_type:
+            return "UNK"
+
+        # Extract the last part of URI if it's a URI
+        if "/" in ecosystem_type:
+            ecosystem_type = ecosystem_type.split("/")[-1]
+
+        # Check if it's in IGBP format (igbp_XXX)
+        if ecosystem_type.startswith("igbp_"):
+            igbp_code = ecosystem_type[5:].upper()  # Extract XXX from igbp_XXX
+            return igbp_code
+
+        # If not recognized, return unknown
+        logger.debug(f"Unknown ecosystem type for IGBP mapping: {ecosystem_type}")
+        return "UNK"
 
 
 # Auto-register the plugin
