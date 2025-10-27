@@ -1,11 +1,11 @@
-"""Test suite for fluxnet_shuttle_lib.sources.ameriflux module."""
+"""Test suite for fluxnet_shuttle.sources.ameriflux module."""
 
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
-from fluxnet_shuttle_lib import FLUXNETShuttleError
-from fluxnet_shuttle_lib.sources.ameriflux import download_ameriflux_data
+from fluxnet_shuttle import FLUXNETShuttleError
+from fluxnet_shuttle.sources.ameriflux import download_ameriflux_data
 
 
 class TestDownloadAmerifluxData:
@@ -14,7 +14,7 @@ class TestDownloadAmerifluxData:
     def test_successful_download(self):
         """Test successful file download."""
         with (
-            patch("fluxnet_shuttle_lib.sources.ameriflux.requests.get") as mock_get,
+            patch("fluxnet_shuttle.sources.ameriflux.requests.get") as mock_get,
             patch("builtins.open", mock_open()),
         ):
             mock_response = MagicMock()
@@ -26,7 +26,7 @@ class TestDownloadAmerifluxData:
 
             mock_get.assert_called_once_with("http://example.com/test.zip", stream=True)
 
-    @patch("fluxnet_shuttle_lib.sources.ameriflux.requests.get")
+    @patch("fluxnet_shuttle.sources.ameriflux.requests.get")
     def test_download_failure_404(self, mock_get):
         """Test handling of 404 download failure."""
         mock_response = MagicMock()
@@ -36,7 +36,7 @@ class TestDownloadAmerifluxData:
         with pytest.raises(FLUXNETShuttleError, match="Failed to download AmeriFlux file.*404"):
             download_ameriflux_data("US-TEST", "test.zip", "http://example.com/test.zip")
 
-    @patch("fluxnet_shuttle_lib.sources.ameriflux.requests.get")
+    @patch("fluxnet_shuttle.sources.ameriflux.requests.get")
     def test_download_failure_500(self, mock_get):
         """Test handling of 500 download failure."""
         mock_response = MagicMock()
@@ -49,7 +49,7 @@ class TestDownloadAmerifluxData:
     def test_file_writing(self):
         """Test that file is written correctly."""
         with (
-            patch("fluxnet_shuttle_lib.sources.ameriflux.requests.get") as mock_get,
+            patch("fluxnet_shuttle.sources.ameriflux.requests.get") as mock_get,
             patch("builtins.open", mock_open()) as mock_file,
         ):
             mock_response = MagicMock()

@@ -1,12 +1,12 @@
 """
 Core functionality for FLUXNET Shuttle operations
 
-:module: fluxnet_shuttle_lib.shuttle
+:module: fluxnet_shuttle.shuttle
 :moduleauthor: Gilberto Z. Pastorello <gzpastorello@lbl.gov>
 :platform: Unix, Windows
 :created: 2024-10-31
 
-.. currentmodule:: fluxnet_shuttle_lib.shuttle
+.. currentmodule:: fluxnet_shuttle.shuttle
 
 This module provides the core functionality for FLUXNET Shuttle operations,
 including data discovery, download, and source management across multiple
@@ -45,7 +45,7 @@ Minimal MVP fields:
 License
 -------
 
-For license information, see LICENSE file or headers in fluxnet_shuttle_lib.__init__.py
+For license information, see LICENSE file or headers in fluxnet_shuttle.__init__.py
 
 
 Version
@@ -65,11 +65,11 @@ from typing import Any, Dict, List
 
 import aiofiles
 
-from fluxnet_shuttle_lib import FLUXNETShuttleError
-from fluxnet_shuttle_lib.core.decorators import async_to_sync
-from fluxnet_shuttle_lib.core.shuttle import FluxnetShuttle
-from fluxnet_shuttle_lib.sources.ameriflux import download_ameriflux_data
-from fluxnet_shuttle_lib.sources.icos import download_icos_data
+from fluxnet_shuttle import FLUXNETShuttleError
+from fluxnet_shuttle.core.decorators import async_to_sync
+from fluxnet_shuttle.core.shuttle import FluxnetShuttle
+from fluxnet_shuttle.sources.ameriflux import download_ameriflux_data
+from fluxnet_shuttle.sources.icos import download_icos_data
 
 _log = logging.getLogger(__name__)
 

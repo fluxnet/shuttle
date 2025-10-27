@@ -4,10 +4,10 @@ API Reference
 This section contains the complete API reference for the FLUXNET Shuttle Library.
 
 
-fluxnet_shuttle_lib package
+fluxnet_shuttle package
 ---------------------------
 
-.. automodule:: fluxnet_shuttle_lib
+.. automodule:: fluxnet_shuttle
 
    .. rubric:: Overview
    .. autosummary::

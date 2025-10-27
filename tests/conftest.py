@@ -1,4 +1,4 @@
-"""Shared pytest fixtures for fluxnet_shuttle_lib tests."""
+"""Shared pytest fixtures for fluxnet_shuttle tests."""
 
 import logging
 import os

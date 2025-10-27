@@ -4,9 +4,9 @@ Test Registry
 
 import pytest
 
-from fluxnet_shuttle_lib.core.base import NetworkPlugin
-from fluxnet_shuttle_lib.core.decorators import async_to_sync_generator
-from fluxnet_shuttle_lib.core.registry import ErrorCollectingIterator, PluginRegistry
+from fluxnet_shuttle.core.base import NetworkPlugin
+from fluxnet_shuttle.core.decorators import async_to_sync_generator
+from fluxnet_shuttle.core.registry import ErrorCollectingIterator, PluginRegistry
 
 
 class DummyPlugin(NetworkPlugin):

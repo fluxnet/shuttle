@@ -21,7 +21,7 @@ A Python library for FLUXNET shuttle operations providing functionality for down
 
 ### From PyPI (when published)
 ```bash
-pip install fluxnet-shuttle-lib
+pip install fluxnet-shuttle
 ```
 
 ### For Development
@@ -34,19 +34,19 @@ pip install -e .[dev,docs]
 ### For Running Example Notebooks
 To run the example Jupyter notebooks with data analysis and plotting:
 ```bash
-pip install fluxnet-shuttle-lib[examples]
+pip install fluxnet-shuttle[examples]
 ```
 
 ### For Testing Notebooks
 To run the notebook validation tests:
 ```bash
-pip install fluxnet-shuttle-lib[test-notebooks]
+pip install fluxnet-shuttle[test-notebooks]
 ```
 
 ### All Optional Dependencies
 To install all optional dependencies at once:
 ```bash
-pip install fluxnet-shuttle-lib[dev,docs,examples,test-notebooks]
+pip install fluxnet-shuttle[dev,docs,examples,test-notebooks]
 ```
 
 ## Requirements
@@ -121,7 +121,7 @@ pytest -m examples
 ### Coverage Report
 Generate detailed coverage report:
 ```bash
-pytest --cov=fluxnet_shuttle_lib --cov-report=html
+pytest --cov=fluxnet_shuttle --cov-report=html
 ```
 
 ## Documentation

@@ -2,13 +2,13 @@
 Configuration System
 ====================
 
-:module:: fluxnet_shuttle_lib.core.config
+:module:: fluxnet_shuttle.core.config
 :synopsis: Configuration system for FLUXNET Shuttle library
 :moduleauthor: Valerie Hendrix <vchendrix@lbl.gov>
 :platform: Unix, Windows
 :created: 2025-10-09
 
-.. currentmodule:: fluxnet_shuttle_lib.core.config
+.. currentmodule:: fluxnet_shuttle.core.config
 
 
 This module provides the configuration system for the FLUXNET Shuttle
@@ -53,7 +53,7 @@ class ShuttleConfig:
                 # Don't use deprecated pkg_resources if possible
                 import importlib.resources
 
-                config_data = importlib.resources.read_text("fluxnet_shuttle_lib.plugins", "config.yaml")
+                config_data = importlib.resources.read_text("fluxnet_shuttle.plugins", "config.yaml")
                 config_dict = yaml.safe_load(config_data)
                 logger.info("Loaded default configuration from package")
             except (ImportError, FileNotFoundError):  # pragma: no cover

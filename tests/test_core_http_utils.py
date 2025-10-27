@@ -11,14 +11,14 @@ from unittest.mock import AsyncMock, patch
 import aiohttp
 import pytest
 
-from fluxnet_shuttle_lib.core.http_utils import session_request
+from fluxnet_shuttle.core.http_utils import session_request
 
 
 class TestHTTPUtils:
     """Test suite for HTTP utility functions."""
 
     @pytest.mark.asyncio
-    @patch("fluxnet_shuttle_lib.core.http_utils.aiohttp.ClientSession.request")
+    @patch("fluxnet_shuttle.core.http_utils.aiohttp.ClientSession.request")
     async def test_session_request_success(self, mock_request):
         """Test successful HTTP GET request."""
         url = "https://httpbin.org/get"
@@ -42,7 +42,7 @@ class TestHTTPUtils:
             assert isinstance(exc_info.value.original_error, aiohttp.ClientConnectionError)
 
     @pytest.mark.asyncio
-    @patch("fluxnet_shuttle_lib.core.http_utils.aiohttp.ClientSession.request")
+    @patch("fluxnet_shuttle.core.http_utils.aiohttp.ClientSession.request")
     async def test_session_request_http_error(self, mock_request):
         """Test HTTP request that results in an HTTP error (e.g., 404)."""
         url = "https://httpbin.org/status/404"

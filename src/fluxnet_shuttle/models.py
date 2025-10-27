@@ -2,14 +2,14 @@
 Pydantic Schema Models for FLUXNET Shuttle Library
 ==================================================
 
-:module:: fluxnet_shuttle_lib.models
+:module:: fluxnet_shuttle.models
 :synopsis: Pydantic models for FLUXNET dataset metadata and validation
 :moduleauthor: Valerie Hendrix <vchendrix@lbl.gov>
 :versionadded: 1.0.0
 :platform: Unix, Windows
 :created: 2025-10-09
 
-.. currentmodule:: fluxnet_shuttle_lib.models
+.. currentmodule:: fluxnet_shuttle.models
 
 This module defines Pydantic models for data validation and serialization
 in the FLUXNET Shuttle Library. These models ensure type safety and provide
@@ -31,7 +31,7 @@ validation for:
     - Error tracking and reporting
 
 Example:
-    >>> from fluxnet_shuttle_lib.models.schema import FluxnetDatasetMetadata
+    >>> from fluxnet_shuttle.models.schema import FluxnetDatasetMetadata
     >>> site_info = BadmSiteGeneralInfo(
     ...     site_id="US-Ha1",
     ...     network="AmeriFlux",

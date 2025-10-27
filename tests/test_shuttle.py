@@ -1,4 +1,4 @@
-"""Test suite for fluxnet_shuttle_lib.shuttle module."""
+"""Test suite for fluxnet_shuttle.shuttle module."""
 
 import os
 import tempfile
@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock, call, mock_open, patch
 
 import pytest
 
-from fluxnet_shuttle_lib import FLUXNETShuttleError
-from fluxnet_shuttle_lib.shuttle import download, listall
+from fluxnet_shuttle import FLUXNETShuttleError
+from fluxnet_shuttle.shuttle import download, listall
 
 
 class TestDownload:
@@ -40,7 +40,7 @@ class TestDownload:
         with pytest.raises(FLUXNETShuttleError, match="Network Unknown not supported for download"):
             download(["US-TEST"], "test.csv")
 
-    @patch("fluxnet_shuttle_lib.shuttle.download_ameriflux_data")
+    @patch("fluxnet_shuttle.shuttle.download_ameriflux_data")
     @patch("os.path.exists")
     @patch(
         "builtins.open",
@@ -58,7 +58,7 @@ class TestDownload:
             site_id="US-TEST", filename="test.zip", download_link="http://example.com/test.zip"
         )
 
-    @patch("fluxnet_shuttle_lib.shuttle.download_icos_data")
+    @patch("fluxnet_shuttle.shuttle.download_icos_data")
     @patch("os.path.exists")
     @patch(
         "builtins.open",
@@ -113,10 +113,10 @@ class TestListall:
         assert callable(listall)
 
     @pytest.mark.asyncio
-    @patch("fluxnet_shuttle_lib.shuttle.aiofiles.open")
-    @patch("fluxnet_shuttle_lib.shuttle.csv.DictWriter.writerow", new_callable=AsyncMock)
-    @patch("fluxnet_shuttle_lib.shuttle.csv.DictWriter.writeheader", new_callable=AsyncMock)
-    @patch("fluxnet_shuttle_lib.shuttle.datetime")
+    @patch("fluxnet_shuttle.shuttle.aiofiles.open")
+    @patch("fluxnet_shuttle.shuttle.csv.DictWriter.writerow", new_callable=AsyncMock)
+    @patch("fluxnet_shuttle.shuttle.csv.DictWriter.writeheader", new_callable=AsyncMock)
+    @patch("fluxnet_shuttle.shuttle.datetime")
     async def test_listall_basic_functionality(self, mock_datetime, mock_write_header, mock_write_row, mock_open):
         """Test basic listall functionality without external calls."""
 
@@ -135,11 +135,11 @@ class TestListall:
         assert not mock_write_row.called  # No rows should be written when no networks are enabled
 
     @pytest.mark.asyncio
-    @patch("fluxnet_shuttle_lib.shuttle.aiofiles.open")
-    @patch("fluxnet_shuttle_lib.shuttle.csv.DictWriter.writerow", new_callable=AsyncMock)
-    @patch("fluxnet_shuttle_lib.shuttle.csv.DictWriter.writeheader", new_callable=AsyncMock)
-    @patch("fluxnet_shuttle_lib.shuttle.datetime")
-    @patch("fluxnet_shuttle_lib.core.shuttle.FluxnetShuttle.get_all_sites", new_callable=MagicMock)
+    @patch("fluxnet_shuttle.shuttle.aiofiles.open")
+    @patch("fluxnet_shuttle.shuttle.csv.DictWriter.writerow", new_callable=AsyncMock)
+    @patch("fluxnet_shuttle.shuttle.csv.DictWriter.writeheader", new_callable=AsyncMock)
+    @patch("fluxnet_shuttle.shuttle.datetime")
+    @patch("fluxnet_shuttle.core.shuttle.FluxnetShuttle.get_all_sites", new_callable=MagicMock)
     async def test_listall_with_networks(
         self, mock_get_all_sites, mock_datetime, mock_write_header, mock_write_row, mock_open
     ):
@@ -206,7 +206,7 @@ class TestModuleFunctions:
 
     def test_test_connectivity_function_exists(self):
         """Test that test connectivity function exists."""
-        from fluxnet_shuttle_lib.shuttle import test
+        from fluxnet_shuttle.shuttle import test
 
         assert callable(test)
 
@@ -215,7 +215,7 @@ class TestModuleFunctions:
 
     def test_import_works(self):
         """Test that imports work correctly."""
-        from fluxnet_shuttle_lib.shuttle import download, listall
+        from fluxnet_shuttle.shuttle import download, listall
 
         assert download is not None
         assert listall is not None

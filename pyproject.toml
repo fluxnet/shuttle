@@ -16,7 +16,7 @@ dirty_template = "{tag}.post{ccount}+dirty"
 
 
 [project]
-name = "fluxnet-shuttle-lib"
+name = "fluxnet-shuttle"
 # 'dynamic = ["version"]' tells build tools that the version is determined at build time (by setuptools-git-versioning), not statically set here.
 dynamic = ["version"]
 description = "A Python library for FLUXNET shuttle operations."
@@ -66,13 +66,13 @@ test-notebooks = [
 ]
 
 [project.scripts]
-fluxnet-shuttle = "fluxnet_shuttle_lib.main:main"
+fluxnet-shuttle = "fluxnet_shuttle.main:main"
 
 # Entry points for plugin discovery
 [project.entry-points."fluxnet_shuttle.plugins"]
-ameriflux = "fluxnet_shuttle_lib.plugins.ameriflux:AmeriFluxPlugin"
-icos = "fluxnet_shuttle_lib.plugins.icos:ICOSPlugin"
-fluxnet2015 = "fluxnet_shuttle_lib.plugins.fluxnet2015:Fluxnet2015Plugin"
+ameriflux = "fluxnet_shuttle.plugins.ameriflux:AmeriFluxPlugin"
+icos = "fluxnet_shuttle.plugins.icos:ICOSPlugin"
+fluxnet2015 = "fluxnet_shuttle.plugins.fluxnet2015:Fluxnet2015Plugin"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -82,7 +82,7 @@ where = ["src"]
 
 # Include package data
 [tool.setuptools.package-data]
-"fluxnet_shuttle_lib.plugins" = ["config.yaml"]
+"fluxnet_shuttle.plugins" = ["config.yaml"]
 
 [tool.mypy]
 ignore_missing_imports = true
@@ -96,7 +96,7 @@ line_length = 120
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=fluxnet_shuttle_lib --cov-report=term-missing -m 'not integration and not slow and not performance and not examples'"
+addopts = "--cov=fluxnet_shuttle --cov-report=term-missing -m 'not integration and not slow and not performance and not examples'"
 markers = [
     "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",

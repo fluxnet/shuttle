@@ -1,5 +1,5 @@
 """
-:module: fluxnet_shuttle_lib
+:module: fluxnet_shuttle
 :synopsis: Main library package for FLUXNET Shuttle operations with plugin system
 :module author: Gilberto Pastorello <gzpastorello@lbl.gov>
 :module author: Valerie Hendrix <vchendrix@lbl.gov>
@@ -7,7 +7,7 @@
 :created: 2024-10-31
 :updated: 2025-01-09
 
-.. currentmodule:: fluxnet_shuttle_lib
+.. currentmodule:: fluxnet_shuttle
 
 
 FLUXNET Shuttle Library provides functionality for discovering, downloading, and cataloging

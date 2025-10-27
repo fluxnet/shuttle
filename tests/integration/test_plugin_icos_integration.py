@@ -14,8 +14,8 @@ import logging
 import pytest
 import requests
 
-from fluxnet_shuttle_lib.models import FluxnetDatasetMetadata
-from fluxnet_shuttle_lib.plugins.icos import ICOSPlugin
+from fluxnet_shuttle.models import FluxnetDatasetMetadata
+from fluxnet_shuttle.plugins.icos import ICOSPlugin
 
 # Mark all tests in this file as integration tests
 pytestmark = pytest.mark.integration

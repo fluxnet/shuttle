@@ -62,13 +62,13 @@ poetry shell
 #### Using conda (with environment.yml)
 ```sh
 conda env create -f environment.yml
-conda activate fluxnet-shuttle-lib
+conda activate fluxnet-shuttle
 ```
 
 Or, to create the environment manually:
 ```sh
-conda create -n fluxnet-shuttle-lib python=3.13
-conda activate fluxnet-shuttle-lib
+conda create -n fluxnet-shuttle python=3.13
+conda activate fluxnet-shuttle
 pip install -e .[dev,docs]
 ```
 
@@ -86,13 +86,13 @@ black .
 isort .
 
 # Lint with flake8
-flake8 src/fluxnet_shuttle_lib tests
+flake8 src/fluxnet_shuttle tests
 
 # Type check with mypy
-mypy src/fluxnet_shuttle_lib
+mypy src/fluxnet_shuttle
 
 # Run tests with coverage
-pytest --cov=fluxnet_shuttle_lib --cov-report=term-missing
+pytest --cov=fluxnet_shuttle --cov-report=term-missing
 ```
 
 ### Running Tests
@@ -102,7 +102,7 @@ pytest --cov=fluxnet_shuttle_lib --cov-report=term-missing
 pytest
 
 # Run tests with coverage
-pytest --cov=fluxnet_shuttle_lib
+pytest --cov=fluxnet_shuttle
 
 # Run specific test file
 pytest tests/test_core.py
@@ -132,9 +132,9 @@ pre-commit install
 ## Project Structure
 
 ```
-fluxnet-shuttle-lib/
+fluxnet-shuttle/
 ├── src/
-│   └── fluxnet_shuttle_lib/
+│   └── fluxnet_shuttle/
 │       ├── __init__.py
 │       └── core.py
 ├── tests/

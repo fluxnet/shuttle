@@ -2,13 +2,13 @@
 Base Plugin Interface
 =====================
 
-:module: fluxnet_shuttle_lib.core.base
+:module: fluxnet_shuttle.core.base
 :synopsis: Base class and interfaces for network plugins in the FLUXNET Shuttle library.
 :author: Valerie Hendrix <vchendrix@lbl.gov>
 :platform: Unix, Windows
 :created: 2025-10-09
 
-.. currentmodule:: fluxnet_shuttle_lib.core.base
+.. currentmodule:: fluxnet_shuttle.core.base
 
 This module defines the base class and interfaces for network plugins
 in the FLUXNET Shuttle library.
@@ -32,8 +32,8 @@ Implementation Basics
 ---------------------
 An example implementation of a network plugin might look like this::
 
-    from fluxnet_shuttle_lib.core.base import NetworkPlugin
-    from fluxnet_shuttle_lib.models import FluxnetDatasetMetadata
+    from fluxnet_shuttle.core.base import NetworkPlugin
+    from fluxnet_shuttle.models import FluxnetDatasetMetadata
 
     class MyNetworkPlugin(NetworkPlugin):
         @property
@@ -85,9 +85,9 @@ from typing import Any, AsyncGenerator, Dict, Optional
 
 import aiohttp
 
-from fluxnet_shuttle_lib.core import exceptions
-from fluxnet_shuttle_lib.core.decorators import async_to_sync_generator
-from fluxnet_shuttle_lib.core.http_utils import session_request
+from fluxnet_shuttle.core import exceptions
+from fluxnet_shuttle.core.decorators import async_to_sync_generator
+from fluxnet_shuttle.core.http_utils import session_request
 
 from ..models import FluxnetDatasetMetadata
 

@@ -2,13 +2,13 @@
 Command Line Interface Module
 =============================
 
-:module: fluxnet_shuttle_lib.main
+:module: fluxnet_shuttle.main
 :synopsis: Command-line interface for FLUXNET Shuttle Library
-:moduleauthor: Generated for fluxnet-shuttle-lib
+:moduleauthor: Generated for fluxnet-shuttle
 :platform: Unix, Windows
 :created: 2025-10-06
 
-.. currentmodule:: fluxnet_shuttle_lib.main
+.. currentmodule:: fluxnet_shuttle.main
 
 
 This module provides the command-line interface for the FLUXNET Shuttle Library,
@@ -254,7 +254,7 @@ def main() -> None:
 
     parser.add_argument("--no-logfile", help="Disable logging to file", action="store_true", dest="no_logfile")
 
-    parser.add_argument("--version", help="Show version and exit", action="version", version="fluxnet-shuttle-lib")
+    parser.add_argument("--version", help="Show version and exit", action="version", version="fluxnet-shuttle")
 
     args = parser.parse_args()
 

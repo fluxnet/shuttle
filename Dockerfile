@@ -17,4 +17,4 @@ RUN pip install --upgrade pip && pip install .
 ENV PYTHONPATH=/app/src
 
 # Default command to demonstrate library import
-CMD ["python", "-c", "from fluxnet_shuttle_lib import main; main(); print('FLUXNET Shuttle Library main function executed successfully!')"]
+CMD ["python", "-c", "from fluxnet_shuttle import main; main(); print('FLUXNET Shuttle Library main function executed successfully!')"]
