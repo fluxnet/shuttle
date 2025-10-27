@@ -2,13 +2,13 @@
 Decorators module
 =================
 
-:module:: fluxnet_shuttle_lib.core.decorators
+:module:: fluxnet_shuttle.core.decorators
 :synopsis: Decorators for FLUXNET Shuttle Library
 :moduleauthor: Valerie Hendrix <vchendrix@lbl.gov>
 :platform: Unix, Windows
 :created: 2025-10-09
 
-.. currentmodule:: fluxnet_shuttle_lib.core.decorators
+.. currentmodule:: fluxnet_shuttle.core.decorators
 
 This module provides decorators for converting between sync and async operations.
 """

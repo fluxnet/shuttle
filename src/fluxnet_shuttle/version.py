@@ -1,7 +1,7 @@
 import importlib.metadata
 
 try:
-    __version__ = importlib.metadata.version("fluxnet-shuttle-lib")
+    __version__ = importlib.metadata.version("fluxnet-shuttle")
     if "-" in __version__:
         __release__ = __version__
         __version__ = __version__.split("-")[0]

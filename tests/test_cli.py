@@ -15,7 +15,7 @@ from unittest.mock import patch
 
 import pytest
 
-from fluxnet_shuttle_lib.main import cmd_download, cmd_listall, cmd_search, cmd_sources, cmd_test, main, setup_logging
+from fluxnet_shuttle.main import cmd_download, cmd_listall, cmd_search, cmd_sources, cmd_test, main, setup_logging
 
 
 class TestCLIIntegration:
@@ -31,7 +31,7 @@ class TestCLIIntegration:
                 """
 import sys
 sys.argv = ["fluxnet-shuttle", "--help"]
-from fluxnet_shuttle_lib.main import main
+from fluxnet_shuttle.main import main
 try:
     main()
 except SystemExit as e:
@@ -55,7 +55,7 @@ except SystemExit as e:
     def test_cli_import(self):
         """Test that CLI module can be imported."""
         result = subprocess.run(
-            [sys.executable, "-c", 'from fluxnet_shuttle_lib.main import main; print("CLI import successful")'],
+            [sys.executable, "-c", 'from fluxnet_shuttle.main import main; print("CLI import successful")'],
             capture_output=True,
             text=True,
         )
@@ -73,7 +73,7 @@ except SystemExit as e:
                 """
 import sys
 sys.argv = ["fluxnet-shuttle"]
-from fluxnet_shuttle_lib.main import main
+from fluxnet_shuttle.main import main
 try:
     main()
 except SystemExit as e:
@@ -99,7 +99,7 @@ except SystemExit as e:
                 """
 import sys
 sys.argv = ["fluxnet-shuttle", "invalid"]
-from fluxnet_shuttle_lib.main import main
+from fluxnet_shuttle.main import main
 try:
     main()
 except SystemExit as e:
@@ -125,7 +125,7 @@ except SystemExit as e:
                 """
 import sys
 sys.argv = ["fluxnet-shuttle", "listall", "--help"]
-from fluxnet_shuttle_lib.main import main
+from fluxnet_shuttle.main import main
 try:
     main()
 except SystemExit as e:
@@ -153,7 +153,7 @@ except SystemExit as e:
                 """
 import sys
 sys.argv = ["fluxnet-shuttle", "download", "--no-logfile"]
-from fluxnet_shuttle_lib.main import main
+from fluxnet_shuttle.main import main
 try:
     main()
 except SystemExit as e:
@@ -212,7 +212,7 @@ class TestCLIFunctions:
             if os.path.exists(log_file):
                 os.unlink(log_file)
 
-    @patch("fluxnet_shuttle_lib.main.listall")
+    @patch("fluxnet_shuttle.main.listall")
     def test_cmd_listall_basic(self, mock_listall):
         """Test cmd_listall function."""
         mock_listall.return_value = [{"site_id": "US-Ha1", "network": "AmeriFlux", "data_url": "http://example.com"}]
@@ -226,7 +226,7 @@ class TestCLIFunctions:
         # Verify listall was called
         mock_listall.assert_called_once()
 
-    @patch("fluxnet_shuttle_lib.main.listall")
+    @patch("fluxnet_shuttle.main.listall")
     def test_cmd_listall_no_logfile(self, mock_listall):
         """Test cmd_listall with no log file."""
         mock_listall.return_value = []
@@ -236,7 +236,7 @@ class TestCLIFunctions:
         cmd_listall(args)
         mock_listall.assert_called_once()
 
-    @patch("fluxnet_shuttle_lib.main.download")
+    @patch("fluxnet_shuttle.main.download")
     def test_cmd_download_with_sites_and_runfile(self, mock_download):
         """Test cmd_download with both site IDs and runfile."""
         mock_download.return_value = []
@@ -263,7 +263,7 @@ class TestCLIFunctions:
         finally:
             os.unlink(csv_file)
 
-    @patch("fluxnet_shuttle_lib.main.download")
+    @patch("fluxnet_shuttle.main.download")
     def test_cmd_download_with_runfile_only(self, mock_download):
         """Test cmd_download with run file only (sites extracted from CSV)."""
         mock_download.return_value = []
@@ -308,7 +308,7 @@ class TestCLIFunctions:
             cmd_download(args)
         assert exc_info.value.code == 1
 
-    @patch("fluxnet_shuttle_lib.main.download")
+    @patch("fluxnet_shuttle.main.download")
     def test_cmd_download_with_space_separated_sites(self, mock_download):
         """Test cmd_download with space-separated site IDs in a single argument."""
         mock_download.return_value = []
@@ -357,7 +357,7 @@ class TestCLIFunctions:
         finally:
             os.unlink(csv_file)
 
-    @patch("fluxnet_shuttle_lib.main.download")
+    @patch("fluxnet_shuttle.main.download")
     def test_cmd_download_csv_uppercase_site_id(self, mock_download):
         """Test cmd_download with CSV file having SITE_ID column (uppercase)."""
         mock_download.return_value = []
@@ -407,7 +407,7 @@ class TestCLIFunctions:
         # Should not raise any exception
         cmd_search(args)
 
-    @patch("fluxnet_shuttle_lib.shuttle.listall")
+    @patch("fluxnet_shuttle.shuttle.listall")
     def test_cmd_test(self, mock_listall):
         """Test cmd_test function."""
         mock_listall.return_value = [{"site_id": "test"}]
@@ -418,7 +418,7 @@ class TestCLIFunctions:
         cmd_test(args)
         mock_listall.assert_called_once()
 
-    @patch("fluxnet_shuttle_lib.shuttle.listall")
+    @patch("fluxnet_shuttle.shuttle.listall")
     def test_cmd_test_exception_handling(self, mock_listall):
         """Test cmd_test function with API exception."""
         mock_listall.side_effect = Exception("Connection error")
@@ -438,7 +438,7 @@ class TestCLIFunctions:
                 main()
             assert exc_info.value.code == 0
 
-    @patch("fluxnet_shuttle_lib.main.cmd_listall")
+    @patch("fluxnet_shuttle.main.cmd_listall")
     def test_main_with_listall_command(self, mock_cmd):
         """Test main function with listall command."""
         test_args = ["fluxnet-shuttle", "listall", "--no-logfile"]
@@ -447,7 +447,7 @@ class TestCLIFunctions:
             main()
             mock_cmd.assert_called_once()
 
-    @patch("fluxnet_shuttle_lib.main.cmd_download")
+    @patch("fluxnet_shuttle.main.cmd_download")
     def test_main_with_download_command(self, mock_cmd):
         """Test main function with download command."""
         test_args = ["fluxnet-shuttle", "download", "--sites", "US-Ha1", "--no-logfile"]
@@ -456,7 +456,7 @@ class TestCLIFunctions:
             main()
             mock_cmd.assert_called_once()
 
-    @patch("fluxnet_shuttle_lib.main.cmd_sources")
+    @patch("fluxnet_shuttle.main.cmd_sources")
     def test_main_with_sources_command(self, mock_cmd):
         """Test main function with sources command."""
         test_args = ["fluxnet-shuttle", "sources", "--no-logfile"]
@@ -465,7 +465,7 @@ class TestCLIFunctions:
             main()
             mock_cmd.assert_called_once()
 
-    @patch("fluxnet_shuttle_lib.main.cmd_search")
+    @patch("fluxnet_shuttle.main.cmd_search")
     def test_main_with_search_command(self, mock_cmd):
         """Test main function with search command."""
         test_args = ["fluxnet-shuttle", "search", "--no-logfile"]
@@ -474,7 +474,7 @@ class TestCLIFunctions:
             main()
             mock_cmd.assert_called_once()
 
-    @patch("fluxnet_shuttle_lib.main.cmd_test")
+    @patch("fluxnet_shuttle.main.cmd_test")
     def test_main_with_test_command(self, mock_cmd):
         """Test main function with test command."""
         test_args = ["fluxnet-shuttle", "test", "--no-logfile"]
@@ -500,10 +500,10 @@ class TestCLIFunctions:
                     main()
                 assert exc_info.value.code == 1
 
-    @patch("fluxnet_shuttle_lib.main.cmd_test")
+    @patch("fluxnet_shuttle.main.cmd_test")
     def test_main_fluxnet_shuttle_error(self, mock_cmd):
         """Test main function with FLUXNETShuttleError."""
-        from fluxnet_shuttle_lib import FLUXNETShuttleError
+        from fluxnet_shuttle import FLUXNETShuttleError
 
         mock_cmd.side_effect = FLUXNETShuttleError("Test error")
 
@@ -514,7 +514,7 @@ class TestCLIFunctions:
                 main()
             assert exc_info.value.code == 1
 
-    @patch("fluxnet_shuttle_lib.main.cmd_test")
+    @patch("fluxnet_shuttle.main.cmd_test")
     def test_main_unexpected_error(self, mock_cmd):
         """Test main function with unexpected exception."""
         mock_cmd.side_effect = RuntimeError("Unexpected error")
@@ -548,7 +548,7 @@ class TestCLIFunctions:
             os.chmod(csv_file, 0o644)
             os.unlink(csv_file)
 
-    @patch("fluxnet_shuttle_lib.shuttle.listall")
+    @patch("fluxnet_shuttle.shuttle.listall")
     def test_cmd_test_no_sites_returned(self, mock_listall):
         """Test cmd_test function when no sites are returned."""
         mock_listall.return_value = []  # Empty result

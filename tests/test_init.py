@@ -1,4 +1,4 @@
-"""Test suite for fluxnet_shuttle_lib.__init__ module."""
+"""Test suite for fluxnet_shuttle.__init__ module."""
 
 import logging
 import os
@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from fluxnet_shuttle_lib import (
+from fluxnet_shuttle import (
     LOG_DATEFMT,
     LOG_FMT,
     LOG_LEVELS,
@@ -224,14 +224,14 @@ class TestModuleImports:
 
     def test_shuttle_functions_imported(self):
         """Test that shuttle functions are properly imported."""
-        from fluxnet_shuttle_lib import download, listall
+        from fluxnet_shuttle import download, listall
 
         assert callable(download)
         assert callable(listall)
 
     def test_all_exports(self):
         """Test that __all__ contains expected exports."""
-        from fluxnet_shuttle_lib import __all__
+        from fluxnet_shuttle import __all__
 
         expected_exports = [
             "download",

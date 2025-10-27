@@ -2,7 +2,7 @@
 Custom Exceptions for FLUXNET Shuttle Library
 =============================================
 
-:module:: fluxnet_shuttle_lib.core.exceptions
+:module:: fluxnet_shuttle.core.exceptions
 :synopsis: Custom exceptions for FLUXNET Shuttle Library
 :moduleauthor: Valerie Hendrix <vchendrix@lbl.gov>
 :platform: Unix, Windows

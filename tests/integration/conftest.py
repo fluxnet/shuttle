@@ -32,7 +32,7 @@ def ameriflux_api_available():
     """Check if AmeriFlux API is available."""
     import requests
 
-    from fluxnet_shuttle_lib.plugins.ameriflux import (
+    from fluxnet_shuttle.plugins.ameriflux import (
         AMERIFLUX_AVAILABILITY_PATH,
         AMERIFLUX_BASE_PATH,
         AMERIFLUX_BASE_URL,
@@ -52,7 +52,7 @@ def icos_api_available():
     """Check if ICOS Carbon Portal API is available."""
     import requests
 
-    from fluxnet_shuttle_lib.sources.icos import ICOS_API_URL
+    from fluxnet_shuttle.sources.icos import ICOS_API_URL
 
     try:
         # Try to reach ICOS SPARQL endpoint

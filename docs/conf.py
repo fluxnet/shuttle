@@ -2,7 +2,7 @@
 import os
 import sys
 
-from fluxnet_shuttle_lib.version import __release__
+from fluxnet_shuttle.version import __release__
 
 # Add the project root to the Python path
 sys.path.insert(0, os.path.abspath("../src"))

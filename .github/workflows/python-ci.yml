@@ -28,8 +28,8 @@ jobs:
       - name: Check import sorting
         run: isort --check-only .
       - name: Lint with flake8
-        run: flake8 src/fluxnet_shuttle_lib tests
+        run: flake8 src/fluxnet_shuttle tests
       - name: Type check with mypy
-        run: mypy src/fluxnet_shuttle_lib
+        run: mypy src/fluxnet_shuttle
       - name: Test with pytest and coverage
         run: pytest -vv --cov-report=xml

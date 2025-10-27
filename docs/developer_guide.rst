@@ -26,7 +26,7 @@ Basic Usage
 
 .. code-block:: python
 
-    from fluxnet_shuttle_lib.core.shuttle import FluxnetShuttle
+    from fluxnet_shuttle.core.shuttle import FluxnetShuttle
 
     # Create shuttle instance (automatically loads all registered plugins)
     shuttle = FluxnetShuttle()
@@ -49,7 +49,7 @@ Programmatic Error Handling
 
 .. code-block:: python
 
-    from fluxnet_shuttle_lib.core.shuttle import FluxnetShuttle
+    from fluxnet_shuttle.core.shuttle import FluxnetShuttle
 
     # Create shuttle instance
     shuttle = FluxnetShuttle()
@@ -85,7 +85,7 @@ You can also work with individual network plugins directly:
 
 .. code-block:: python
 
-    from fluxnet_shuttle_lib.core.registry import registry
+    from fluxnet_shuttle.core.registry import registry
 
     # List all available plugins
     plugin_names = registry.list_plugins()
@@ -105,7 +105,7 @@ List all available plugins and create instances:
 
 .. code-block:: python
 
-    from fluxnet_shuttle_lib.core.registry import registry
+    from fluxnet_shuttle.core.registry import registry
 
     # Get all registered plugin names
     plugin_names = registry.list_plugins()
@@ -129,7 +129,7 @@ For normal Python scripts and synchronous contexts, use regular for loops:
 
 .. code-block:: python
 
-    from fluxnet_shuttle_lib.core.shuttle import FluxnetShuttle
+    from fluxnet_shuttle.core.shuttle import FluxnetShuttle
 
     shuttle = FluxnetShuttle()
 
@@ -147,7 +147,7 @@ Use the async interface when you're in an async context:
 .. code-block:: python
 
     import asyncio
-    from fluxnet_shuttle_lib.core.shuttle import FluxnetShuttle
+    from fluxnet_shuttle.core.shuttle import FluxnetShuttle
 
     async def fetch_sites():
         shuttle = FluxnetShuttle()

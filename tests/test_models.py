@@ -12,7 +12,7 @@ from datetime import datetime
 import pytest
 from pydantic import ValidationError
 
-from fluxnet_shuttle_lib.models import (
+from fluxnet_shuttle.models import (
     BadmSiteGeneralInfo,
     DataFluxnetProduct,
     ErrorSummary,

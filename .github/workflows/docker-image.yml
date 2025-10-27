@@ -83,8 +83,8 @@ jobs:
       - name: Test Docker image
         run: |
           docker run --rm fluxnet-shuttle-lib:${{ steps.get_version.outputs.version }} python -c "
-          import fluxnet_shuttle_lib
-          from fluxnet_shuttle_lib import download, listall, main
+          import fluxnet_shuttle
+          from fluxnet_shuttle import download, listall, main
           print('Library imported successfully')
           print('Available functions: download, listall, main')
           print('Library import test passed')

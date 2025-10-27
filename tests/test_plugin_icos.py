@@ -1,11 +1,11 @@
-"""Test suite for fluxnet_shuttle_lib.sources.icos module."""
+"""Test suite for fluxnet_shuttle.sources.icos module."""
 
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from fluxnet_shuttle_lib.models import FluxnetDatasetMetadata
-from fluxnet_shuttle_lib.plugins.icos import ICOSPlugin
+from fluxnet_shuttle.models import FluxnetDatasetMetadata
+from fluxnet_shuttle.plugins.icos import ICOSPlugin
 
 
 class TestICOSPlugin:
@@ -28,7 +28,7 @@ class TestICOSPlugin:
         assert plugin.config["api_url"] == "https://test.icos-cp.eu"
 
     @pytest.mark.asyncio
-    @patch("fluxnet_shuttle_lib.plugins.icos.NetworkPlugin._session_request")
+    @patch("fluxnet_shuttle.plugins.icos.NetworkPlugin._session_request")
     async def test_async_get_sites(self, mock_request):
         """Test async get_sites method."""
         mock_response = AsyncMock()
@@ -70,7 +70,7 @@ class TestICOSPlugin:
         )
 
     @pytest.mark.asyncio
-    @patch("fluxnet_shuttle_lib.plugins.icos.NetworkPlugin._session_request")
+    @patch("fluxnet_shuttle.plugins.icos.NetworkPlugin._session_request")
     async def test_async_get_sites_with_time_errors(self, mock_request):
         """Test async get_sites method."""
         mock_response = AsyncMock()
@@ -113,7 +113,7 @@ class TestICOSPlugin:
         assert mock_request.call_count == 1
 
     @pytest.mark.asyncio
-    @patch("fluxnet_shuttle_lib.plugins.icos.NetworkPlugin._session_request")
+    @patch("fluxnet_shuttle.plugins.icos.NetworkPlugin._session_request")
     async def test_async_get_sites_with_errors(self, mock_request, caplog):
         """Test async get_sites method with invalid latitude."""
         mock_response = AsyncMock()
@@ -174,7 +174,7 @@ class TestICOSPlugin:
         assert plugin._map_ecosystem_to_igbp("some_random_text") == "UNK"
 
     @pytest.mark.asyncio
-    @patch("fluxnet_shuttle_lib.plugins.icos.NetworkPlugin._session_request")
+    @patch("fluxnet_shuttle.plugins.icos.NetworkPlugin._session_request")
     async def test_async_get_sites_with_invalid_longitude(self, mock_request, caplog):
         """Test async get_sites method with invalid longitude."""
         mock_response = AsyncMock()
@@ -213,7 +213,7 @@ class TestICOSPlugin:
         assert mock_request.call_count == 1
 
     @pytest.mark.asyncio
-    @patch("fluxnet_shuttle_lib.plugins.icos.NetworkPlugin._session_request")
+    @patch("fluxnet_shuttle.plugins.icos.NetworkPlugin._session_request")
     async def test_async_get_sites_with_general_exception(self, mock_request, caplog):
         """Test async get_sites handles general exceptions during parsing."""
         mock_response = AsyncMock()

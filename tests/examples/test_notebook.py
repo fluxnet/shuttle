@@ -139,7 +139,7 @@ class NotebookTester:
         packages = {
             "pandas": False,
             "matplotlib": False,
-            "fluxnet_shuttle_lib": False,
+            "fluxnet_shuttle": False,
             "zipfile": False,  # Built-in module
             "logging": False,  # Built-in module
         }
@@ -200,7 +200,7 @@ class TestExampleNotebook:
         import_text = " ".join(imports)
 
         # Check for key imports
-        assert "fluxnet_shuttle_lib" in import_text, "Should import fluxnet_shuttle_lib"
+        assert "fluxnet_shuttle" in import_text, "Should import fluxnet_shuttle"
         assert "pandas" in import_text, "Should import pandas"
         assert "matplotlib" in import_text, "Should import matplotlib"
 

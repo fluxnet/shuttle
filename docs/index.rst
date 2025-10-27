@@ -24,7 +24,7 @@ Installation
 
 From PyPI (when published)::
 
-    pip install fluxnet-shuttle-lib
+    pip install fluxnet-shuttle
 
 For Development::
 
@@ -34,7 +34,7 @@ For Development::
 
 For Running Example Notebooks::
 
-    pip install fluxnet-shuttle-lib[examples]
+    pip install fluxnet-shuttle[examples]
 
 Quick Start
 -----------
@@ -43,7 +43,7 @@ Quick Start
 
 .. code-block:: python
 
-    from fluxnet_shuttle_lib import download, listall
+    from fluxnet_shuttle import download, listall
 
     # Discover available data
     csv_filename = listall(ameriflux=True, icos=True)

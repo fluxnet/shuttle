@@ -2,13 +2,13 @@
 ICOS Data Source Module
 =======================
 
-:module: fluxnet_shuttle_lib.sources.icos
+:module: fluxnet_shuttle.sources.icos
 :synopsis: ICOS Carbon Portal data source implementation
 :moduleauthor: Gilberto Pastorello <gzpastorello@lbl.gov>
 :platform: Unix, Windows
 :created: 2025-01-25
 
-.. currentmodule:: fluxnet_shuttle_lib.sources.icos
+.. currentmodule:: fluxnet_shuttle.sources.icos
 
 This module provides functionality for accessing and downloading data from the
 ICOS (Integrated Carbon Observation System) network through the ICOS Carbon Portal.
@@ -33,7 +33,7 @@ temporal coverage, and download links.
 License
 -------
 
-For license information, see LICENSE file or headers in fluxnet_shuttle_lib.__init__.py
+For license information, see LICENSE file or headers in fluxnet_shuttle.__init__.py
 
 
 Version
@@ -49,7 +49,7 @@ import sys
 
 import requests
 
-from fluxnet_shuttle_lib import FLUXNETShuttleError
+from fluxnet_shuttle import FLUXNETShuttleError
 
 _log = logging.getLogger(__name__)
 

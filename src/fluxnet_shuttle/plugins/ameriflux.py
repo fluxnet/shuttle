@@ -11,7 +11,7 @@ from typing import Any, AsyncGenerator, Dict, Generator, List, cast
 
 from pydantic import HttpUrl
 
-from fluxnet_shuttle_lib.core.exceptions import PluginError
+from fluxnet_shuttle.core.exceptions import PluginError
 
 from ..core.base import NetworkPlugin
 from ..core.decorators import async_to_sync_generator
@@ -269,6 +269,6 @@ class AmeriFluxPlugin(NetworkPlugin):
 
 
 # Auto-register the plugin
-from fluxnet_shuttle_lib.core.registry import registry
+from fluxnet_shuttle.core.registry import registry
 
 registry.register(AmeriFluxPlugin)

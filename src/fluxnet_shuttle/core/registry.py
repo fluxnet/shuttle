@@ -2,13 +2,13 @@
 Plugin Registry and Error Collection
 ====================================
 
-:module:: fluxnet_shuttle_lib.core.registry
+:module:: fluxnet_shuttle.core.registry
 :synopsis: Plugin registry and error collection for FLUXNET Shuttle Library
 :moduleauthor: Valerie Hendrix <vchendrix@lbl.gov>
 :platform: Unix, Windows
 :created: 2025-10-09
 
-.. currentmodule:: fluxnet_shuttle_lib.core.registry
+.. currentmodule:: fluxnet_shuttle.core.registry
 
 
 This module provides the plugin registry for managing network plugins

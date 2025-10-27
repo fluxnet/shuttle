@@ -1,11 +1,11 @@
-"""Test suite for fluxnet_shuttle_lib.version module."""
+"""Test suite for fluxnet_shuttle.version module."""
 
 import importlib
 import importlib.metadata
 import sys
 from unittest.mock import patch
 
-from fluxnet_shuttle_lib import version
+from fluxnet_shuttle import version
 
 
 class TestVersionModule:
@@ -38,13 +38,13 @@ class TestVersionModule:
         mock_version.return_value = "1.2.3"
 
         # Act - Force reload the module to trigger version loading
-        if "fluxnet_shuttle_lib.version" in sys.modules:
-            importlib.reload(sys.modules["fluxnet_shuttle_lib.version"])
+        if "fluxnet_shuttle.version" in sys.modules:
+            importlib.reload(sys.modules["fluxnet_shuttle.version"])
 
         # Assert
-        mock_version.assert_called_with("fluxnet-shuttle-lib")
-        assert sys.modules["fluxnet_shuttle_lib.version"].__version__ == "1.2.3"
-        assert sys.modules["fluxnet_shuttle_lib.version"].__release__ == "1.2.3"
+        mock_version.assert_called_with("fluxnet-shuttle")
+        assert sys.modules["fluxnet_shuttle.version"].__version__ == "1.2.3"
+        assert sys.modules["fluxnet_shuttle.version"].__release__ == "1.2.3"
 
     @patch.object(importlib.metadata, "version")
     def test_version_retrieval_success_with_hyphen(self, mock_version):
@@ -53,13 +53,13 @@ class TestVersionModule:
         mock_version.return_value = "1.2.3-dev.4+abc123"
 
         # Act - Force reload the module to trigger version loading
-        if "fluxnet_shuttle_lib.version" in sys.modules:
-            importlib.reload(sys.modules["fluxnet_shuttle_lib.version"])
+        if "fluxnet_shuttle.version" in sys.modules:
+            importlib.reload(sys.modules["fluxnet_shuttle.version"])
 
         # Assert
-        mock_version.assert_called_with("fluxnet-shuttle-lib")
-        assert sys.modules["fluxnet_shuttle_lib.version"].__version__ == "1.2.3"  # Split on first hyphen
-        assert sys.modules["fluxnet_shuttle_lib.version"].__release__ == "1.2.3-dev.4+abc123"  # Full version
+        mock_version.assert_called_with("fluxnet-shuttle")
+        assert sys.modules["fluxnet_shuttle.version"].__version__ == "1.2.3"  # Split on first hyphen
+        assert sys.modules["fluxnet_shuttle.version"].__release__ == "1.2.3-dev.4+abc123"  # Full version
 
     @patch.object(importlib.metadata, "version")
     def test_version_retrieval_success_with_multiple_hyphens(self, mock_version):
@@ -68,13 +68,13 @@ class TestVersionModule:
         mock_version.return_value = "1.2.3-rc-1-beta"
 
         # Act - Force reload the module to trigger version loading
-        if "fluxnet_shuttle_lib.version" in sys.modules:
-            importlib.reload(sys.modules["fluxnet_shuttle_lib.version"])
+        if "fluxnet_shuttle.version" in sys.modules:
+            importlib.reload(sys.modules["fluxnet_shuttle.version"])
 
         # Assert
-        mock_version.assert_called_with("fluxnet-shuttle-lib")
-        assert sys.modules["fluxnet_shuttle_lib.version"].__version__ == "1.2.3"  # Split on first hyphen only
-        assert sys.modules["fluxnet_shuttle_lib.version"].__release__ == "1.2.3-rc-1-beta"
+        mock_version.assert_called_with("fluxnet-shuttle")
+        assert sys.modules["fluxnet_shuttle.version"].__version__ == "1.2.3"  # Split on first hyphen only
+        assert sys.modules["fluxnet_shuttle.version"].__release__ == "1.2.3-rc-1-beta"
 
     @patch.object(importlib.metadata, "version")
     def test_version_retrieval_package_not_found(self, mock_version):
@@ -83,13 +83,13 @@ class TestVersionModule:
         mock_version.side_effect = importlib.metadata.PackageNotFoundError("Package not found")
 
         # Act - Force reload the module to trigger version loading
-        if "fluxnet_shuttle_lib.version" in sys.modules:
-            importlib.reload(sys.modules["fluxnet_shuttle_lib.version"])
+        if "fluxnet_shuttle.version" in sys.modules:
+            importlib.reload(sys.modules["fluxnet_shuttle.version"])
 
         # Assert
-        mock_version.assert_called_with("fluxnet-shuttle-lib")
-        assert sys.modules["fluxnet_shuttle_lib.version"].__version__ == "unknown"
-        assert sys.modules["fluxnet_shuttle_lib.version"].__release__ == "unknown"
+        mock_version.assert_called_with("fluxnet-shuttle")
+        assert sys.modules["fluxnet_shuttle.version"].__version__ == "unknown"
+        assert sys.modules["fluxnet_shuttle.version"].__release__ == "unknown"
 
     @patch.object(importlib.metadata, "version")
     def test_version_retrieval_with_empty_string(self, mock_version):
@@ -98,13 +98,13 @@ class TestVersionModule:
         mock_version.return_value = ""
 
         # Act - Force reload the module to trigger version loading
-        if "fluxnet_shuttle_lib.version" in sys.modules:
-            importlib.reload(sys.modules["fluxnet_shuttle_lib.version"])
+        if "fluxnet_shuttle.version" in sys.modules:
+            importlib.reload(sys.modules["fluxnet_shuttle.version"])
 
         # Assert
-        mock_version.assert_called_with("fluxnet-shuttle-lib")
-        assert sys.modules["fluxnet_shuttle_lib.version"].__version__ == ""
-        assert sys.modules["fluxnet_shuttle_lib.version"].__release__ == ""
+        mock_version.assert_called_with("fluxnet-shuttle")
+        assert sys.modules["fluxnet_shuttle.version"].__version__ == ""
+        assert sys.modules["fluxnet_shuttle.version"].__release__ == ""
 
     @patch.object(importlib.metadata, "version")
     def test_version_retrieval_with_only_hyphen(self, mock_version):
@@ -113,13 +113,13 @@ class TestVersionModule:
         mock_version.return_value = "-"
 
         # Act - Force reload the module to trigger version loading
-        if "fluxnet_shuttle_lib.version" in sys.modules:
-            importlib.reload(sys.modules["fluxnet_shuttle_lib.version"])
+        if "fluxnet_shuttle.version" in sys.modules:
+            importlib.reload(sys.modules["fluxnet_shuttle.version"])
 
         # Assert
-        mock_version.assert_called_with("fluxnet-shuttle-lib")
-        assert sys.modules["fluxnet_shuttle_lib.version"].__version__ == ""  # First part of split on "-"
-        assert sys.modules["fluxnet_shuttle_lib.version"].__release__ == "-"
+        mock_version.assert_called_with("fluxnet-shuttle")
+        assert sys.modules["fluxnet_shuttle.version"].__version__ == ""  # First part of split on "-"
+        assert sys.modules["fluxnet_shuttle.version"].__release__ == "-"
 
     @patch.object(importlib.metadata, "version")
     def test_version_retrieval_with_leading_hyphen(self, mock_version):
@@ -128,13 +128,13 @@ class TestVersionModule:
         mock_version.return_value = "-1.2.3"
 
         # Act - Force reload the module to trigger version loading
-        if "fluxnet_shuttle_lib.version" in sys.modules:
-            importlib.reload(sys.modules["fluxnet_shuttle_lib.version"])
+        if "fluxnet_shuttle.version" in sys.modules:
+            importlib.reload(sys.modules["fluxnet_shuttle.version"])
 
         # Assert
-        mock_version.assert_called_with("fluxnet-shuttle-lib")
-        assert sys.modules["fluxnet_shuttle_lib.version"].__version__ == ""  # First part of split on "-"
-        assert sys.modules["fluxnet_shuttle_lib.version"].__release__ == "-1.2.3"
+        mock_version.assert_called_with("fluxnet-shuttle")
+        assert sys.modules["fluxnet_shuttle.version"].__version__ == ""  # First part of split on "-"
+        assert sys.modules["fluxnet_shuttle.version"].__release__ == "-1.2.3"
 
     @patch.object(importlib.metadata, "version")
     def test_correct_package_name_used(self, mock_version):
@@ -143,14 +143,14 @@ class TestVersionModule:
         mock_version.return_value = "1.0.0"
 
         # Act - Force reload the module to trigger version loading
-        if "fluxnet_shuttle_lib.version" in sys.modules:
-            importlib.reload(sys.modules["fluxnet_shuttle_lib.version"])
+        if "fluxnet_shuttle.version" in sys.modules:
+            importlib.reload(sys.modules["fluxnet_shuttle.version"])
 
         # Assert that the correct package name is used
-        mock_version.assert_called_with("fluxnet-shuttle-lib")
+        mock_version.assert_called_with("fluxnet-shuttle")
         # Verify the test variables are used
-        assert sys.modules["fluxnet_shuttle_lib.version"].__version__ == "1.0.0"
-        assert sys.modules["fluxnet_shuttle_lib.version"].__release__ == "1.0.0"
+        assert sys.modules["fluxnet_shuttle.version"].__version__ == "1.0.0"
+        assert sys.modules["fluxnet_shuttle.version"].__release__ == "1.0.0"
 
     def test_version_logic_edge_cases(self):
         """Test version logic with direct function calls to test edge cases."""

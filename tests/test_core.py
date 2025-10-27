@@ -12,11 +12,11 @@ from unittest.mock import AsyncMock, patch
 import aiohttp
 import pytest
 
-from fluxnet_shuttle_lib.core.base import NetworkPlugin
-from fluxnet_shuttle_lib.core.config import NetworkConfig, ShuttleConfig
-from fluxnet_shuttle_lib.core.decorators import async_to_sync, async_to_sync_generator
-from fluxnet_shuttle_lib.core.exceptions import FLUXNETShuttleError, PluginError
-from fluxnet_shuttle_lib.models import BadmSiteGeneralInfo, DataFluxnetProduct, FluxnetDatasetMetadata
+from fluxnet_shuttle.core.base import NetworkPlugin
+from fluxnet_shuttle.core.config import NetworkConfig, ShuttleConfig
+from fluxnet_shuttle.core.decorators import async_to_sync, async_to_sync_generator
+from fluxnet_shuttle.core.exceptions import FLUXNETShuttleError, PluginError
+from fluxnet_shuttle.models import BadmSiteGeneralInfo, DataFluxnetProduct, FluxnetDatasetMetadata
 
 
 class MockNetworkPlugin(NetworkPlugin):
@@ -134,7 +134,7 @@ class TestNetworkPlugin:
         assert sites[0].site_info.site_id == "US-TEST"
 
     @pytest.mark.asyncio
-    @patch("fluxnet_shuttle_lib.core.base.session_request")
+    @patch("fluxnet_shuttle.core.base.session_request")
     async def test_session_request_success(self, mock_session_request):
         """Test successful _session_request call."""
         plugin = MockNetworkPlugin()
@@ -156,7 +156,7 @@ class TestNetworkPlugin:
         mock_session_request.assert_called_once_with("GET", url)
 
     @pytest.mark.asyncio
-    @patch("fluxnet_shuttle_lib.core.base.session_request")
+    @patch("fluxnet_shuttle.core.base.session_request")
     async def test_session_request_client_error(self, mock_session_request):
         """Test _session_request handling of aiohttp.ClientError."""
         plugin = MockNetworkPlugin()
@@ -175,7 +175,7 @@ class TestNetworkPlugin:
         assert isinstance(error.original_error, aiohttp.ClientConnectionError)
 
     @pytest.mark.asyncio
-    @patch("fluxnet_shuttle_lib.core.base.session_request")
+    @patch("fluxnet_shuttle.core.base.session_request")
     async def test_session_request_unexpected_error(self, mock_session_request):
         """Test _session_request handling of unexpected errors."""
         plugin = MockNetworkPlugin()

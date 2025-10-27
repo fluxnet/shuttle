@@ -10,7 +10,7 @@ After installing the library, the CLI tool is automatically available:
 
 .. code-block:: bash
 
-    pip install fluxnet-shuttle-lib
+    pip install fluxnet-shuttle
     fluxnet-shuttle --help
 
 Commands

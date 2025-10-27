@@ -2,13 +2,13 @@
 Data Sources Package
 ====================
 
-:module: fluxnet_shuttle_lib.sources
+:module: fluxnet_shuttle.sources
 :synopsis: Data source implementations for different FLUXNET networks
 :moduleauthor: Gilberto Pastorello <gzpastorello@lbl.gov>
 :platform: Unix, Windows
 :created: 2025-01-25
 
-.. currentmodule:: fluxnet_shuttle_lib.sources
+.. currentmodule:: fluxnet_shuttle.sources
 
 
 This package contains data source implementations for accessing different FLUXNET

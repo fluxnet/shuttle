@@ -2,13 +2,13 @@
 AmeriFlux Data Source Module
 ============================
 
-:module: fluxnet_shuttle_lib.sources.ameriflux
+:module: fluxnet_shuttle.sources.ameriflux
 :synopsis: AmeriFlux network data source implementation
 :moduleauthor: Gilberto Pastorello <gzpastorello@lbl.gov>
 :platform: Unix, Windows
 :created: 2025-01-25
 
-.. currentmodule:: fluxnet_shuttle_lib.sources.ameriflux
+.. currentmodule:: fluxnet_shuttle.sources.ameriflux
 
 
 This module provides functionality for accessing and downloading data from the
@@ -30,7 +30,7 @@ The module uses the following AmeriFlux API endpoints:
 License
 -------
 
-For license information, see LICENSE file or headers in fluxnet_shuttle_lib.__init__.py
+For license information, see LICENSE file or headers in fluxnet_shuttle.__init__.py
 
 Version
 -------
@@ -45,7 +45,7 @@ import sys
 
 import requests
 
-from fluxnet_shuttle_lib import FLUXNETShuttleError
+from fluxnet_shuttle import FLUXNETShuttleError
 
 _log = logging.getLogger(__name__)
 

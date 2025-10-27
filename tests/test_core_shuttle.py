@@ -10,11 +10,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from fluxnet_shuttle_lib.core.config import NetworkConfig, ShuttleConfig
-from fluxnet_shuttle_lib.core.decorators import async_to_sync_generator
-from fluxnet_shuttle_lib.core.registry import PluginRegistry
-from fluxnet_shuttle_lib.core.shuttle import FluxnetShuttle
-from fluxnet_shuttle_lib.models import BadmSiteGeneralInfo, DataFluxnetProduct, FluxnetDatasetMetadata
+from fluxnet_shuttle.core.config import NetworkConfig, ShuttleConfig
+from fluxnet_shuttle.core.decorators import async_to_sync_generator
+from fluxnet_shuttle.core.registry import PluginRegistry
+from fluxnet_shuttle.core.shuttle import FluxnetShuttle
+from fluxnet_shuttle.models import BadmSiteGeneralInfo, DataFluxnetProduct, FluxnetDatasetMetadata
 
 
 class MockFailingPlugin:

@@ -2,13 +2,13 @@
 Main Shuttle Orchestrator
 =========================
 
-:module:: fluxnet_shuttle_lib.core.shuttle
+:module:: fluxnet_shuttle.core.shuttle
 :synopsis: Main orchestrator for FLUXNET Shuttle operations
 :moduleauthor: Valerie Hendrix <vchendrix@lbl.gov>
 :platform: Unix, Windows
 :created: 2025-10-09
 
-.. currentmodule:: fluxnet_shuttle_lib.core.shuttle
+.. currentmodule:: fluxnet_shuttle.core.shuttle
 
 
 This module provides the main FluxnetShuttle class that orchestrates
@@ -18,8 +18,8 @@ operations across multiple network plugins.
 import logging
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
-from fluxnet_shuttle_lib.core.decorators import async_to_sync_generator
-from fluxnet_shuttle_lib.core.registry import ErrorCollectingIterator, registry
+from fluxnet_shuttle.core.decorators import async_to_sync_generator
+from fluxnet_shuttle.core.registry import ErrorCollectingIterator, registry
 
 from ..models import ErrorSummary, FluxnetDatasetMetadata
 from .config import ShuttleConfig
