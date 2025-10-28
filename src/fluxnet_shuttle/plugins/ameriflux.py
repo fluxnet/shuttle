@@ -23,7 +23,6 @@ logger = logging.getLogger(__name__)
 AMERIFLUX_BASE_URL = "https://amfcdn.lbl.gov/"
 AMERIFLUX_BASE_PATH = "api/v2/"
 AMERIFLUX_SITE_INFO_PATH = "site_info_display/AmeriFlux"
-AMERIFLUX_AVAILABILITY_PATH = "data_availability/AmeriFlux/FLUXNET/CCBY4.0"
 AMERIFLUX_DOWNLOAD_PATH = "amf_shuttle_data_files_and_manifest"
 AMERIFLUX_HEADERS = {"Content-Type": "application/json"}
 
@@ -55,10 +54,7 @@ class AmeriFluxPlugin(NetworkPlugin):
         api_url = f"{AMERIFLUX_BASE_URL}{AMERIFLUX_BASE_PATH}"
 
         try:
-            site_metadata, availability_data = await asyncio.gather(
-                self._get_site_metadata(api_url, timeout=30),
-                self._get_data_availability(api_url, timeout=30),
-            )
+            site_metadata = await self._get_site_metadata(api_url, timeout=30)
         except Exception as e:
             logger.exception("Failed to retrieve AmeriFlux data: %s", e)
             raise PluginError(self.name, f"Failed to retrieve data from API: {e}", original_error=e)
@@ -69,19 +65,13 @@ class AmeriFluxPlugin(NetworkPlugin):
         else:
             logger.info(f"Retrieved metadata for {len(site_metadata)} AmeriFlux sites")
 
-        # Validate data availability
-        if not availability_data:
-            logger.warning("No AmeriFlux data availability information found")
-        else:
-            logger.info(f"Retrieved availability data for {len(availability_data)} sites")
-
-        if site_metadata and availability_data:
+        if site_metadata:
             try:
-                # Filter for sites with FLUXNET data (non-empty publish_years)
+                # Filter for sites with FLUXNET data (non-empty grp_publish_fluxnet)
                 sites_with_data: Dict[str, List[int]] = {
-                    cast(str, site["site_id"]): cast(List[int], site["publish_years"])
-                    for site in availability_data
-                    if site.get("publish_years")
+                    site_id: cast(List[int], site.get("grp_publish_fluxnet", []))
+                    for site_id, site in site_metadata.items()
+                    if site.get("grp_publish_fluxnet")
                 }
 
                 if not sites_with_data:
@@ -108,7 +98,7 @@ class AmeriFluxPlugin(NetworkPlugin):
                 logger.exception("Error processing AmeriFlux data: %s", e)
                 raise PluginError(self.name, f"Error processing data: {e}", original_error=e)
 
-    async def _get_site_metadata(self, api_url: str, timeout: int) -> Dict[str, BadmSiteGeneralInfo]:
+    async def _get_site_metadata(self, api_url: str, timeout: int) -> Dict[str, Any]:
         """Get site metadata including lat, lon, IGBP from v2 site_info_display endpoint."""
         try:
             async with self._session_request(
@@ -127,19 +117,6 @@ class AmeriFluxPlugin(NetworkPlugin):
 
         except PluginError:
             # Re-raise PluginError - site metadata is critical for plugin operation
-            raise
-
-    async def _get_data_availability(self, api_url: str, timeout: int) -> List[Dict[str, Any]]:
-        """Get data availability from v2 data_availability endpoint."""
-        try:
-            async with self._session_request(
-                "GET", f"{api_url}{AMERIFLUX_AVAILABILITY_PATH}", timeout=timeout
-            ) as response:
-                data = await response.json()
-                return cast(List[Dict[str, Any]], data.get("values", []))
-
-        except PluginError:
-            # Re-raise PluginError - data availability is critical for plugin operation
             raise
 
     async def _get_download_links(self, base_url: str, site_ids: list, timeout: int) -> Dict[str, Any]:
