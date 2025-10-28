@@ -64,14 +64,48 @@ from datetime import datetime
 from typing import Any, Dict, List
 
 import aiofiles
+import requests
 
 from fluxnet_shuttle import FLUXNETShuttleError
 from fluxnet_shuttle.core.decorators import async_to_sync
 from fluxnet_shuttle.core.shuttle import FluxnetShuttle
-from fluxnet_shuttle.sources.ameriflux import download_ameriflux_data
-from fluxnet_shuttle.sources.icos import download_icos_data
 
 _log = logging.getLogger(__name__)
+
+
+def _download_dataset(site_id: str, network: str, filename: str, download_link: str) -> None:
+    """
+    Download dataset file from any FLUXNET network.
+
+    This is a private generic download function that works for all networks.
+    Network plugins are responsible for providing ready-to-use download URLs.
+
+    :param site_id: Site identifier
+    :type site_id: str
+    :param network: Network name (e.g., "AmeriFlux", "ICOS")
+    :type network: str
+    :param filename: Local filename to save data
+    :type filename: str
+    :param download_link: Ready-to-use URL to download data from
+    :type download_link: str
+    :raises FLUXNETShuttleError: If download fails
+    """
+    _log.info(f"{network}: downloading site {site_id} data file: {filename}")
+    try:
+        response = requests.get(download_link, stream=True)
+        if response.status_code == 200:
+            with open(filename, "wb") as file:
+                for chunk in response.iter_content(chunk_size=8192):
+                    file.write(chunk)
+            _log.info(f"{network}: file downloaded successfully to {filename}")
+        else:
+            msg = f"Failed to download {network} file. Status code: {response.status_code}"
+            _log.error(msg)
+            raise FLUXNETShuttleError(msg)
+    except requests.RequestException as e:
+        msg = f"Failed to download {network} file: {e}"
+        _log.error(msg)
+        raise FLUXNETShuttleError(msg)
 
 
 def download(site_ids: List[str], runfile: str) -> List[str]:
@@ -134,14 +168,7 @@ def download(site_ids: List[str], runfile: str) -> List[str]:
         filename = download_link.split("/")[-1]
         _log.info(f"Downloading data for site {site_id} from network {network}")
 
-        if network == "AmeriFlux":
-            download_ameriflux_data(site_id=site_id, filename=filename, download_link=download_link)
-        elif network == "ICOS":
-            download_icos_data(site_id=site_id, filename=filename, download_link=download_link)
-        else:
-            msg = f"Network {network} not supported for download."
-            _log.error(msg)
-            raise FLUXNETShuttleError(msg)
+        _download_dataset(site_id=site_id, network=network, filename=filename, download_link=download_link)
         downloaded_filenames.append(filename)
     _log.info(f"Downloaded data for {len(site_ids)} sites: {site_ids}")
     return downloaded_filenames
