@@ -19,24 +19,21 @@ class TestAmeriFluxPlugin:
         assert plugin.display_name == "AmeriFlux"
 
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_site_metadata")
-    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_data_availability")
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_links")
-    def test_get_sites_success(self, mock_get_links, mock_get_availability, mock_get_metadata):
+    def test_get_sites_success(self, mock_get_links, mock_get_metadata):
         """Test successful retrieval of sites."""
         mock_get_metadata.return_value = {
             "AR-Bal": {
                 "grp_location": {"location_lat": "-37.7596", "location_long": "-58.3024"},
                 "grp_igbp": {"igbp": "CRO"},
+                "grp_publish_fluxnet": [2012, 2013],
             },
             "AR-CCa": {
                 "grp_location": {"location_lat": "-31.4821", "location_long": "-63.6458"},
                 "grp_igbp": {"igbp": "GRA"},
+                "grp_publish_fluxnet": [2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020],
             },
         }
-        mock_get_availability.return_value = [
-            {"site_id": "AR-Bal", "publish_years": [2012, 2013]},
-            {"site_id": "AR-CCa", "publish_years": [2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020]},
-        ]
         mock_get_links.return_value = {
             "data_urls": [
                 {
@@ -81,17 +78,16 @@ class TestAmeriFluxPlugin:
         assert sites[1].site_info.igbp == "GRA"  # Real value from metadata
 
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_site_metadata")
-    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_data_availability")
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_links")
-    def test_get_sites_with_unexpected_filename_format(self, mock_get_links, mock_get_availability, mock_get_metadata):
-        """Test get_sites uses publish_years from data_availability instead of parsing filename."""
+    def test_get_sites_with_unexpected_filename_format(self, mock_get_links, mock_get_metadata):
+        """Test get_sites uses publish_years from grp_publish_fluxnet instead of parsing filename."""
         mock_get_metadata.return_value = {
             "US-XYZ": {
                 "grp_location": {"location_lat": "45.0", "location_long": "-90.0"},
                 "grp_igbp": {"igbp": "DBF"},
+                "grp_publish_fluxnet": [2005, 2006, 2007],
             }
         }
-        mock_get_availability.return_value = [{"site_id": "US-XYZ", "publish_years": [2005, 2006, 2007]}]
         mock_get_links.return_value = {
             "data_urls": [
                 {
@@ -125,24 +121,21 @@ class TestAmeriFluxPlugin:
         assert len(sites) == 0  # No sites should be returned
 
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_site_metadata")
-    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_data_availability")
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_links")
-    def test_get_sites_partial_failure(self, mock_get_links, mock_get_availability, mock_get_metadata):
+    def test_get_sites_partial_failure(self, mock_get_links, mock_get_metadata):
         """Test get_sites handles partial failures in download link retrieval."""
         mock_get_metadata.return_value = {
             "US-ABC": {
                 "grp_location": {"location_lat": "40.0", "location_long": "-100.0"},
                 "grp_igbp": {"igbp": "GRA"},
+                "grp_publish_fluxnet": [2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012],
             },
             "US-DEF": {
                 "grp_location": {"location_lat": "41.0", "location_long": "-101.0"},
                 "grp_igbp": {"igbp": "CRO"},
+                "grp_publish_fluxnet": [2010, 2011],
             },
         }
-        mock_get_availability.return_value = [
-            {"site_id": "US-ABC", "publish_years": [2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012]},
-            {"site_id": "US-DEF", "publish_years": [2010, 2011]},
-        ]
         mock_get_links.return_value = {
             "data_urls": [
                 {"site_id": "US-ABC", "url": "http://example.com/US-ABC__FLUXNET_FULLSET_2005-2012_3-7.zip"},
@@ -166,9 +159,8 @@ class TestAmeriFluxPlugin:
         assert sites[0].product_data.last_year == 2012  # From publish_years
 
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_site_metadata")
-    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_data_availability")
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_links")
-    def test_get_sites_api_failure(self, mock_get_links, mock_get_availability, mock_get_metadata):
+    def test_get_sites_api_failure(self, mock_get_links, mock_get_metadata):
         """Test get_sites handles API failure gracefully."""
         mock_get_metadata.side_effect = Exception("API failure")
 
@@ -179,12 +171,10 @@ class TestAmeriFluxPlugin:
         assert "API failure" in str(excinfo.value)
 
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_site_metadata")
-    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_data_availability")
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_links")
-    def test_get_sites_download_links_failure(self, mock_get_links, mock_get_availability, mock_get_metadata):
+    def test_get_sites_download_links_failure(self, mock_get_links, mock_get_metadata):
         """Test get_sites handles download links API failure gracefully."""
-        mock_get_metadata.return_value = {"US-ABC": {}}
-        mock_get_availability.return_value = [{"site_id": "US-ABC", "publish_years": [2005]}]
+        mock_get_metadata.return_value = {"US-ABC": {"grp_publish_fluxnet": [2005]}}
         mock_get_links.side_effect = Exception("Download links API failure")
 
         plugin = ameriflux.AmeriFluxPlugin()
@@ -194,12 +184,10 @@ class TestAmeriFluxPlugin:
         assert "Download links API failure" in str(excinfo.value)
 
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_site_metadata")
-    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_data_availability")
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_links")
-    def test_get_sites_with_no_download_links(self, mock_get_links, mock_get_availability, mock_get_metadata):
+    def test_get_sites_with_no_download_links(self, mock_get_links, mock_get_metadata):
         """Test get_sites handles missing download links gracefully."""
-        mock_get_metadata.return_value = {"US-XYZ": {}}
-        mock_get_availability.return_value = [{"site_id": "US-XYZ", "publish_years": [2005]}]
+        mock_get_metadata.return_value = {"US-XYZ": {"grp_publish_fluxnet": [2005]}}
         # No download links available
         mock_get_links.return_value = {}
 
@@ -244,40 +232,6 @@ class TestAmeriFluxPlugin:
         """Test _get_site_metadata raises PluginError on failure."""
         with pytest.raises(PluginError) as exc_info:
             await ameriflux.AmeriFluxPlugin()._get_site_metadata(api_url="http://example.com", timeout=10)
-
-        assert "ameriflux" in str(exc_info.value).lower()
-        assert mock_request.call_count == 1  # Ensure the request was attempted
-
-    @pytest.mark.asyncio
-    @patch("fluxnet_shuttle.plugins.ameriflux.NetworkPlugin._session_request")
-    async def test__get_data_availability(self, mock_request):
-        """Test _get_data_availability handles _session_request correctly."""
-        mock_response = AsyncMock()
-        mock_response.json.return_value = {
-            "values": [
-                {"site_id": "US-TEST", "publish_years": [2010, 2011, 2012]},
-                {"site_id": "US-EXM", "publish_years": []},
-            ]
-        }
-        mock_response.raise_for_status.side_effect = None
-        mock_request.return_value.__aenter__.return_value = mock_response
-
-        availability = await ameriflux.AmeriFluxPlugin()._get_data_availability(
-            api_url="http://example.com", timeout=10
-        )
-        assert len(availability) == 2
-        assert availability[0]["site_id"] == "US-TEST"
-        assert availability[0]["publish_years"] == [2010, 2011, 2012]
-
-    @pytest.mark.asyncio
-    @patch(
-        "fluxnet_shuttle.plugins.ameriflux.NetworkPlugin._session_request",
-        side_effect=PluginError("ameriflux", "Test error"),
-    )
-    async def test__get_data_availability_failure(self, mock_request):
-        """Test _get_data_availability raises PluginError on failure."""
-        with pytest.raises(PluginError) as exc_info:
-            await ameriflux.AmeriFluxPlugin()._get_data_availability(api_url="http://example.com", timeout=10)
 
         assert "ameriflux" in str(exc_info.value).lower()
         assert mock_request.call_count == 1  # Ensure the request was attempted
@@ -385,11 +339,9 @@ class TestAmeriFluxPlugin:
         assert results[0].site_info.site_id == "US-TEST"
 
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_site_metadata")
-    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_data_availability")
-    def test_get_sites_no_data_availability(self, mock_get_availability, mock_get_metadata):
-        """Test get_sites returns empty when data availability is None."""
+    def test_get_sites_no_data_availability(self, mock_get_metadata):
+        """Test get_sites returns empty when site has no grp_publish_fluxnet."""
         mock_get_metadata.return_value = {"US-TEST": {}}
-        mock_get_availability.return_value = None
 
         plugin = ameriflux.AmeriFluxPlugin()
         sites = list(plugin.get_sites())
@@ -397,14 +349,12 @@ class TestAmeriFluxPlugin:
         assert len(sites) == 0
 
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_site_metadata")
-    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_data_availability")
-    def test_get_sites_all_sites_have_empty_publish_years(self, mock_get_availability, mock_get_metadata):
-        """Test get_sites returns empty when all sites have empty publish_years."""
-        mock_get_metadata.return_value = {"US-TEST": {}, "US-EXM": {}}
-        mock_get_availability.return_value = [
-            {"site_id": "US-TEST", "publish_years": []},
-            {"site_id": "US-EXM", "publish_years": []},
-        ]
+    def test_get_sites_all_sites_have_empty_publish_years(self, mock_get_metadata):
+        """Test get_sites returns empty when all sites have empty grp_publish_fluxnet."""
+        mock_get_metadata.return_value = {
+            "US-TEST": {"grp_publish_fluxnet": []},
+            "US-EXM": {"grp_publish_fluxnet": []},
+        }
 
         plugin = ameriflux.AmeriFluxPlugin()
         sites = list(plugin.get_sites())
@@ -446,17 +396,16 @@ class TestAmeriFluxPlugin:
 
     @pytest.mark.asyncio
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_site_metadata")
-    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_data_availability")
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_links")
-    async def test_get_sites_reraises_plugin_error(self, mock_get_links, mock_get_availability, mock_get_metadata):
+    async def test_get_sites_reraises_plugin_error(self, mock_get_links, mock_get_metadata):
         """Test get_sites re-raises PluginError from processing."""
         mock_get_metadata.return_value = {
             "US-TEST": {
                 "grp_location": {"location_lat": "40.5", "location_long": "-105.5"},
                 "grp_igbp": {"igbp": "ENF"},
+                "grp_publish_fluxnet": [2020, 2021],
             }
         }
-        mock_get_availability.return_value = [{"site_id": "US-TEST", "publish_years": [2020, 2021]}]
         mock_get_links.return_value = {"data_urls": [{"site_id": "US-TEST", "url": "http://example.com/test.zip"}]}
 
         plugin = ameriflux.AmeriFluxPlugin()
