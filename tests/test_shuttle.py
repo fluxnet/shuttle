@@ -7,7 +7,94 @@ from unittest.mock import AsyncMock, MagicMock, call, mock_open, patch
 import pytest
 
 from fluxnet_shuttle import FLUXNETShuttleError
-from fluxnet_shuttle.shuttle import download, listall
+from fluxnet_shuttle.shuttle import _download_dataset, download, listall
+
+
+class TestDownloadDataset:
+    """Test cases for the _download_dataset private function."""
+
+    def test_successful_download_ameriflux(self):
+        """Test successful file download for AmeriFlux."""
+        with (
+            patch("fluxnet_shuttle.shuttle.requests.get") as mock_get,
+            patch("builtins.open", mock_open()),
+        ):
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_response.iter_content.return_value = [b"chunk1", b"chunk2"]
+            mock_get.return_value = mock_response
+
+            _download_dataset("US-TEST", "AmeriFlux", "test.zip", "http://example.com/test.zip")
+
+            mock_get.assert_called_once_with("http://example.com/test.zip", stream=True)
+
+    def test_successful_download_icos(self):
+        """Test successful file download for ICOS."""
+        with (
+            patch("fluxnet_shuttle.shuttle.requests.get") as mock_get,
+            patch("builtins.open", mock_open()),
+        ):
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_response.iter_content.return_value = [b"chunk1", b"chunk2"]
+            mock_get.return_value = mock_response
+
+            # ICOS plugin provides ready-to-use URL with license acceptance
+            _download_dataset(
+                "FI-HYY", "ICOS", "test.zip", "https://data.icos-cp.eu/licence_accept?ids=%5B%22test%22%5D"
+            )
+
+            mock_get.assert_called_once_with("https://data.icos-cp.eu/licence_accept?ids=%5B%22test%22%5D", stream=True)
+
+    @patch("fluxnet_shuttle.shuttle.requests.get")
+    def test_download_failure_404(self, mock_get):
+        """Test handling of 404 download failure."""
+        mock_response = MagicMock()
+        mock_response.status_code = 404
+        mock_get.return_value = mock_response
+
+        with pytest.raises(FLUXNETShuttleError, match="Failed to download.*404"):
+            _download_dataset("US-TEST", "AmeriFlux", "test.zip", "http://example.com/test.zip")
+
+    @patch("fluxnet_shuttle.shuttle.requests.get")
+    def test_download_failure_500(self, mock_get):
+        """Test handling of 500 download failure."""
+        mock_response = MagicMock()
+        mock_response.status_code = 500
+        mock_get.return_value = mock_response
+
+        with pytest.raises(FLUXNETShuttleError, match="Failed to download.*500"):
+            _download_dataset("FI-HYY", "ICOS", "test.zip", "http://example.com/test.zip")
+
+    def test_file_writing(self):
+        """Test that file is written correctly."""
+        with (
+            patch("fluxnet_shuttle.shuttle.requests.get") as mock_get,
+            patch("builtins.open", mock_open()) as mock_file,
+        ):
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            test_chunks = [b"data_chunk_1", b"data_chunk_2"]
+            mock_response.iter_content.return_value = test_chunks
+            mock_get.return_value = mock_response
+
+            _download_dataset("US-TEST", "AmeriFlux", "output.zip", "http://example.com/file.zip")
+
+            # Verify file was opened for writing
+            mock_file.assert_called_once_with("output.zip", "wb")
+            # Verify all chunks were written
+            handle = mock_file.return_value.__enter__.return_value
+            assert handle.write.call_count == len(test_chunks)
+
+    @patch("fluxnet_shuttle.shuttle.requests.get")
+    def test_request_exception_handling(self, mock_get):
+        """Test handling of request exceptions."""
+        import requests
+
+        mock_get.side_effect = requests.RequestException("Network error")
+
+        with pytest.raises(FLUXNETShuttleError, match="Failed to download.*Network error"):
+            _download_dataset("US-TEST", "AmeriFlux", "test.zip", "http://example.com/test.zip")
 
 
 class TestDownload:
@@ -28,19 +115,7 @@ class TestDownload:
         with pytest.raises(FLUXNETShuttleError, match="does not exist"):
             download(["US-Ha1"], "nonexistent.csv")
 
-    @patch("os.path.exists")
-    @patch(
-        "builtins.open",
-        mock_open(read_data="site_id,network,filename,download_link\n" "US-TEST,Unknown,test.zip,http://example.com\n"),
-    )
-    def test_download_unsupported_network_raises_error(self, mock_exists):
-        """Test that download raises error for unsupported network."""
-        mock_exists.return_value = True
-
-        with pytest.raises(FLUXNETShuttleError, match="Network Unknown not supported for download"):
-            download(["US-TEST"], "test.csv")
-
-    @patch("fluxnet_shuttle.shuttle.download_ameriflux_data")
+    @patch("fluxnet_shuttle.shuttle._download_dataset")
     @patch("os.path.exists")
     @patch(
         "builtins.open",
@@ -55,10 +130,10 @@ class TestDownload:
 
         assert result == ["test.zip"]
         mock_download.assert_called_once_with(
-            site_id="US-TEST", filename="test.zip", download_link="http://example.com/test.zip"
+            site_id="US-TEST", network="AmeriFlux", filename="test.zip", download_link="http://example.com/test.zip"
         )
 
-    @patch("fluxnet_shuttle.shuttle.download_icos_data")
+    @patch("fluxnet_shuttle.shuttle._download_dataset")
     @patch("os.path.exists")
     @patch(
         "builtins.open",
@@ -73,7 +148,7 @@ class TestDownload:
 
         assert result == ["test.zip"]
         mock_download.assert_called_once_with(
-            site_id="FI-HYY", filename="test.zip", download_link="http://example.com/test.zip"
+            site_id="FI-HYY", network="ICOS", filename="test.zip", download_link="http://example.com/test.zip"
         )
 
     @patch("os.path.exists")
