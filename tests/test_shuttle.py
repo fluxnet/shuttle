@@ -7,7 +7,90 @@ from unittest.mock import AsyncMock, MagicMock, call, mock_open, patch
 import pytest
 
 from fluxnet_shuttle import FLUXNETShuttleError
-from fluxnet_shuttle.shuttle import _download_dataset, download, listall
+from fluxnet_shuttle.shuttle import (
+    _download_dataset,
+    _extract_filename_from_headers,
+    _extract_filename_from_url,
+    download,
+    listall,
+)
+
+
+class TestExtractFilenameFromUrl:
+    """Test cases for the _extract_filename_from_url helper function."""
+
+    def test_simple_url_without_query_params(self):
+        """Test URL without query parameters."""
+        url = "https://example.com/path/to/file.zip"
+        result = _extract_filename_from_url(url)
+        assert result == "file.zip"
+
+    def test_ameriflux_url_with_query_params(self):
+        """Test AmeriFlux URL with query parameters."""
+        url = (
+            "https://ftp.fluxdata.org/.ameriflux_downloads/FLUXNET/"
+            "AMF_AR-Bal_FLUXNET_FULLSET_2012-2013_3-7.zip?=fluxnetshuttle"
+        )
+        result = _extract_filename_from_url(url)
+        assert result == "AMF_AR-Bal_FLUXNET_FULLSET_2012-2013_3-7.zip"
+
+    def test_icos_license_url(self):
+        """Test ICOS license acceptance URL."""
+        url = "https://data.icos-cp.eu/licence_accept?ids=%5B%220ZIsO-A84jm8raOmFfQ1TSbY%22%5D"
+        result = _extract_filename_from_url(url)
+        assert result == "licence_accept"
+
+    def test_url_with_encoded_characters(self):
+        """Test URL with percent-encoded characters."""
+        url = "https://example.com/path/file%20name.zip"
+        result = _extract_filename_from_url(url)
+        assert result == "file name.zip"
+
+    def test_url_with_multiple_query_params(self):
+        """Test URL with multiple query parameters."""
+        url = "https://example.com/download/data.csv?param1=value1&param2=value2"
+        result = _extract_filename_from_url(url)
+        assert result == "data.csv"
+
+
+class TestExtractFilenameFromHeaders:
+    """Test cases for the _extract_filename_from_headers helper function."""
+
+    def test_content_disposition_with_filename(self):
+        """Test Content-Disposition header with filename."""
+        headers = {"Content-Disposition": 'attachment; filename="test.zip"'}
+        result = _extract_filename_from_headers(headers)
+        assert result == "test.zip"
+
+    def test_content_disposition_without_quotes(self):
+        """Test Content-Disposition header without quotes around filename."""
+        headers = {"Content-Disposition": "attachment; filename=test.zip"}
+        result = _extract_filename_from_headers(headers)
+        assert result == "test.zip"
+
+    def test_content_disposition_with_encoded_filename(self):
+        """Test Content-Disposition header with percent-encoded filename."""
+        headers = {"Content-Disposition": "attachment; filename=file%20name.zip"}
+        result = _extract_filename_from_headers(headers)
+        assert result == "file name.zip"
+
+    def test_no_content_disposition(self):
+        """Test when Content-Disposition header is missing."""
+        headers = {"Content-Type": "application/zip"}
+        result = _extract_filename_from_headers(headers)
+        assert result is None
+
+    def test_empty_headers(self):
+        """Test with empty headers dictionary."""
+        headers = {}
+        result = _extract_filename_from_headers(headers)
+        assert result is None
+
+    def test_content_disposition_without_filename(self):
+        """Test Content-Disposition header without filename parameter."""
+        headers = {"Content-Disposition": "attachment"}
+        result = _extract_filename_from_headers(headers)
+        assert result is None
 
 
 class TestDownloadDataset:
@@ -21,11 +104,13 @@ class TestDownloadDataset:
         ):
             mock_response = MagicMock()
             mock_response.status_code = 200
+            mock_response.headers = {}
             mock_response.iter_content.return_value = [b"chunk1", b"chunk2"]
             mock_get.return_value = mock_response
 
-            _download_dataset("US-TEST", "AmeriFlux", "test.zip", "http://example.com/test.zip")
+            result = _download_dataset("US-TEST", "AmeriFlux", "test.zip", "http://example.com/test.zip")
 
+            assert result == "test.zip"
             mock_get.assert_called_once_with("http://example.com/test.zip", stream=True)
 
     def test_successful_download_icos(self):
@@ -36,15 +121,35 @@ class TestDownloadDataset:
         ):
             mock_response = MagicMock()
             mock_response.status_code = 200
+            mock_response.headers = {}
             mock_response.iter_content.return_value = [b"chunk1", b"chunk2"]
             mock_get.return_value = mock_response
 
             # ICOS plugin provides ready-to-use URL with license acceptance
-            _download_dataset(
+            result = _download_dataset(
                 "FI-HYY", "ICOS", "test.zip", "https://data.icos-cp.eu/licence_accept?ids=%5B%22test%22%5D"
             )
 
+            assert result == "test.zip"
             mock_get.assert_called_once_with("https://data.icos-cp.eu/licence_accept?ids=%5B%22test%22%5D", stream=True)
+
+    def test_successful_download_with_content_disposition(self):
+        """Test that filename from Content-Disposition header overrides provided filename."""
+        with (
+            patch("fluxnet_shuttle.shuttle.requests.get") as mock_get,
+            patch("builtins.open", mock_open()),
+        ):
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_response.headers = {"Content-Disposition": 'attachment; filename="actual_file.zip"'}
+            mock_response.iter_content.return_value = [b"chunk1", b"chunk2"]
+            mock_get.return_value = mock_response
+
+            result = _download_dataset("FI-HYY", "ICOS", "placeholder.zip", "http://example.com/download")
+
+            # Should use filename from Content-Disposition header
+            assert result == "actual_file.zip"
+            mock_get.assert_called_once_with("http://example.com/download", stream=True)
 
     @patch("fluxnet_shuttle.shuttle.requests.get")
     def test_download_failure_404(self, mock_get):
@@ -124,7 +229,7 @@ class TestDownload:
     def test_download_ameriflux_site_success(self, mock_exists, mock_download):
         """Test successful download of AmeriFlux site."""
         mock_exists.return_value = True
-        mock_download.return_value = None
+        mock_download.return_value = "test.zip"
 
         result = download(["US-TEST"], "test.csv")
 
@@ -142,13 +247,38 @@ class TestDownload:
     def test_download_icos_site_success(self, mock_exists, mock_download):
         """Test successful download of ICOS site."""
         mock_exists.return_value = True
-        mock_download.return_value = None
+        mock_download.return_value = "test.zip"
 
         result = download(["FI-HYY"], "test.csv")
 
         assert result == ["test.zip"]
         mock_download.assert_called_once_with(
             site_id="FI-HYY", network="ICOS", filename="test.zip", download_link="http://example.com/test.zip"
+        )
+
+    @patch("fluxnet_shuttle.shuttle._download_dataset")
+    @patch("os.path.exists")
+    @patch(
+        "builtins.open",
+        mock_open(
+            read_data="site_id,network,download_link\n"
+            "US-TEST,AmeriFlux,http://example.com/file.zip?=fluxnetshuttle\n"
+        ),
+    )
+    def test_download_with_query_params_in_url(self, mock_exists, mock_download):
+        """Test that download correctly handles URLs with query parameters."""
+        mock_exists.return_value = True
+        mock_download.return_value = "file.zip"
+
+        result = download(["US-TEST"], "test.csv")
+
+        assert result == ["file.zip"]
+        # Verify that filename passed to _download_dataset has no query params
+        mock_download.assert_called_once_with(
+            site_id="US-TEST",
+            network="AmeriFlux",
+            filename="file.zip",
+            download_link="http://example.com/file.zip?=fluxnetshuttle",
         )
 
     @patch("os.path.exists")

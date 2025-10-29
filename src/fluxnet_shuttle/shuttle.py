@@ -61,7 +61,8 @@ import logging
 import os
 import sys
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
+from urllib.parse import unquote, urlparse
 
 import aiofiles
 import requests
@@ -73,7 +74,44 @@ from fluxnet_shuttle.core.shuttle import FluxnetShuttle
 _log = logging.getLogger(__name__)
 
 
-def _download_dataset(site_id: str, network: str, filename: str, download_link: str) -> None:
+def _extract_filename_from_url(url: str) -> str:
+    """
+    Extract a clean filename from a URL by removing query parameters.
+
+    :param url: URL to extract filename from
+    :type url: str
+    :return: Extracted filename without query parameters
+    :rtype: str
+    """
+    parsed_url = urlparse(url)
+    # Get the path component (without query parameters)
+    path = parsed_url.path
+    # Extract the last part of the path as filename
+    filename = unquote(path.split("/")[-1])
+    return filename
+
+
+def _extract_filename_from_headers(headers: Dict[str, str]) -> Optional[str]:
+    """
+    Extract filename from HTTP Content-Disposition header if present.
+
+    :param headers: HTTP response headers
+    :type headers: dict
+    :return: Extracted filename or None if not found
+    :rtype: Optional[str]
+    """
+    content_disposition = headers.get("Content-Disposition", "")
+    if content_disposition:
+        # Parse Content-Disposition header (e.g., 'attachment; filename="file.zip"')
+        parts = content_disposition.split(";")
+        for part in parts:
+            if "filename=" in part:
+                filename = part.split("=")[1].strip().strip('"')
+                return unquote(filename)
+    return None
+
+
+def _download_dataset(site_id: str, network: str, filename: str, download_link: str) -> str:
     """
     Download dataset file from any FLUXNET network.
 
@@ -84,20 +122,29 @@ def _download_dataset(site_id: str, network: str, filename: str, download_link: 
     :type site_id: str
     :param network: Network name (e.g., "AmeriFlux", "ICOS")
     :type network: str
-    :param filename: Local filename to save data
+    :param filename: Local filename to save data (may be overridden by Content-Disposition header)
     :type filename: str
     :param download_link: Ready-to-use URL to download data from
     :type download_link: str
+    :return: The actual filename used to save the file
+    :rtype: str
     :raises FLUXNETShuttleError: If download fails
     """
     _log.info(f"{network}: downloading site {site_id} data file: {filename}")
     try:
         response = requests.get(download_link, stream=True)
         if response.status_code == 200:
+            # Try to get filename from Content-Disposition header
+            actual_filename = _extract_filename_from_headers(dict(response.headers))
+            if actual_filename:
+                _log.debug(f"Using filename from Content-Disposition header: {actual_filename}")
+                filename = actual_filename
+
             with open(filename, "wb") as file:
                 for chunk in response.iter_content(chunk_size=8192):
                     file.write(chunk)
             _log.info(f"{network}: file downloaded successfully to {filename}")
+            return filename
         else:
             msg = f"Failed to download {network} file. Status code: {response.status_code}"
             _log.error(msg)
@@ -165,11 +212,15 @@ def download(site_ids: List[str], runfile: str) -> List[str]:
         site = sites[site_id]
         network = site["network"]
         download_link = site["download_link"]
-        filename = download_link.split("/")[-1]
+        # Extract clean filename from URL (without query parameters)
+        filename = _extract_filename_from_url(download_link)
         _log.info(f"Downloading data for site {site_id} from network {network}")
 
-        _download_dataset(site_id=site_id, network=network, filename=filename, download_link=download_link)
-        downloaded_filenames.append(filename)
+        # _download_dataset may override filename from Content-Disposition header
+        actual_filename = _download_dataset(
+            site_id=site_id, network=network, filename=filename, download_link=download_link
+        )
+        downloaded_filenames.append(actual_filename)
     _log.info(f"Downloaded data for {len(site_ids)} sites: {site_ids}")
     return downloaded_filenames
 
