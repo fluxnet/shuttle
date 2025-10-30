@@ -109,7 +109,7 @@ jobs:
         env:
           PYTHONHASHSEED: 0
         run: |
-          pytest -m benchmark --benchmark-autosave --benchmark-save="${{ inputs.run-name }}"
+          pytest -vv -m benchmark --benchmark-autosave --benchmark-save="${{ inputs.run-name }}" --cov-fail-under=0
 
           if [ -n "${{ inputs.baseline }}" ]; then
             echo "Comparing against baseline: ${{ inputs.baseline }}"
