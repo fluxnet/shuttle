@@ -109,6 +109,12 @@ pytest tests/test_core.py
 
 # Run tests with verbose output
 pytest -v
+
+# Run and save the benchmark integration tests
+pytest -m benchmark --benchmark-autosave --benchmark-storage=file:///tmp/fluxnet-shuttle-benchmarks
+ls -l /tmp/fluxnet-shuttle-benchmarks/*
+total 16
+-rw-r--r--@ 1 user  wheel  5184 Oct 30 12:59 0001_c5688d1539fdbfecd3c40ae823a1188fb304a97f_20251030_193028_uncommited-changes.json
 ```
 
 ### Building Documentation

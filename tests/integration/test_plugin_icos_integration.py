@@ -34,9 +34,11 @@ class TestICOSAPIIntegration:
             assert isinstance(sites, list)
 
             # If we got sites, verify they're FluxnetDatasetMetadata objects
-            if sites:
+            if sites and len(sites) > 0:
                 assert all(isinstance(site, FluxnetDatasetMetadata) for site in sites)
                 logging.info(f"Retrieved {len(sites)} ICOS sites")
+            else:
+                pytest.fail("No sites were returned.")
 
         except requests.exceptions.RequestException as e:
             pytest.skip(f"ICOS API not accessible: {e}")

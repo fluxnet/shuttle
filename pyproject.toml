@@ -45,7 +45,8 @@ dev = [
     "flake8>=3.8",
     "types-requests",   
     "types-pyyaml",
-    "types-aiofiles"
+    "types-aiofiles",
+    "pytest-benchmark"
 ]
 docs = [
     "sphinx",
@@ -96,7 +97,7 @@ line_length = 120
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=fluxnet_shuttle --cov-report=term-missing -m 'not integration and not slow and not performance and not examples'"
+addopts = "--cov=fluxnet_shuttle --cov-report=term-missing -m 'not benchmark and not integration and not slow and not performance and not examples'"
 markers = [
     "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
