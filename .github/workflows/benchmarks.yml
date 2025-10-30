@@ -1,0 +1,130 @@
+name: Benchmarks (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      python:
+        description: 'Python version'
+        required: true
+        default: '3.12'
+      run-name:
+        description: 'Name for this benchmark run (used with --benchmark-save)'
+        required: true
+        default: 'manual-run'
+      baseline:
+        description: 'Baseline name to compare against (optional)'
+        required: false
+        default: ''
+
+jobs:
+  benchmarks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.python }}
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml', '**/requirements*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # ensure test deps are present
+          pip install -e .[dev] || true
+          pip install pytest pytest-benchmark
+
+      - name: Ensure benchmarks dir exists
+        run: mkdir -p .benchmarks
+
+      - name: Download benchmark baseline (previous run, API)
+        if: ${{ inputs.baseline != '' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+          NAME="benchmark-results-${{ inputs.baseline }}"
+          echo "Searching for artifact named: $NAME"
+ 
+          ARTIFACTS_JSON=$(curl -sS -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${REPO}/actions/artifacts?per_page=100")
+
+          ARTIFACT_ID=$(python - <<'PY'
+          import json, sys
+          data = json.load(sys.stdin)
+          name = sys.argv[1]
+          arts = data.get('artifacts', [])
+          matches = [a for a in arts if a.get('name') == name]
+          if not matches:
+              # no matches found
+              sys.exit(0)
+          # pick the latest by created_at (ISO timestamp)
+          latest = sorted(matches, key=lambda a: a.get('created_at') or '', reverse=True)[0]
+          print(latest.get('id'))
+          PY
+            "$NAME" <<<"$ARTIFACTS_JSON" || true)
+
+          if [ -z "$ARTIFACT_ID" ]; then
+            echo "Baseline artifact not found: $NAME"
+            exit 1
+          fi
+
+          echo "Found artifact id: $ARTIFACT_ID. Downloading..."
+          curl -sSL -H "Authorization: token $GITHUB_TOKEN" \
+          "https://api.github.com/repos/${REPO}/actions/artifacts/${ARTIFACT_ID}/zip" -o baseline.zip
+          unzip -o baseline.zip -d baseline_unzip
+          # Move .benchmarks into place (artifact may contain top-level folder)
+          if [ -d baseline_unzip/.benchmarks ]; then
+            rm -rf .benchmarks || true
+           mv baseline_unzip/.benchmarks ./
+          else
+            FOUND=$(find baseline_unzip -type d -name '.benchmarks' -print -quit || true)
+            if [ -n "$FOUND" ]; then
+              rm -rf .benchmarks || true
+              mv "$FOUND" ./
+            else
+              echo "Downloaded artifact did not contain a .benchmarks directory"
+              exit 1
+            fi
+          fi
+
+      - name: Record environment metadata
+        run: |
+          echo "runner: $RUNNER_OS" > .benchmarks/${{ inputs.run-name }}-meta.txt
+          echo "python: $(python -V)" >> .benchmarks/${{ inputs.run-name }}-meta.txt
+          uname -a >> .benchmarks/${{ inputs.run-name }}-meta.txt
+          lscpu || true
+
+      - name: Run benchmarks
+        env:
+          PYTHONHASHSEED: 0
+        run: |
+          pytest -m benchmark --benchmark-autosave --benchmark-save="${{ inputs.run-name }}"
+
+          if [ -n "${{ inputs.baseline }}" ]; then
+            echo "Comparing against baseline: ${{ inputs.baseline }}"
+            # remove '|| true' if you want the job to fail on compare exit codes
+            pytest -m benchmark --benchmark-compare="${{ inputs.baseline }}" || true
+          fi
+
+      - name: Upload benchmark artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-${{ inputs.run-name }}
+          path: .benchmarks
+          retention-days: 30
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "Benchmark run '${{ inputs.run-name }}' finished. Artifact uploaded as 'benchmark-results-${{ inputs.run-name }}'."
