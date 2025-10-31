@@ -54,42 +54,30 @@ class AmeriFluxPlugin(NetworkPlugin):
         api_url = f"{AMERIFLUX_BASE_URL}{AMERIFLUX_BASE_PATH}"
 
         try:
-            site_metadata = await self._get_site_metadata(api_url, timeout=30)
+            site_metadata = await self._get_site_metadata(api_url)
         except Exception as e:
             logger.exception("Failed to retrieve AmeriFlux data: %s", e)
             raise PluginError(self.name, f"Failed to retrieve data from API: {e}", original_error=e)
 
         # Validate site metadata
         if not site_metadata:
-            logger.warning("No AmeriFlux site metadata found")
+            logger.warning("No AmeriFlux sites with FLUXNET data found")
         else:
             logger.info(f"Retrieved metadata for {len(site_metadata)} AmeriFlux sites")
 
-        if site_metadata:
             try:
-                # Filter for sites with FLUXNET data (non-empty grp_publish_fluxnet)
-                sites_with_data: Dict[str, List[int]] = {
-                    site_id: cast(List[int], site.get("grp_publish_fluxnet", []))
-                    for site_id, site in site_metadata.items()
-                    if site.get("grp_publish_fluxnet")
-                }
 
-                if not sites_with_data:
-                    logger.warning("No AmeriFlux sites with FLUXNET data found")
+                # Get download links for sites with data
+                site_ids = list(site_metadata.keys())
+                download_data = await self._get_download_links(api_url, site_ids)
+
+                if not download_data or not download_data.get("data_urls"):
+                    logger.warning("No AmeriFlux download links found")
                 else:
-                    logger.info(f"Found {len(sites_with_data)} AmeriFlux sites with FLUXNET data")
-
-                    # Get download links for sites with data
-                    site_ids = list(sites_with_data.keys())
-                    download_data = await self._get_download_links(api_url, site_ids, timeout=30)
-
-                    if not download_data or not download_data.get("data_urls"):
-                        logger.warning("No AmeriFlux download links found")
-                    else:
-                        logger.info(f"Retrieved download links for {len(download_data.get('data_urls', []))} sites")
-                        for site_data in self._parse_response(download_data, site_metadata, sites_with_data):
-                            await asyncio.sleep(0.1)
-                            yield site_data
+                    logger.info(f"Retrieved download links for {len(download_data.get('data_urls', []))} sites")
+                    for site_data in self._parse_response(download_data, site_metadata):
+                        await asyncio.sleep(0.001)  # Yield control to event loop
+                        yield site_data
 
             except PluginError:
                 # Re-raise PluginError without wrapping
@@ -98,19 +86,17 @@ class AmeriFluxPlugin(NetworkPlugin):
                 logger.exception("Error processing AmeriFlux data: %s", e)
                 raise PluginError(self.name, f"Error processing data: {e}", original_error=e)
 
-    async def _get_site_metadata(self, api_url: str, timeout: int) -> Dict[str, Any]:
+    async def _get_site_metadata(self, api_url: str) -> Dict[str, Any]:
         """Get site metadata including lat, lon, IGBP from v2 site_info_display endpoint."""
         try:
-            async with self._session_request(
-                "GET", f"{api_url}{AMERIFLUX_SITE_INFO_PATH}", timeout=timeout
-            ) as response:
+            async with self._session_request("GET", f"{api_url}{AMERIFLUX_SITE_INFO_PATH}") as response:
                 data = await response.json()
                 # Create a dictionary indexed by site_id for quick lookup
                 site_dict = {}
                 for site in data.get("values", []):
-                    await asyncio.sleep(0.1)
+                    await asyncio.sleep(0.001)  # Yield control to event loop
                     site_id = site.get("site_id")
-                    if site_id:
+                    if site_id is not None and site.get("grp_publish_fluxnet", False):
                         site_dict[site_id] = site
 
                 return site_dict
@@ -119,7 +105,7 @@ class AmeriFluxPlugin(NetworkPlugin):
             # Re-raise PluginError - site metadata is critical for plugin operation
             raise
 
-    async def _get_download_links(self, base_url: str, site_ids: list, timeout: int) -> Dict[str, Any]:
+    async def _get_download_links(self, base_url: str, site_ids: list) -> Dict[str, Any]:
         """Get download links for specified AmeriFlux sites using v2 shuttle endpoint."""
         url_post_query = f"{base_url}{AMERIFLUX_DOWNLOAD_PATH}"
 
@@ -133,7 +119,7 @@ class AmeriFluxPlugin(NetworkPlugin):
 
         try:
             async with self._session_request(
-                "POST", url_post_query, headers=AMERIFLUX_HEADERS, json=json_query, timeout=timeout
+                "POST", url_post_query, headers=AMERIFLUX_HEADERS, json=json_query
             ) as response:
                 data: Dict[str, Any] = await response.json()
                 return data
@@ -207,7 +193,7 @@ class AmeriFluxPlugin(NetworkPlugin):
         )
 
     def _parse_response(
-        self, data: Dict[str, Any], site_metadata: Dict[str, Any], sites_with_data: Dict[str, List[int]]
+        self, data: Dict[str, Any], site_metadata: Dict[str, Any]
     ) -> Generator[FluxnetDatasetMetadata, None, None]:
         """
         Parse AmeriFlux API response to extract site information with complete metadata.
@@ -215,7 +201,6 @@ class AmeriFluxPlugin(NetworkPlugin):
         Args:
             data: AmeriFlux API response data with download links
             site_metadata: Dictionary of site metadata indexed by site_id
-            sites_with_data: Dictionary of site_id to publish_years
 
         Returns:
             Generator yielding FluxnetDatasetMetadata objects
@@ -225,8 +210,8 @@ class AmeriFluxPlugin(NetworkPlugin):
                 site_id = s["site_id"]
                 download_link = s["url"]
 
-                # Get years from sites_with_data (from data_availability endpoint)
-                publish_years = sites_with_data.get(site_id, [])
+                # Get years from site_metadata (from data_availability endpoint)
+                publish_years = site_metadata.get(site_id, {}).get("grp_publish_fluxnet", [])
                 if not publish_years:
                     logger.debug(f"Skipping site {site_id} - no publish years available")
                     continue

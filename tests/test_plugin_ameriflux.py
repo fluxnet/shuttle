@@ -207,18 +207,20 @@ class TestAmeriFluxPlugin:
                     "site_id": "US-TEST",
                     "grp_location": {"location_lat": "40.0", "location_long": "-105.0"},
                     "grp_igbp": {"igbp": "ENF"},
+                    "grp_publish_fluxnet": [2005, 2006, 2007],
                 },
                 {
                     "site_id": "US-EXM",
                     "grp_location": {"location_lat": "41.0", "location_long": "-106.0"},
                     "grp_igbp": {"igbp": "DBF"},
+                    "grp_publish_fluxnet": [2010, 2011, 2012],
                 },
             ]
         }
         mock_response.raise_for_status.side_effect = None
         mock_request.return_value.__aenter__.return_value = mock_response
 
-        metadata = await ameriflux.AmeriFluxPlugin()._get_site_metadata(api_url="http://example.com", timeout=10)
+        metadata = await ameriflux.AmeriFluxPlugin()._get_site_metadata(api_url="http://example.com")
         assert "US-TEST" in metadata
         assert "US-EXM" in metadata
         assert metadata["US-TEST"]["grp_location"]["location_lat"] == "40.0"
@@ -231,7 +233,7 @@ class TestAmeriFluxPlugin:
     async def test__get_site_metadata_failure(self, mock_request):
         """Test _get_site_metadata raises PluginError on failure."""
         with pytest.raises(PluginError) as exc_info:
-            await ameriflux.AmeriFluxPlugin()._get_site_metadata(api_url="http://example.com", timeout=10)
+            await ameriflux.AmeriFluxPlugin()._get_site_metadata(api_url="http://example.com")
 
         assert "ameriflux" in str(exc_info.value).lower()
         assert mock_request.call_count == 1  # Ensure the request was attempted
@@ -244,9 +246,7 @@ class TestAmeriFluxPlugin:
     async def test__get_download_links_with_failure(self, mock_request):
         """Test _get_download_links raises PluginError on failure."""
         with pytest.raises(PluginError) as exc_info:
-            await ameriflux.AmeriFluxPlugin()._get_download_links(
-                base_url="http://example.com", site_ids=["US-TEST"], timeout=10
-            )
+            await ameriflux.AmeriFluxPlugin()._get_download_links(base_url="http://example.com", site_ids=["US-TEST"])
 
         assert "ameriflux" in str(exc_info.value).lower()
         assert mock_request.call_count == 1  # Ensure the request was attempted
@@ -269,7 +269,7 @@ class TestAmeriFluxPlugin:
         mock_response.json = mock_json
 
         links = await ameriflux.AmeriFluxPlugin()._get_download_links(
-            base_url="http://example.com", site_ids=["US-TEST"], timeout=10
+            base_url="http://example.com", site_ids=["US-TEST"]
         )
         assert links == {
             "data_urls": [
@@ -291,12 +291,12 @@ class TestAmeriFluxPlugin:
             "US-TEST": {
                 "grp_location": {"location_lat": "40.5", "location_long": "-105.5"},
                 "grp_igbp": {"igbp": "ENF"},
+                "grp_publish_fluxnet": [2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012],
             }
         }
-        sites_with_data = {"US-TEST": [2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012]}
 
         plugin = ameriflux.AmeriFluxPlugin()
-        results = list(plugin._parse_response(sample_response, site_metadata, sites_with_data))
+        results = list(plugin._parse_response(sample_response, site_metadata))
 
         # Should only return valid entries, skipping the invalid one
         assert len(results) == 1
@@ -321,19 +321,16 @@ class TestAmeriFluxPlugin:
             "US-TEST": {
                 "grp_location": {"location_lat": "40.5", "location_long": "-105.5"},
                 "grp_igbp": {"igbp": "ENF"},
+                "grp_publish_fluxnet": [2005, 2006, 2007],
             },
             "US-NODATA": {
                 "grp_location": {"location_lat": "41.0", "location_long": "-106.0"},
                 "grp_igbp": {"igbp": "GRA"},
             },
         }
-        sites_with_data = {
-            "US-TEST": [2005, 2006, 2007],
-            # US-NODATA has no entry (filtered out during availability check)
-        }
 
         plugin = ameriflux.AmeriFluxPlugin()
-        results = list(plugin._parse_response(sample_response, site_metadata, sites_with_data))
+        results = list(plugin._parse_response(sample_response, site_metadata))
 
         assert len(results) == 1  # Only US-TEST should be included
         assert results[0].site_info.site_id == "US-TEST"
@@ -372,12 +369,12 @@ class TestAmeriFluxPlugin:
             "US-TEST": {
                 "grp_location": {"location_lat": "invalid", "location_long": "also_invalid"},
                 "grp_igbp": {"igbp": "ENF"},
+                "grp_publish_fluxnet": [2005, 2006],
             }
         }
-        sites_with_data = {"US-TEST": [2005, 2006]}
 
         plugin = ameriflux.AmeriFluxPlugin()
-        results = list(plugin._parse_response(sample_response, site_metadata, sites_with_data))
+        results = list(plugin._parse_response(sample_response, site_metadata))
 
         assert len(results) == 1
         assert results[0].site_info.site_id == "US-TEST"
