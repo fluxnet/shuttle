@@ -38,12 +38,12 @@ async def get_session() -> AsyncGenerator[aiohttp.ClientSession, None]:
     # the default requests timeout behavior.  The key setting is:
     #    - total=None → no overall deadline
     #    - sock_connect → a generous connect timeout (60 s is usually enough)
-    #    - sock_read=None → wait forever for the server to finally answer
+    #    - sock_read=300 → 5 minute read timeout to avoid TLS issues on slow networks
     # ----------------------------------------------------------------------
     client_timeout = aiohttp.ClientTimeout(
         total=None,  # no global deadline
         sock_connect=60,  # allow slow TLS handshakes on a busy network
-        sock_read=None,  # **key** – disables the 5‑second idle read timeout
+        sock_read=300,  # 5 minute read timeout to avoid TLS issues
     )
     session = aiohttp.ClientSession(timeout=client_timeout)
     yield session
