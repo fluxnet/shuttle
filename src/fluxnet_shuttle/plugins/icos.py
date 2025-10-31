@@ -63,30 +63,36 @@ class ICOSPlugin(NetworkPlugin):
         return "ICOS"
 
     @async_to_sync_generator
-    async def get_sites(self, **filters) -> AsyncGenerator[FluxnetDatasetMetadata, None]:
+    async def get_sites(self) -> AsyncGenerator[FluxnetDatasetMetadata, None]:
         """
-        Get ICOS sites with FLUXNET data.
+        Fetch ICOS sites with FLUXNET data from the ICOS Carbon Portal SPARQL endpoint.
 
-        Args:
-            **filters: Optional filters (not used in this implementation)
+        Yields site metadata objects using the FluxnetDatasetMetadata model.
+        All available sites are returned; filtering is not currently supported.
+
+        This method is an async generator. The :func:`async_to_sync_generator`
+        decorator allows usage in both asynchronous and synchronous contexts.
+
+        Configuration:
+            api_url (str): Optional. Override the default ICOS API URL.
+            timeout (int): Optional. Request timeout in seconds.
 
         Yields:
-            FluxnetDatasetMetadata: Site metadata objects
+            FluxnetDatasetMetadata: Site metadata objects.
         """
         logger.info("Fetching ICOS sites...")
 
         # Get configuration parameters
         api_url = self.config.get("api_url", ICOS_API_URL)
-        timeout = self.config.get("timeout", 45)
 
         async with self._session_request(
-            "POST", api_url, data={"query": ICOS_SPARQL_QUERY}, headers={"Accept": "application/json"}, timeout=timeout
+            "POST", api_url, data={"query": ICOS_SPARQL_QUERY}, headers={"Accept": "application/json"}
         ) as response:
             data = await response.json()
 
             # Parse and yield site metadata
             for site_data in self._parse_sparql_response(data):
-                await asyncio.sleep(0.1)  # Yield control to event loop
+                await asyncio.sleep(0.001)  # Yield control to event loop
                 yield site_data
 
     def _parse_sparql_response(self, data: Dict[str, Any]) -> Generator[FluxnetDatasetMetadata, None, None]:
@@ -168,7 +174,6 @@ class ICOSPlugin(NetworkPlugin):
                 )
 
                 metadata = FluxnetDatasetMetadata(site_info=site_info, product_data=product_data)
-
                 yield metadata
 
             except Exception as e:
