@@ -51,7 +51,7 @@ Quick Start
 
     # Download specific sites
     sites = ['US-ARc', 'IT-Niv']
-    downloaded_files = download(site_ids=sites, runfile=csv_filename)
+    downloaded_files = download(site_ids=sites, snapshot_file=csv_filename)
 
 For advanced usage with error handling and the developer API, see :doc:`developer_guide`.
 
@@ -59,14 +59,17 @@ For advanced usage with error handling and the developer API, see :doc:`develope
 
 .. code-block:: bash
 
-    # List all available datasets
-    fluxnet-shuttle listall --verbose --output sites.csv
+    # List all available datasets (creates snapshot file)
+    fluxnet-shuttle listall
 
-    # Download data for specific sites
-    fluxnet-shuttle download -s US-Ha1 US-MMS -r sites.csv
+    # Download data for specific sites using snapshot file
+    fluxnet-shuttle download -f fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv -s US-Ha1 US-MMS
 
-    # Run connectivity tests
-    fluxnet-shuttle test
+    # Create output directory
+    mkdir /data/fluxnet
+    fluxnet-shuttle download -f fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv -s US-ARc IT-Niv -o /data/fluxnet
+
+For complete CLI documentation, see :doc:`cli`.
 
 Documentation
 =============

@@ -111,7 +111,7 @@ def _extract_filename_from_headers(headers: Dict[str, str]) -> Optional[str]:
     return None
 
 
-def _download_dataset(site_id: str, network: str, filename: str, download_link: str) -> str:
+def _download_dataset(site_id: str, network: str, filename: str, download_link: str, output_dir: str = ".") -> str:
     """
     Download dataset file from any FLUXNET network.
 
@@ -126,6 +126,8 @@ def _download_dataset(site_id: str, network: str, filename: str, download_link: 
     :type filename: str
     :param download_link: Ready-to-use URL to download data from
     :type download_link: str
+    :param output_dir: Directory to save downloaded files (default: current directory)
+    :type output_dir: str
     :return: The actual filename used to save the file
     :rtype: str
     :raises FLUXNETShuttleError: If download fails
@@ -140,11 +142,18 @@ def _download_dataset(site_id: str, network: str, filename: str, download_link: 
                 _log.debug(f"Using filename from Content-Disposition header: {actual_filename}")
                 filename = actual_filename
 
-            with open(filename, "wb") as file:
+            # Join with output directory
+            filepath = os.path.join(output_dir, filename)
+
+            # Warn if file already exists and will be overwritten
+            if os.path.exists(filepath):
+                _log.warning(f"{network}: file already exists and will be overwritten: {filepath}")
+
+            with open(filepath, "wb") as file:
                 for chunk in response.iter_content(chunk_size=8192):
                     file.write(chunk)
-            _log.info(f"{network}: file downloaded successfully to {filename}")
-            return filename
+            _log.info(f"{network}: file downloaded successfully to {filepath}")
+            return filepath
         else:
             msg = f"Failed to download {network} file. Status code: {response.status_code}"
             _log.error(msg)
@@ -155,38 +164,34 @@ def _download_dataset(site_id: str, network: str, filename: str, download_link: 
         raise FLUXNETShuttleError(msg)
 
 
-def download(site_ids: List[str], runfile: str) -> List[str]:
+def download(site_ids: Optional[List[str]] = None, snapshot_file: str = "", output_dir: str = ".") -> List[str]:
     """
-    Download FLUXNET data for specified sites using configuration from a run file.
+    Download FLUXNET data for specified sites using configuration from a snapshot file.
 
     .. versionadded:: 0.1.0
        Initial download functionality for AmeriFlux and ICOS networks.
 
-    :param site_ids: List of site IDs to download data for
-    :type site_ids: list
-    :param runfile: Path to CSV file containing site configuration
-    :type runfile: str
+    :param site_ids: List of site IDs to download data for. If None or empty, downloads all sites from snapshot file.
+    :type site_ids: Optional[List[str]]
+    :param snapshot_file: Path to CSV snapshot file containing site configuration
+    :type snapshot_file: str
+    :param output_dir: Directory to save downloaded files (default: current directory)
+    :type output_dir: str
     :return: List of downloaded filenames
     :rtype: list
-    :raises FLUXNETShuttleError: If site_ids or runfile are invalid
+    :raises FLUXNETShuttleError: If snapshot_file is invalid or sites not found
     """
-    if not site_ids:
-        msg = "No site IDs provided for download."
-        _log.error(msg)
-        raise FLUXNETShuttleError(msg)
-    if not runfile:
-        msg = "No run file provided."
+    if not snapshot_file:
+        msg = "No snapshot file provided."
         _log.error(msg)
         raise FLUXNETShuttleError(msg)
 
-    _log.info(f"Starting download with site IDs: {site_ids} and run file: {runfile}")
-
-    # Load CSV run file
-    if not os.path.exists(runfile):
-        msg = f"Run file {runfile} does not exist."
+    # Load CSV snapshot file
+    if not os.path.exists(snapshot_file):
+        msg = f"Snapshot file {snapshot_file} does not exist."
         _log.error(msg)
         raise FLUXNETShuttleError(msg)
-    with open(runfile, "r") as f:
+    with open(snapshot_file, "r") as f:
         run_data: List[Any] = f.readlines()
     run_data = [line.strip().split(",") for line in run_data]
     fields = run_data[0]
@@ -196,15 +201,22 @@ def download(site_ids: List[str], runfile: str) -> List[str]:
         for i, field in enumerate(fields):
             site[field] = line[i]
         sites[site["site_id"]] = site
-    _log.debug(f"Loaded {len(sites)} sites from run file")
+    _log.debug(f"Loaded {len(sites)} sites from snapshot file")
 
-    # Check if site IDs are in the run file
+    # If no site IDs specified, download all sites from snapshot
+    if not site_ids:
+        site_ids = list(sites.keys())
+        _log.info(f"No site IDs specified. Will download all {len(site_ids)} sites from snapshot file.")
+
+    _log.info(f"Starting download with {len(site_ids)} site IDs: {site_ids} and snapshot file: {snapshot_file}")
+
+    # Check if site IDs are in the snapshot file
     for site_id in site_ids:
         if site_id not in sites:
-            msg = f"Site ID {site_id} not found in run file."
+            msg = f"Site ID {site_id} not found in snapshot file."
             _log.error(msg)
             raise FLUXNETShuttleError(msg)
-    _log.debug("All site IDs found in run file")
+    _log.debug("All site IDs found in snapshot file")
 
     # Download data for each site
     downloaded_filenames = []
@@ -218,7 +230,7 @@ def download(site_ids: List[str], runfile: str) -> List[str]:
 
         # _download_dataset may override filename from Content-Disposition header
         actual_filename = _download_dataset(
-            site_id=site_id, network=network, filename=filename, download_link=download_link
+            site_id=site_id, network=network, filename=filename, download_link=download_link, output_dir=output_dir
         )
         downloaded_filenames.append(actual_filename)
     _log.info(f"Downloaded data for {len(site_ids)} sites: {site_ids}")
@@ -239,10 +251,16 @@ async def listall(*args, **kwargs) -> str:
     :type ameriflux: bool
     :param icos: Whether to include ICOS data
     :type icos: bool
+    :param output_dir: Directory to save the snapshot file (default: current directory)
+    :type output_dir: str
     :return: CSV filename containing data availability information
     :rtype: str
     """
     _log.debug(f"Starting listall with {args}, {kwargs}")
+
+    # Extract output_dir from kwargs if present
+    output_dir = kwargs.pop("output_dir", ".")
+
     networks = [k for k, v in kwargs.items() if v]
     _log.debug(f"Networks to include: {networks}")
     shuttle = FluxnetShuttle(networks=networks)
@@ -261,33 +279,13 @@ async def listall(*args, **kwargs) -> str:
         "download_link",
     ]
 
-    csv_filename = f"data_availability_{datetime.now().strftime('%Y%m%dT%H%M%S')}.csv"
-    counts = await _write_data_availability(shuttle, fields, csv_filename)
+    csv_filename = f"fluxnet_shuttle_snapshot_{datetime.now().strftime('%Y%m%dT%H%M%S')}.csv"
+    csv_filepath = os.path.join(output_dir, csv_filename)
+    counts = await _write_data_availability(shuttle, fields, csv_filepath)
 
-    _log.info(f"Wrote data availability to {csv_filename}")
+    _log.info(f"Wrote data availability to {csv_filepath}")
     _log.info(f"Network counts: {counts}")
-    return csv_filename
-
-
-def test(*args, **kwargs) -> bool:
-    """
-    Test connectivity to all configured FLUXNET networks.
-
-    .. versionadded:: 0.1.0
-       Initial connectivity test functionality for AmeriFlux and ICOS networks.
-    .. versionchanged:: 0.2.0
-       Refactored to be a stub until plugins implement connectivity tests.
-
-    :return: True if connectivity test passed, False otherwise
-    :rtype: bool
-
-    :raises NotImplementedError: If connectivity test is not implemented in plugins
-    """
-    _log.debug("Starting connectivity test")
-
-    # Stub this method until a helper method is implemented in each plugin
-    _log.info("Testing connectivity for networks is not fully implemented yet.")
-    raise NotImplementedError("Connectivity test not implemented in plugins yet.")
+    return csv_filepath
 
 
 @async_to_sync

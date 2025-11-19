@@ -19,7 +19,7 @@ Commands
 listall
 ~~~~~~~
 
-List all available FLUXNET datasets from AmeriFlux and ICOS networks.
+List all available FLUXNET datasets from AmeriFlux and ICOS networks. Creates a snapshot CSV file containing available site metadata and download links. The timestamp of the request is included in the filename.
 
 .. code-block:: bash
 
@@ -27,74 +27,92 @@ List all available FLUXNET datasets from AmeriFlux and ICOS networks.
 
 **Options:**
 
-- ``--output, -o TEXT``: Output CSV filename (default: timestamped)
-- ``--verbose, -v``: Enable verbose logging
-- ``--no-logfile``: Disable logging to file
-- ``--logfile TEXT``: Custom log file path
+- ``--output-dir, -o PATH``: Directory to save the snapshot file (default: current directory). **Note:** Directory must already exist.
+
+**Output:**
+
+Creates a file named ``fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv`` containing:
+
+- Network name
+- Site ID
+- First year of data
+- Last year of data
+- Download link
 
 **Examples:**
 
 .. code-block:: bash
 
-    # List all sites and save to timestamped CSV
-    fluxnet-shuttle listall --verbose
+    # List all sites and save snapshot file to current directory
+    fluxnet-shuttle listall
 
-    # Save to specific filename
-    fluxnet-shuttle listall --output my_sites.csv
+    # Save snapshot file to specific directory (directory must exist)
+    fluxnet-shuttle listall -o /path/to/output
+
+    # With verbose logging
+    fluxnet-shuttle --verbose listall
 
 download
 ~~~~~~~~
 
-Download FLUXNET data for specified sites using a run file with site configurations.
+Download FLUXNET data products (zip files) for specified sites using a snapshot file generated with the listall command.
 
 .. code-block:: bash
 
-    fluxnet-shuttle download [OPTIONS]
+    fluxnet-shuttle download -f SNAPSHOT_FILE [OPTIONS]
 
 **Options:**
 
-- ``--sites, -s TEXT``: Space-separated list of site IDs
-- ``--runfile, -r TEXT``: Path to CSV run file (from listall command)
-- ``--verbose, -v``: Enable verbose logging
-- ``--no-logfile``: Disable logging to file
-- ``--logfile TEXT``: Custom log file path
+- ``--snapshot-file, -f PATH``: Path to snapshot CSV file (required)
+- ``--sites, -s SITE_ID [SITE_ID ...]``: Space-separated list of site IDs to download (optional - downloads ALL if not specified)
+- ``--output-dir, -o PATH``: Directory to save downloaded files (default: current directory). **Note:** Directory must already exist.
+- ``--quiet, -q``: Skip confirmation prompt when downloading all sites
+
+**Behavior:**
+
+- If ``--sites`` is specified: Downloads only those sites
+- If ``--sites`` is not specified: Prompts for confirmation before downloading ALL sites from the snapshot file
+- Use ``--quiet`` to skip the confirmation prompt (useful for automation)
+- **File Overwriting:** If a file already exists at the download location, a warning will be logged and the file will be overwritten
+- **Output Directory Validation:** The output directory must exist before running the command
 
 **Examples:**
 
 .. code-block:: bash
 
-    # Download specific sites using runfile
-    fluxnet-shuttle download -s US-Ha1 US-MMS -r sites.csv
+    # Download specific sites
+    fluxnet-shuttle download -f fluxnet_shuttle_snapshot_20251114T113216.csv -s US-Ha1 US-MMS
 
-    # Download with verbose output
-    fluxnet-shuttle download -s US-ARc IT-Niv -r sites.csv --verbose
+    # Download to specific directory (directory must exist)
+    fluxnet-shuttle download -f fluxnet_shuttle_snapshot_20251114T113216.csv -s US-ARc IT-Niv -o /data/fluxnet
+
+    # Download ALL sites (with confirmation prompt)
+    fluxnet-shuttle download -f fluxnet_shuttle_snapshot_20251114T113216.csv
+
+    # Download ALL sites without confirmation (automation)
+    fluxnet-shuttle download -f fluxnet_shuttle_snapshot_20251114T113216.csv --quiet
 
 sources
 ~~~~~~~
 
-List available data sources and their information.
+List available FLUXNET network plugins dynamically registered in the system.
 
 .. code-block:: bash
 
-    fluxnet-shuttle sources [OPTIONS]
+    fluxnet-shuttle sources
 
-test
-~~~~
+**Output:**
 
-Run connectivity tests to verify API access to AmeriFlux and ICOS networks.
+Displays all registered network plugins with their display names and identifiers.
 
-.. code-block:: bash
-
-    fluxnet-shuttle test [OPTIONS]
-
-search
-~~~~~~
-
-Search functionality (placeholder for future implementation).
+**Example:**
 
 .. code-block:: bash
 
-    fluxnet-shuttle search [OPTIONS]
+    fluxnet-shuttle sources
+    # Output:
+    #   - AmeriFlux (ameriflux)
+    #   - ICOS (icos)
 
 Global Options
 --------------
@@ -114,20 +132,34 @@ Complete workflow from discovery to download:
 
 .. code-block:: bash
 
-    # Step 1: Discover available data
-    fluxnet-shuttle listall --verbose
+    # Step 1: Check available network plugins
+    fluxnet-shuttle sources
 
-    # Step 2: Review the CSV file (external step)
-    # Open sites.csv and identify sites of interest
+    # Step 2: Create directories for snapshots and downloads
+    mkdir /data/snapshots /data/fluxnet
 
-    # Step 3: Download specific sites
-    fluxnet-shuttle download \
-      -r data_availability_YYYYMMDDTHHMMSS.csv  \
+    # Step 3: Discover available data and create snapshot
+    fluxnet-shuttle --verbose listall -o /data/snapshots
+
+    # Step 4: Review the snapshot file (external step)
+    # Open fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv and identify sites of interest
+
+    # Step 5: Download specific sites
+    fluxnet-shuttle --verbose download \
+      -f /data/snapshots/fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv \
       -s US-ARc IT-Niv DE-Tha \
-      --verbose
+      -o /data/fluxnet
 
-    # Step 4: Test connectivity if needed
-    fluxnet-shuttle test --verbose
+    # Alternative: Download all sites (with confirmation)
+    fluxnet-shuttle download \
+      -f /data/snapshots/fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv \
+      -o /data/fluxnet
+
+    # Alternative: Download all sites without confirmation (automation)
+    fluxnet-shuttle download \
+      -f /data/snapshots/fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv \
+      -o /data/fluxnet \
+      --quiet
 
 Error Handling
 --------------
@@ -139,5 +171,25 @@ The CLI provides clear error messages for common issues:
 - Network connectivity problems
 - File not found errors
 - Invalid CSV format
+- Output directory does not exist
+- Output directory is not writable
+- Output path is a file instead of a directory
 
 All errors are logged and return appropriate exit codes for use in scripts.
+
+Important Notes
+---------------
+
+**Output Directory Requirements:**
+
+- The output directory specified with ``-o`` or ``--output-dir`` must already exist
+- The CLI will **not** automatically create directories
+- Users must create directories before running commands
+- If the output directory does not exist, the command will fail with an error message
+
+**File Overwriting:**
+
+- When downloading files, if a file with the same name already exists, it will be overwritten
+- A warning message will be logged when overwriting occurs
+- No confirmation is required for individual file overwrites
+- To avoid losing data, ensure you use unique output directories or backup existing files

@@ -15,7 +15,7 @@ from unittest.mock import patch
 
 import pytest
 
-from fluxnet_shuttle.main import cmd_download, cmd_listall, cmd_search, cmd_sources, cmd_test, main, setup_logging
+from fluxnet_shuttle.main import cmd_download, cmd_listall, cmd_sources, main, setup_logging
 
 
 class TestCLIIntegration:
@@ -237,8 +237,8 @@ class TestCLIFunctions:
         mock_listall.assert_called_once()
 
     @patch("fluxnet_shuttle.main.download")
-    def test_cmd_download_with_sites_and_runfile(self, mock_download):
-        """Test cmd_download with both site IDs and runfile."""
+    def test_cmd_download_with_sites_and_snapshot_file(self, mock_download):
+        """Test cmd_download with both site IDs and snapshot file."""
         mock_download.return_value = []
 
         # Create a temporary CSV file
@@ -248,7 +248,12 @@ class TestCLIFunctions:
 
         try:
             args = argparse.Namespace(
-                sites=["US-Ha1", "US-MMS"], runfile=csv_file, logfile="test.log", no_logfile=False, verbose=False
+                sites=["US-Ha1", "US-MMS"],
+                snapshot_file=csv_file,
+                output_dir=".",
+                logfile="test.log",
+                no_logfile=False,
+                verbose=False,
             )
 
             cmd_download(args)
@@ -264,8 +269,8 @@ class TestCLIFunctions:
             os.unlink(csv_file)
 
     @patch("fluxnet_shuttle.main.download")
-    def test_cmd_download_with_runfile_only(self, mock_download):
-        """Test cmd_download with run file only (sites extracted from CSV)."""
+    def test_cmd_download_with_snapshot_file_only(self, mock_download):
+        """Test cmd_download with snapshot file only (sites extracted from CSV)."""
         mock_download.return_value = []
 
         # Create a temporary CSV file
@@ -274,7 +279,15 @@ class TestCLIFunctions:
             csv_file = tmp.name
 
         try:
-            args = argparse.Namespace(sites=None, runfile=csv_file, logfile="test.log", no_logfile=False, verbose=False)
+            args = argparse.Namespace(
+                sites=None,
+                snapshot_file=csv_file,
+                output_dir=".",
+                quiet=True,
+                logfile="test.log",
+                no_logfile=False,
+                verbose=False,
+            )
 
             cmd_download(args)
 
@@ -288,57 +301,38 @@ class TestCLIFunctions:
         finally:
             os.unlink(csv_file)
 
-    def test_cmd_download_sites_without_runfile(self):
-        """Test cmd_download with sites but no runfile."""
+    def test_cmd_download_sites_without_snapshot_file(self):
+        """Test cmd_download with sites but no snapshot file."""
         args = argparse.Namespace(
-            sites=["US-Ha1", "US-MMS"], runfile=None, logfile="test.log", no_logfile=False, verbose=False
+            sites=["US-Ha1", "US-MMS"],
+            snapshot_file=None,
+            output_dir=".",
+            logfile="test.log",
+            no_logfile=False,
+            verbose=False,
         )
 
-        # Should raise SystemExit due to missing runfile
+        # Should raise SystemExit due to missing snapshot file
         with pytest.raises(SystemExit) as exc_info:
             cmd_download(args)
         assert exc_info.value.code == 1
 
-    def test_cmd_download_no_sites_or_runfile(self):
-        """Test cmd_download with no sites or runfile."""
-        args = argparse.Namespace(sites=None, runfile=None, logfile="test.log", no_logfile=False, verbose=False)
+    def test_cmd_download_no_sites_or_snapshot_file(self):
+        """Test cmd_download with no sites or snapshot file."""
+        args = argparse.Namespace(
+            sites=None,
+            snapshot_file=None,
+            output_dir=".",
+            quiet=True,
+            logfile="test.log",
+            no_logfile=False,
+            verbose=False,
+        )
 
         # Should raise SystemExit due to no input
         with pytest.raises(SystemExit) as exc_info:
             cmd_download(args)
         assert exc_info.value.code == 1
-
-    @patch("fluxnet_shuttle.main.download")
-    def test_cmd_download_with_space_separated_sites(self, mock_download):
-        """Test cmd_download with space-separated site IDs in a single argument."""
-        mock_download.return_value = []
-
-        # Create a temporary CSV file
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as tmp:
-            tmp.write("site_id,network\nUS-Ha1,AmeriFlux\nUS-MMS,AmeriFlux\n")
-            csv_file = tmp.name
-
-        try:
-            args = argparse.Namespace(
-                sites=["US-Ha1 US-MMS US-WCr"],  # Space-separated in single string
-                runfile=csv_file,
-                logfile="test.log",
-                no_logfile=False,
-                verbose=False,
-            )
-
-            cmd_download(args)
-
-            # Verify download was called with split sites
-            mock_download.assert_called_once()
-            call_args = mock_download.call_args
-            sites = call_args[1]["site_ids"]
-            assert "US-Ha1" in sites
-            assert "US-MMS" in sites
-            assert "US-WCr" in sites
-
-        finally:
-            os.unlink(csv_file)
 
     def test_cmd_download_csv_no_site_id_column(self):
         """Test cmd_download with CSV file missing site_id column."""
@@ -348,7 +342,15 @@ class TestCLIFunctions:
             csv_file = tmp.name
 
         try:
-            args = argparse.Namespace(sites=None, runfile=csv_file, logfile="test.log", no_logfile=False, verbose=False)
+            args = argparse.Namespace(
+                sites=None,
+                snapshot_file=csv_file,
+                output_dir=".",
+                quiet=True,
+                logfile="test.log",
+                no_logfile=False,
+                verbose=False,
+            )
 
             with pytest.raises(SystemExit) as exc_info:
                 cmd_download(args)
@@ -357,35 +359,16 @@ class TestCLIFunctions:
         finally:
             os.unlink(csv_file)
 
-    @patch("fluxnet_shuttle.main.download")
-    def test_cmd_download_csv_uppercase_site_id(self, mock_download):
-        """Test cmd_download with CSV file having SITE_ID column (uppercase)."""
-        mock_download.return_value = []
-
-        # Create a temporary CSV file with uppercase SITE_ID
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as tmp:
-            tmp.write("SITE_ID,network\nUS-Ha1,AmeriFlux\nUS-MMS,AmeriFlux\n")
-            csv_file = tmp.name
-
-        try:
-            args = argparse.Namespace(sites=None, runfile=csv_file, logfile="test.log", no_logfile=False, verbose=False)
-
-            cmd_download(args)
-
-            # Should work with uppercase SITE_ID column
-            mock_download.assert_called_once()
-            call_args = mock_download.call_args
-            sites = call_args[1]["site_ids"]
-            assert "US-Ha1" in sites
-            assert "US-MMS" in sites
-
-        finally:
-            os.unlink(csv_file)
-
-    def test_cmd_download_invalid_runfile(self):
-        """Test cmd_download with invalid run file."""
+    def test_cmd_download_invalid_snapshot_file(self):
+        """Test cmd_download with invalid snapshot file."""
         args = argparse.Namespace(
-            sites=None, runfile="nonexistent.csv", logfile="test.log", no_logfile=False, verbose=False
+            sites=None,
+            snapshot_file="nonexistent.csv",
+            output_dir=".",
+            quiet=True,
+            logfile="test.log",
+            no_logfile=False,
+            verbose=False,
         )
 
         # Should raise SystemExit due to missing file
@@ -400,35 +383,6 @@ class TestCLIFunctions:
         # Should not raise any exception
         cmd_sources(args)
 
-    def test_cmd_search(self):
-        """Test cmd_search function."""
-        args = argparse.Namespace(logfile="test.log", no_logfile=False, verbose=False)
-
-        # Should not raise any exception
-        cmd_search(args)
-
-    @patch("fluxnet_shuttle.shuttle.listall")
-    def test_cmd_test(self, mock_listall):
-        """Test cmd_test function."""
-        mock_listall.return_value = [{"site_id": "test"}]
-
-        args = argparse.Namespace(logfile="test.log", no_logfile=False, verbose=False)
-
-        # Should not raise any exception
-        cmd_test(args)
-        mock_listall.assert_called_once()
-
-    @patch("fluxnet_shuttle.shuttle.listall")
-    def test_cmd_test_exception_handling(self, mock_listall):
-        """Test cmd_test function with API exception."""
-        mock_listall.side_effect = Exception("Connection error")
-
-        args = argparse.Namespace(logfile="test.log", no_logfile=False, verbose=False)
-
-        # Should not raise exception, just log error
-        cmd_test(args)
-        mock_listall.assert_called_once()
-
     def test_main_with_version(self):
         """Test main function with --version argument."""
         test_args = ["fluxnet-shuttle", "--version"]
@@ -441,7 +395,7 @@ class TestCLIFunctions:
     @patch("fluxnet_shuttle.main.cmd_listall")
     def test_main_with_listall_command(self, mock_cmd):
         """Test main function with listall command."""
-        test_args = ["fluxnet-shuttle", "listall", "--no-logfile"]
+        test_args = ["fluxnet-shuttle", "--no-logfile", "listall"]
 
         with patch("sys.argv", test_args):
             main()
@@ -450,7 +404,7 @@ class TestCLIFunctions:
     @patch("fluxnet_shuttle.main.cmd_download")
     def test_main_with_download_command(self, mock_cmd):
         """Test main function with download command."""
-        test_args = ["fluxnet-shuttle", "download", "--sites", "US-Ha1", "--no-logfile"]
+        test_args = ["fluxnet-shuttle", "--no-logfile", "download", "-f", "test.csv", "-s", "US-Ha1"]
 
         with patch("sys.argv", test_args):
             main()
@@ -459,25 +413,7 @@ class TestCLIFunctions:
     @patch("fluxnet_shuttle.main.cmd_sources")
     def test_main_with_sources_command(self, mock_cmd):
         """Test main function with sources command."""
-        test_args = ["fluxnet-shuttle", "sources", "--no-logfile"]
-
-        with patch("sys.argv", test_args):
-            main()
-            mock_cmd.assert_called_once()
-
-    @patch("fluxnet_shuttle.main.cmd_search")
-    def test_main_with_search_command(self, mock_cmd):
-        """Test main function with search command."""
-        test_args = ["fluxnet-shuttle", "search", "--no-logfile"]
-
-        with patch("sys.argv", test_args):
-            main()
-            mock_cmd.assert_called_once()
-
-    @patch("fluxnet_shuttle.main.cmd_test")
-    def test_main_with_test_command(self, mock_cmd):
-        """Test main function with test command."""
-        test_args = ["fluxnet-shuttle", "test", "--no-logfile"]
+        test_args = ["fluxnet-shuttle", "--no-logfile", "sources"]
 
         with patch("sys.argv", test_args):
             main()
@@ -500,26 +436,26 @@ class TestCLIFunctions:
                     main()
                 assert exc_info.value.code == 1
 
-    @patch("fluxnet_shuttle.main.cmd_test")
+    @patch("fluxnet_shuttle.main.cmd_sources")
     def test_main_fluxnet_shuttle_error(self, mock_cmd):
-        """Test main function with FLUXNETShuttleError."""
+        """Test main function error handling for FLUXNETShuttleError."""
         from fluxnet_shuttle import FLUXNETShuttleError
 
         mock_cmd.side_effect = FLUXNETShuttleError("Test error")
 
-        test_args = ["fluxnet-shuttle", "test", "--no-logfile"]
+        test_args = ["fluxnet-shuttle", "--no-logfile", "sources"]
 
         with patch("sys.argv", test_args):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 1
 
-    @patch("fluxnet_shuttle.main.cmd_test")
+    @patch("fluxnet_shuttle.main.cmd_sources")
     def test_main_unexpected_error(self, mock_cmd):
-        """Test main function with unexpected exception."""
+        """Test main function error handling for unexpected exceptions."""
         mock_cmd.side_effect = RuntimeError("Unexpected error")
 
-        test_args = ["fluxnet-shuttle", "test", "--no-logfile"]
+        test_args = ["fluxnet-shuttle", "--no-logfile", "sources"]
 
         with patch("sys.argv", test_args):
             with pytest.raises(SystemExit) as exc_info:
@@ -537,7 +473,15 @@ class TestCLIFunctions:
             # Make file unreadable
             os.chmod(csv_file, 0o000)
 
-            args = argparse.Namespace(sites=None, runfile=csv_file, logfile="test.log", no_logfile=False, verbose=False)
+            args = argparse.Namespace(
+                sites=None,
+                snapshot_file=csv_file,
+                output_dir=".",
+                quiet=True,
+                logfile="test.log",
+                no_logfile=False,
+                verbose=False,
+            )
 
             with pytest.raises(SystemExit) as exc_info:
                 cmd_download(args)
@@ -548,13 +492,123 @@ class TestCLIFunctions:
             os.chmod(csv_file, 0o644)
             os.unlink(csv_file)
 
-    @patch("fluxnet_shuttle.shuttle.listall")
-    def test_cmd_test_no_sites_returned(self, mock_listall):
-        """Test cmd_test function when no sites are returned."""
-        mock_listall.return_value = []  # Empty result
+    def test_validate_output_directory_not_writable(self):
+        """Test _validate_output_directory with non-writable directory."""
+        import tempfile
+
+        from fluxnet_shuttle.main import _validate_output_directory
+
+        # Create a temp directory and make it read-only
+        with tempfile.TemporaryDirectory() as tmpdir:
+            test_dir = os.path.join(tmpdir, "readonly")
+            os.makedirs(test_dir)
+            os.chmod(test_dir, 0o444)  # Read-only
+
+            try:
+                with pytest.raises(SystemExit) as exc_info:
+                    _validate_output_directory(test_dir)
+                assert exc_info.value.code == 1
+            finally:
+                # Restore permissions for cleanup
+                os.chmod(test_dir, 0o755)
+
+    def test_validate_output_directory_does_not_exist(self):
+        """Test _validate_output_directory with non-existent directory."""
+        from fluxnet_shuttle.main import _validate_output_directory
+
+        with pytest.raises(SystemExit) as exc_info:
+            _validate_output_directory("/nonexistent/path/that/does/not/exist")
+        assert exc_info.value.code == 1
+
+    def test_validate_output_directory_is_file(self):
+        """Test _validate_output_directory with a file path instead of directory."""
+        import tempfile
+
+        from fluxnet_shuttle.main import _validate_output_directory
+
+        # Create a temporary file
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            tmp_file = tmp.name
+
+        try:
+            with pytest.raises(SystemExit) as exc_info:
+                _validate_output_directory(tmp_file)
+            assert exc_info.value.code == 1
+        finally:
+            os.unlink(tmp_file)
+
+    def test_cmd_download_input_confirmation_no(self):
+        """Test cmd_download with user declining confirmation."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as tmp:
+            tmp.write("site_id,network\nUS-Ha1,AmeriFlux\n")
+            csv_file = tmp.name
+
+        try:
+            args = argparse.Namespace(
+                sites=None,
+                snapshot_file=csv_file,
+                output_dir=".",
+                quiet=False,  # Don't skip confirmation
+                logfile="test.log",
+                no_logfile=False,
+                verbose=False,
+            )
+
+            # Mock input to return 'n' (no)
+            with patch("builtins.input", return_value="n"):
+                with pytest.raises(SystemExit) as exc_info:
+                    cmd_download(args)
+                assert exc_info.value.code == 0
+        finally:
+            os.unlink(csv_file)
+
+    def test_cmd_listall_with_output_dir(self):
+        """Test cmd_listall with custom output directory."""
+        import tempfile
+
+        from fluxnet_shuttle.main import cmd_listall
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = argparse.Namespace(output_dir=tmpdir, logfile="test.log", no_logfile=False, verbose=False)
+
+            with patch("fluxnet_shuttle.main.listall") as mock_listall:
+                mock_listall.return_value = os.path.join(tmpdir, "test.csv")
+                result = cmd_listall(args)
+                assert tmpdir in result
+                mock_listall.assert_called_once()
+
+    def test_cmd_sources_no_plugins(self):
+        """Test cmd_sources when no plugins are registered."""
+        from fluxnet_shuttle.main import cmd_sources
 
         args = argparse.Namespace(logfile="test.log", no_logfile=False, verbose=False)
 
-        # Should not raise exception, just log warning
-        cmd_test(args)
-        mock_listall.assert_called_once()
+        # Mock registry to return empty list
+        with patch("fluxnet_shuttle.core.registry.registry.list_plugins", return_value=[]):
+            # Should not raise exception, just log warning
+            cmd_sources(args)
+
+    def test_version_import_error(self):
+        """Test version fallback when package is not found."""
+        # We need to test the module-level import, which is tricky
+        # We'll patch the version function to raise PackageNotFoundError
+        import sys
+        from importlib.metadata import PackageNotFoundError
+
+        # Save original module
+        original_module = sys.modules.get("fluxnet_shuttle.main")
+
+        # Remove module from cache to force reimport
+        if "fluxnet_shuttle.main" in sys.modules:
+            del sys.modules["fluxnet_shuttle.main"]
+
+        with patch("importlib.metadata.version", side_effect=PackageNotFoundError):
+            # Import the module to trigger the exception handler
+            import fluxnet_shuttle.main as main_module
+
+            # After import, __version__ should be "unknown"
+            assert main_module.__version__ == "unknown"
+
+        # Restore original module
+        if original_module:
+            sys.modules["fluxnet_shuttle.main"] = original_module

@@ -110,7 +110,7 @@ class TestDownloadDataset:
 
             result = _download_dataset("US-TEST", "AmeriFlux", "test.zip", "http://example.com/test.zip")
 
-            assert result == "test.zip"
+            assert result == "./test.zip"
             mock_get.assert_called_once_with("http://example.com/test.zip", stream=True)
 
     def test_successful_download_icos(self):
@@ -130,7 +130,7 @@ class TestDownloadDataset:
                 "FI-HYY", "ICOS", "test.zip", "https://data.icos-cp.eu/licence_accept?ids=%5B%22test%22%5D"
             )
 
-            assert result == "test.zip"
+            assert result == "./test.zip"
             mock_get.assert_called_once_with("https://data.icos-cp.eu/licence_accept?ids=%5B%22test%22%5D", stream=True)
 
     def test_successful_download_with_content_disposition(self):
@@ -148,7 +148,7 @@ class TestDownloadDataset:
             result = _download_dataset("FI-HYY", "ICOS", "placeholder.zip", "http://example.com/download")
 
             # Should use filename from Content-Disposition header
-            assert result == "actual_file.zip"
+            assert result == "./actual_file.zip"
             mock_get.assert_called_once_with("http://example.com/download", stream=True)
 
     @patch("fluxnet_shuttle.shuttle.requests.get")
@@ -186,7 +186,7 @@ class TestDownloadDataset:
             _download_dataset("US-TEST", "AmeriFlux", "output.zip", "http://example.com/file.zip")
 
             # Verify file was opened for writing
-            mock_file.assert_called_once_with("output.zip", "wb")
+            mock_file.assert_called_once_with("./output.zip", "wb")
             # Verify all chunks were written
             handle = mock_file.return_value.__enter__.return_value
             assert handle.write.call_count == len(test_chunks)
@@ -201,22 +201,72 @@ class TestDownloadDataset:
         with pytest.raises(FLUXNETShuttleError, match="Failed to download.*Network error"):
             _download_dataset("US-TEST", "AmeriFlux", "test.zip", "http://example.com/test.zip")
 
+    def test_file_overwrite_warning(self):
+        """Test that a warning is logged when overwriting an existing file."""
+        import tempfile
+
+        with (
+            patch("fluxnet_shuttle.shuttle.requests.get") as mock_get,
+            tempfile.TemporaryDirectory() as tmpdir,
+        ):
+            # Create an existing file
+            existing_file = os.path.join(tmpdir, "existing.zip")
+            with open(existing_file, "w") as f:
+                f.write("old content")
+
+            # Mock successful download
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_response.headers = {}
+            mock_response.iter_content.return_value = [b"new content"]
+            mock_get.return_value = mock_response
+
+            # Download to the same location
+            with patch("fluxnet_shuttle.shuttle._log") as mock_log:
+                result = _download_dataset(
+                    "US-TEST", "AmeriFlux", "existing.zip", "http://example.com/test.zip", tmpdir
+                )
+
+                # Check that warning was logged
+                mock_log.warning.assert_called_once()
+                assert "file already exists and will be overwritten" in mock_log.warning.call_args[0][0]
+                assert existing_file in mock_log.warning.call_args[0][0]
+
+            assert result == existing_file
+
 
 class TestDownload:
     """Test cases for the download function."""
 
-    def test_download_no_site_ids_raises_error(self):
-        """Test that download raises error when no site IDs provided."""
-        with pytest.raises(FLUXNETShuttleError, match="No site IDs provided"):
-            download([], "test.csv")
+    def test_download_no_site_ids_downloads_all(self, tmp_path):
+        """Test that download downloads all sites when no site IDs provided."""
+        # Create a mock snapshot file with multiple sites
+        snapshot_file = tmp_path / "snapshot.csv"
+        snapshot_file.write_text(
+            "network,site_id,first_year,last_year,download_link\n"
+            "AmeriFlux,US-Ha1,2000,2020,https://example.com/US-Ha1.zip\n"
+            "AmeriFlux,US-MMS,2005,2021,https://example.com/US-MMS.zip\n"
+        )
 
-    def test_download_no_runfile_raises_error(self):
-        """Test that download raises error when no run file provided."""
-        with pytest.raises(FLUXNETShuttleError, match="No run file provided"):
+        # Mock the _download_dataset function
+        with patch("fluxnet_shuttle.shuttle._download_dataset") as mock_download:
+            mock_download.side_effect = ["US-Ha1.zip", "US-MMS.zip"]
+
+            # Call download with no site IDs (None or empty list)
+            result = download(site_ids=None, snapshot_file=str(snapshot_file), output_dir=str(tmp_path))
+
+            # Verify all sites were downloaded
+            assert len(result) == 2
+            assert result == ["US-Ha1.zip", "US-MMS.zip"]
+            assert mock_download.call_count == 2
+
+    def test_download_no_snapshot_file_raises_error(self):
+        """Test that download raises error when no snapshot file provided."""
+        with pytest.raises(FLUXNETShuttleError, match="No snapshot file provided"):
             download(["US-Ha1"], "")
 
-    def test_download_nonexistent_runfile_raises_error(self):
-        """Test that download raises error when run file doesn't exist."""
+    def test_download_nonexistent_snapshot_file_raises_error(self):
+        """Test that download raises error when snapshot file doesn't exist."""
         with pytest.raises(FLUXNETShuttleError, match="does not exist"):
             download(["US-Ha1"], "nonexistent.csv")
 
@@ -235,7 +285,11 @@ class TestDownload:
 
         assert result == ["test.zip"]
         mock_download.assert_called_once_with(
-            site_id="US-TEST", network="AmeriFlux", filename="test.zip", download_link="http://example.com/test.zip"
+            site_id="US-TEST",
+            network="AmeriFlux",
+            filename="test.zip",
+            download_link="http://example.com/test.zip",
+            output_dir=".",
         )
 
     @patch("fluxnet_shuttle.shuttle._download_dataset")
@@ -253,7 +307,11 @@ class TestDownload:
 
         assert result == ["test.zip"]
         mock_download.assert_called_once_with(
-            site_id="FI-HYY", network="ICOS", filename="test.zip", download_link="http://example.com/test.zip"
+            site_id="FI-HYY",
+            network="ICOS",
+            filename="test.zip",
+            download_link="http://example.com/test.zip",
+            output_dir=".",
         )
 
     @patch("fluxnet_shuttle.shuttle._download_dataset")
@@ -279,6 +337,7 @@ class TestDownload:
             network="AmeriFlux",
             filename="file.zip",
             download_link="http://example.com/file.zip?=fluxnetshuttle",
+            output_dir=".",
         )
 
     @patch("os.path.exists")
@@ -286,11 +345,11 @@ class TestDownload:
         "builtins.open",
         mock_open(read_data="site_id,network,download_link\n" "US-TEST,AmeriFlux,http://example.com/test.zip\n"),
     )
-    def test_download_site_not_in_runfile_raises_error(self, mock_exists):
-        """Test that download raises error when site not in run file."""
+    def test_download_site_not_in_snapshot_file_raises_error(self, mock_exists):
+        """Test that download raises error when site not in snapshot file."""
         mock_exists.return_value = True
 
-        with pytest.raises(FLUXNETShuttleError, match="not found in run file"):
+        with pytest.raises(FLUXNETShuttleError, match="not found in snapshot file"):
             download(["NonExistent"], "test.csv")
 
     def test_download_with_real_csv_file(self):
@@ -303,7 +362,7 @@ class TestDownload:
 
         try:
             # Should raise error because site not found
-            with pytest.raises(FLUXNETShuttleError, match="not found in run file"):
+            with pytest.raises(FLUXNETShuttleError, match="not found in snapshot file"):
                 download(["NonExistent"], temp_filename)
         finally:
             # Clean up
@@ -388,7 +447,7 @@ class TestListall:
         assert result.endswith(".csv")
         assert mock_open.called
         assert mock_open.call_count == 1
-        assert mock_open.call_args[0][0] == "data_availability_20251013T075248.csv"
+        assert mock_open.call_args[0][0] == "./fluxnet_shuttle_snapshot_20251013T075248.csv"
         assert mock_write_header.called
         assert mock_write_header.call_count == 1
         assert mock_write_header.call_args == call()
@@ -408,15 +467,6 @@ class TestModuleFunctions:
     def test_listall_function_exists(self):
         """Test that listall function exists."""
         assert callable(listall)
-
-    def test_test_connectivity_function_exists(self):
-        """Test that test connectivity function exists."""
-        from fluxnet_shuttle.shuttle import test
-
-        assert callable(test)
-
-        with pytest.raises(NotImplementedError):
-            test()
 
     def test_import_works(self):
         """Test that imports work correctly."""
