@@ -83,16 +83,25 @@ fluxnet-shuttle listall --verbose
 #### `download`
 Download data for specific sites:
 ```bash
-fluxnet-shuttle download -r data_availability.csv -s US-ARc US-Bi1 IT-Niv
+# Download specific sites
+fluxnet-shuttle download -f fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv -s US-ARc US-Bi1 IT-Niv
+
+# Download ALL sites from snapshot (prompts for confirmation)
+fluxnet-shuttle download -f fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv
+
+# Download ALL sites without confirmation prompt
+fluxnet-shuttle download -f fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv --quiet
 ```
-- Requires a CSV file from the `listall` command (`-r/--runfile`)
-- Specify site IDs with `-s/--sites`
-- Downloads are saved to the current directory
+- Requires a CSV snapshot file from the `listall` command (`-f/--snapshot-file`)
+- Specify site IDs with `-s/--sites` to download specific sites only
+- Omit `-s/--sites` to download all sites in the snapshot (will prompt for confirmation unless `--quiet` is used)
+- Downloads are saved to the output directory (default: current directory, use `-o` to specify)
 
 ### CLI Options
 - `-v/--verbose`: Enable detailed logging output
 - `-l/--logfile`: Specify log file path (default: `fluxnet-shuttle-run.log`)
 - `--no-logfile`: Disable file logging, output only to console
+- `--quiet/-q`: Skip confirmation prompt when downloading all sites from snapshot
 - `--version`: Show version information
 
 ### Example Workflow

@@ -45,14 +45,23 @@ Version
 """
 
 import argparse
+import csv
 import logging
 import os
 import sys
 from datetime import datetime
+from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
 from typing import Any, List, Optional
 
 from . import FLUXNETShuttleError
 from .shuttle import download, listall
+
+# Get package version dynamically
+try:
+    __version__ = version("fluxnet-shuttle")
+except PackageNotFoundError:
+    __version__ = "unknown"
 
 
 # Setup logging
@@ -93,13 +102,29 @@ def setup_logging(
 
 
 DEFAULT_LOGGING_FILENAME = "fluxnet-shuttle-run.log"
-COMMAND_LIST = [
-    "listall",
-    "download",
-    "sources",
-    "search",
-    "test",
-]
+
+
+def _validate_output_directory(output_dir: str) -> None:
+    """
+    Validate output directory exists and is writable.
+
+    :param output_dir: Directory path to validate
+    :raises SystemExit: If directory does not exist or is not writable
+    """
+    log = logging.getLogger(__name__)
+    output_path = Path(output_dir)
+
+    if not output_path.exists():
+        log.error(f"Output directory does not exist: {output_dir}")
+        sys.exit(1)
+
+    if not output_path.is_dir():
+        log.error(f"Output path is not a directory: {output_dir}")
+        sys.exit(1)
+
+    if not os.access(output_dir, os.W_OK):
+        log.error(f"Output directory is not writable: {output_dir}")
+        sys.exit(1)
 
 
 def cmd_listall(args) -> Any:
@@ -107,13 +132,17 @@ def cmd_listall(args) -> Any:
     log = logging.getLogger(__name__)
     log.debug("Running listall command")
 
+    # Validate output directory
+    output_dir = args.output_dir if hasattr(args, "output_dir") and args.output_dir else "."
+    _validate_output_directory(output_dir)
+
     # Default to both AmeriFlux and ICOS
     ameriflux = True
     icos = True
 
     # Allow selective source querying if implemented in future
-    csv_filename = listall(ameriflux=ameriflux, icos=icos)
-    log.info(f"Data availability saved to: {csv_filename}")
+    csv_filename = listall(ameriflux=ameriflux, icos=icos, output_dir=output_dir)
+    log.info(f"FLUXNET Shuttle snapshot written to {csv_filename}")
     return csv_filename
 
 
@@ -121,107 +150,85 @@ def cmd_download(args) -> List[str]:
     """Execute the download command."""
     log = logging.getLogger(__name__)
 
-    # Either sites or runfile must be provided, but not necessarily both
-    if not args.sites and not args.runfile:
-        log.error(
-            "No site IDs provided for download. Use -s or --sites to specify site IDs, " "or -r to specify a run file."
-        )
+    # snapshot_file is required
+    snapshot_file = args.snapshot_file
+    if not snapshot_file:
+        log.error("Snapshot file is required. Use -f or --snapshot-file to specify the snapshot file.")
+        sys.exit(1)
+    if not os.path.exists(snapshot_file):
+        log.error(f"Snapshot file not found: {snapshot_file}")
         sys.exit(1)
 
-    # If runfile is provided, use it; if sites are provided, create a temporary runfile
-    if args.runfile:
-        if not os.path.exists(args.runfile):
-            log.error(f"Run file not found: {args.runfile}")
+    # Validate output directory
+    output_dir = args.output_dir if hasattr(args, "output_dir") and args.output_dir else "."
+    _validate_output_directory(output_dir)
+
+    # If sites are provided, use them; otherwise extract all from snapshot file
+    if args.sites:
+        sites = args.sites
+    else:
+        # Extract all sites from snapshot file
+        sites = []
+        try:
+            with open(snapshot_file, "r") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    if "site_id" in row:
+                        sites.append(row["site_id"])
+            if not sites:
+                log.error(f"No site_id column found in snapshot file: {snapshot_file}")
+                sys.exit(1)
+        except Exception as e:
+            log.error(f"Error reading snapshot file {snapshot_file}: {e}")
             sys.exit(1)
 
-        # If sites are also provided, use them; otherwise extract from runfile
-        if args.sites:
-            # Handle space-separated sites in a single argument
-            if len(args.sites) == 1 and " " in args.sites[0]:
-                sites = args.sites[0].split(" ")
-            else:
-                sites = args.sites
-        else:
-            # Extract sites from runfile
-            import csv
+        # Confirmation prompt for downloading all sites (unless --quiet is used)
+        quiet = hasattr(args, "quiet") and args.quiet
+        if not quiet:
+            log.warning(f"No site IDs specified. This will download ALL {len(sites)} sites from the snapshot file.")
+            response = input("Proceed with download? [y/n]: ")
+            if response.lower() not in ["y", "yes"]:
+                log.info("Download cancelled by user.")
+                sys.exit(0)
 
-            sites = []
-            try:
-                with open(args.runfile, "r") as f:
-                    reader = csv.DictReader(f)
-                    for row in reader:
-                        if "site_id" in row:
-                            sites.append(row["site_id"])
-                        elif "SITE_ID" in row:
-                            sites.append(row["SITE_ID"])
-                if not sites:
-                    log.error(f"No site_id column found in runfile: {args.runfile}")
-                    sys.exit(1)
-            except Exception as e:
-                log.error(f"Error reading runfile {args.runfile}: {e}")
-                sys.exit(1)
+    log.debug(f"Running download command with {len(sites)} site IDs: {sites} and snapshot file: {snapshot_file}")
 
-        runfile_path = args.runfile
-    else:
-        # Sites provided but no runfile - this is an error based on the download function signature
-        log.error("No run file provided. Use -r or --runfile to specify the run file.")
-        sys.exit(1)
-
-    log.debug(f"Running download command with site IDs: {sites} and run file: {runfile_path}")
-
-    downloaded_files = download(site_ids=sites, runfile=runfile_path)
+    downloaded_files = download(site_ids=sites, snapshot_file=snapshot_file, output_dir=output_dir)
     log.info(f"Downloaded {len(downloaded_files)} files")
     return downloaded_files
 
 
 def cmd_sources(args: Any) -> None:
-    """Execute the sources command (placeholder)."""
+    """Execute the sources command - show available data source plugins."""
     log = logging.getLogger(__name__)
-    log.info("Available data sources:")
-    log.info("  - AmeriFlux: https://ameriflux.lbl.gov")
-    log.info("  - ICOS: https://www.icos-cp.eu")
-    log.info("  - FLUXNET2015: (not yet implemented)")
+    from .core.registry import registry
 
+    log.info("Available FLUXNET network plugins:")
 
-def cmd_search(args: Any) -> None:
-    """Execute the search command (placeholder)."""
-    log = logging.getLogger(__name__)
-    log.info("Search functionality not yet implemented.")
-    log.info("Use 'listall' command to see all available sites.")
+    plugin_names = registry.list_plugins()
+    if not plugin_names:
+        log.warning("No network plugins found")
+        return
 
-
-def cmd_test(args: Any) -> None:
-    """Execute the test command (placeholder)."""
-    log = logging.getLogger(__name__)
-    log.info("Running basic connectivity tests...")
-
-    # Test AmeriFlux and ICOS connectivity by running a minimal listall
-    try:
-        from .shuttle import listall
-
-        result = listall(ameriflux=True, icos=True)
-        if result:
-            log.info("✓ Connectivity test passed - able to fetch site listings")
-        else:
-            log.warning("! Connectivity test completed but no sites returned")
-    except Exception as e:
-        log.error(f"✗ Connectivity test failed: {e}")
+    for plugin_name in sorted(plugin_names):
+        plugin_class = registry.get_plugin(plugin_name)
+        # Instantiate to get display_name
+        instance = plugin_class()
+        log.info(f"  - {instance.display_name} ({plugin_name})")
 
 
 def main() -> None:
     """Main CLI entry point."""
     BEGIN_TS = datetime.now()
 
-    # CLI argument parser
+    # Main parser
     parser = argparse.ArgumentParser(
-        description="FLUXNET Shuttle Library - Download and manage FLUXNET data",
+        prog="fluxnet-shuttle",
+        description="FLUXNET Shuttle - Download and manage FLUXNET data from multiple networks",
         epilog="For more information, visit: https://github.com/AMF-FLX/fluxnet-shuttle-lib",
     )
 
-    parser.add_argument(
-        "command", metavar="COMMAND", help="FLUXNET Shuttle command to run", type=str, choices=COMMAND_LIST
-    )
-
+    # Global arguments
     parser.add_argument(
         "-l",
         "--logfile",
@@ -231,30 +238,75 @@ def main() -> None:
         default=DEFAULT_LOGGING_FILENAME,
     )
 
-    parser.add_argument(
-        "-r",
-        "--runfile",
-        help="FLUXNET Shuttle run results file path (CSV from listall command)",
-        type=str,
-        dest="runfile",
-        default="",
-    )
-
-    parser.add_argument(
-        "-s",
-        "--sites",
-        help="Site IDs for sites to be downloaded (space-separated)",
-        type=str,
-        dest="sites",
-        nargs="+",
-        default=[],
-    )
-
     parser.add_argument("-v", "--verbose", help="Enable verbose logging", action="store_true", dest="verbose")
 
     parser.add_argument("--no-logfile", help="Disable logging to file", action="store_true", dest="no_logfile")
 
-    parser.add_argument("--version", help="Show version and exit", action="version", version="fluxnet-shuttle")
+    parser.add_argument("--version", action="version", version=f"fluxnet-shuttle {__version__}")
+
+    # Subparsers for commands
+    subparsers = parser.add_subparsers(dest="command", help="Available commands", required=True)
+
+    # listall command
+    parser_listall = subparsers.add_parser(
+        "listall",
+        help="List all available FLUXNET datasets",
+        description="Fetch and save a snapshot of all available FLUXNET datasets from configured networks",
+    )
+    parser_listall.add_argument(
+        "-o",
+        "--output-dir",
+        help="Directory to save the snapshot file (default: current directory)",
+        type=str,
+        dest="output_dir",
+        default=".",
+    )
+
+    # download command
+    parser_download = subparsers.add_parser(
+        "download",
+        help="Download FLUXNET datasets",
+        description="Download FLUXNET data files for specified sites using a snapshot file",
+    )
+    parser_download.add_argument(
+        "-f",
+        "--snapshot-file",
+        help="Path to snapshot CSV file (from listall command)",
+        type=str,
+        dest="snapshot_file",
+        required=True,
+    )
+    parser_download.add_argument(
+        "-s",
+        "--sites",
+        help="Site IDs to download (space-separated). If not provided, downloads ALL sites from snapshot file",
+        type=str,
+        dest="sites",
+        nargs="+",
+        default=None,
+    )
+    parser_download.add_argument(
+        "-o",
+        "--output-dir",
+        help="Directory to save downloaded files (default: current directory)",
+        type=str,
+        dest="output_dir",
+        default=".",
+    )
+    parser_download.add_argument(
+        "--quiet",
+        "-q",
+        help="Skip confirmation prompt when downloading all sites",
+        action="store_true",
+        dest="quiet",
+    )
+
+    # sources command
+    subparsers.add_parser(
+        "sources",
+        help="List available data source plugins",
+        description="Display information about available FLUXNET network plugins",
+    )
 
     args = parser.parse_args()
 
@@ -275,10 +327,6 @@ def main() -> None:
             cmd_download(args)
         elif args.command == "sources":
             cmd_sources(args)
-        elif args.command == "search":
-            cmd_search(args)
-        elif args.command == "test":
-            cmd_test(args)
         else:
             log.error(f"Unknown command: {args.command}")
             sys.exit(1)
