@@ -4,8 +4,8 @@
 # Global settings
 parallel_requests: 2
 
-# Network-specific configurations
-networks:
+# Data hub-specific configurations
+data_hubs:
   ameriflux:
     enabled: true
 

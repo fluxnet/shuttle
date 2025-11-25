@@ -12,14 +12,14 @@ from unittest.mock import AsyncMock, patch
 import aiohttp
 import pytest
 
-from fluxnet_shuttle.core.base import NetworkPlugin
-from fluxnet_shuttle.core.config import NetworkConfig, ShuttleConfig
+from fluxnet_shuttle.core.base import DataHubPlugin
+from fluxnet_shuttle.core.config import DataHubConfig, ShuttleConfig
 from fluxnet_shuttle.core.decorators import async_to_sync, async_to_sync_generator
 from fluxnet_shuttle.core.exceptions import FLUXNETShuttleError, PluginError
 from fluxnet_shuttle.models import BadmSiteGeneralInfo, DataFluxnetProduct, FluxnetDatasetMetadata
 
 
-class MockNetworkPlugin(NetworkPlugin):
+class MockDataHubPlugin(DataHubPlugin):
     """Mock plugin for testing."""
 
     @property
@@ -28,13 +28,13 @@ class MockNetworkPlugin(NetworkPlugin):
 
     @property
     def display_name(self) -> str:
-        return "Mock Network"
+        return "Mock Data Hub"
 
     @async_to_sync_generator
     async def get_sites(self, **filters) -> AsyncGenerator[FluxnetDatasetMetadata, None]:
         """Mock implementation that yields test data."""
         site_info = BadmSiteGeneralInfo(
-            site_id="US-TEST", network="Mock", location_lat=40.0, location_long=-100.0, igbp="DBF"
+            site_id="US-TEST", data_hub="Mock", location_lat=40.0, location_long=-100.0, igbp="DBF"
         )
 
         product_data = DataFluxnetProduct(first_year=2020, last_year=2021, download_link="https://example.com/test.zip")
@@ -92,21 +92,21 @@ class TestAsyncToSyncDecorator:
         assert result == [0, 1, 2]
 
 
-class TestNetworkPlugin:
-    """Test cases for NetworkPlugin base class."""
+class TestDataHubPlugin:
+    """Test cases for DataHubPlugin base class."""
 
     def test_plugin_properties(self):
         """Test plugin basic properties."""
-        plugin = MockNetworkPlugin()
+        plugin = MockDataHubPlugin()
 
         assert plugin.name == "mock"
-        assert plugin.display_name == "Mock Network"
+        assert plugin.display_name == "Mock Data Hub"
         assert plugin.config == {}
 
     def test_plugin_with_config(self):
         """Test plugin initialization with config."""
         config = {"api_url": "https://test.com", "timeout": 60}
-        plugin = MockNetworkPlugin(config=config)
+        plugin = MockDataHubPlugin(config=config)
 
         assert plugin.config == config
         assert plugin.config["api_url"] == "https://test.com"
@@ -114,7 +114,7 @@ class TestNetworkPlugin:
     @pytest.mark.asyncio
     async def test_async_get_sites(self):
         """Test async get_sites method."""
-        plugin = MockNetworkPlugin()
+        plugin = MockDataHubPlugin()
 
         sites = []
         async for site in plugin.get_sites():
@@ -125,7 +125,7 @@ class TestNetworkPlugin:
 
     def test_sync_get_sites(self):
         """Test sync version of get_sites (created by decorator)."""
-        plugin = MockNetworkPlugin()
+        plugin = MockDataHubPlugin()
 
         # The sync version should be available due to the decorator
         sites = list(plugin.get_sites())
@@ -137,7 +137,7 @@ class TestNetworkPlugin:
     @patch("fluxnet_shuttle.core.base.session_request")
     async def test_session_request_success(self, mock_session_request):
         """Test successful _session_request call."""
-        plugin = MockNetworkPlugin()
+        plugin = MockDataHubPlugin()
         url = "https://api.example.com/data"
 
         # Mock the response
@@ -159,7 +159,7 @@ class TestNetworkPlugin:
     @patch("fluxnet_shuttle.core.base.session_request")
     async def test_session_request_client_error(self, mock_session_request):
         """Test _session_request handling of aiohttp.ClientError."""
-        plugin = MockNetworkPlugin()
+        plugin = MockDataHubPlugin()
         url = "https://api.example.com/data"
 
         # Make session_request raise a ClientError when entered
@@ -178,7 +178,7 @@ class TestNetworkPlugin:
     @patch("fluxnet_shuttle.core.base.session_request")
     async def test_session_request_unexpected_error(self, mock_session_request):
         """Test _session_request handling of unexpected errors."""
-        plugin = MockNetworkPlugin()
+        plugin = MockDataHubPlugin()
         url = "https://api.example.com/data"
 
         # Make session_request raise a generic exception
@@ -202,14 +202,14 @@ class TestShuttleConfig:
         config = ShuttleConfig._create_default_config()
 
         assert config.parallel_requests == 2
-        assert "ameriflux" in config.networks
-        assert "icos" in config.networks
+        assert "ameriflux" in config.data_hubs
+        assert "icos" in config.data_hubs
 
-    def test_network_config_creation(self):
-        """Test creating NetworkConfig."""
-        net_config = NetworkConfig(enabled=True)
+    def test_data_hub_config_creation(self):
+        """Test creating DataHubConfig."""
+        hub_config = DataHubConfig(enabled=True)
 
-        assert net_config.enabled is True
+        assert hub_config.enabled is True
 
     def test_load_from_file_not_found(self, tmp_path):
         """Test loading config from a non-existent file falls back to defaults."""
@@ -217,8 +217,8 @@ class TestShuttleConfig:
         config = ShuttleConfig.load_from_file(config_path)
 
         assert config.parallel_requests == 2
-        assert "ameriflux" in config.networks
-        assert "icos" in config.networks
+        assert "ameriflux" in config.data_hubs
+        assert "icos" in config.data_hubs
 
     def test_load_from_file_invalid_yaml(self, tmp_path):
         """Test loading config from an invalid YAML file falls back to defaults."""
@@ -228,8 +228,8 @@ class TestShuttleConfig:
         config = ShuttleConfig.load_from_file(config_path)
 
         assert config.parallel_requests == 2
-        assert "ameriflux" in config.networks
-        assert "icos" in config.networks
+        assert "ameriflux" in config.data_hubs
+        assert "icos" in config.data_hubs
 
     def test_load_from_file_valid_yaml(self, tmp_path):
         """Test loading config from a valid YAML file."""
@@ -237,7 +237,7 @@ class TestShuttleConfig:
         config_path.write_text(
             """
             parallel_requests: 3
-            networks:
+            data_hubs:
               ameriflux:
                 enabled: true
               icos:
@@ -250,9 +250,9 @@ class TestShuttleConfig:
         config = ShuttleConfig.load_from_file(config_path)
 
         assert config.parallel_requests == 3
-        assert "ameriflux" in config.networks
-        assert "icos" in config.networks
-        assert "fluxnet2015" in config.networks
+        assert "ameriflux" in config.data_hubs
+        assert "icos" in config.data_hubs
+        assert "fluxnet2015" in config.data_hubs
 
 
 class TestExceptions:

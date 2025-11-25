@@ -24,7 +24,7 @@ Classes:
 
 The models are designed to work with the FLUXNET data format and provide
 validation for:
-    - Network and publisher information
+    - Data hub and publisher information
     - Site identifiers and temporal coverage
     - Dataset versions and file metadata
     - Download URLs with validation
@@ -34,7 +34,7 @@ Example:
     >>> from fluxnet_shuttle.models.schema import FluxnetDatasetMetadata
     >>> site_info = BadmSiteGeneralInfo(
     ...     site_id="US-Ha1",
-    ...     network="AmeriFlux",
+    ...     data_hub="AmeriFlux",
     ...     location_lat=42.5378,
     ...     location_long=-72.1715,
     ...     igbp="DBF"
@@ -73,7 +73,7 @@ class BadmSiteGeneralInfo(BaseModel):
 
     Attributes:
         site_id (str): Site identifier by country using first two chars or clusters
-        network (str): Network name (e.g., AmeriFlux, ICOS)
+        data_hub (str): Data hub name (e.g., AmeriFlux, ICOS)
         location_lat (float): Site latitude in decimal degrees
         location_long (float): Site longitude in decimal degrees
         igbp (str): IGBP land cover type classification
@@ -88,9 +88,10 @@ class BadmSiteGeneralInfo(BaseModel):
         max_length=20,
     )
 
-    network: str = Field(
+    # data_hub is not part of the BADM Standard but including in the BADM SGI model"
+    data_hub: str = Field(
         ...,
-        description="Network name (e.g., AmeriFlux, ICOS, NEON)",
+        description="Data hub name (e.g., AmeriFlux, ICOS, NEON)",
         min_length=1,
         max_length=50,
     )
@@ -172,10 +173,10 @@ class PluginErrorDetail(BaseModel):
     Pydantic model for individual plugin error details.
 
     This model represents an error that occurred during plugin execution,
-    including context about which network/plugin encountered the error.
+    including context about which data hub/plugin encountered the error.
 
     Attributes:
-        network (str): Network/plugin name where the error occurred
+        data_hub (str): Data hub/plugin name where the error occurred
         operation (str): Operation being performed when the error occurred
         error (str): Error message or description
         timestamp (str): ISO format timestamp when the error occurred
@@ -183,7 +184,7 @@ class PluginErrorDetail(BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True, validate_assignment=True, extra="forbid")
 
-    network: str = Field(..., description="Network/plugin name where the error occurred", min_length=1)
+    data_hub: str = Field(..., description="Data hub/plugin name where the error occurred", min_length=1)
 
     operation: str = Field(..., description="Operation being performed when the error occurred", min_length=1)
 

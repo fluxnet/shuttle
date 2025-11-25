@@ -11,7 +11,7 @@ import pytest
 @pytest.fixture
 def temp_csv_file():
     """Create a temporary CSV file for testing."""
-    content = "site_id,network,filename,download_link\n"
+    content = "site_id,data_hub,filename,download_link\n"
     content += "US-TEST,AmeriFlux,test_ameriflux.zip,http://example.com/ameriflux.zip\n"
     content += "IT-TEST,ICOS,test_icos.zip,http://example.com/icos.zip\n"
 

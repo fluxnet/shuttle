@@ -6,20 +6,20 @@ This guide covers advanced usage of the FLUXNET Shuttle Library's core API, incl
 Overview
 --------
 
-The FLUXNET Shuttle Library uses a plugin-based architecture where each FLUXNET network is implemented as a plugin. The core API provides direct access to these plugins and the orchestrator that coordinates them.
+The FLUXNET Shuttle Library uses a plugin-based architecture where each FLUXNET data hub is implemented as a plugin. The core API provides direct access to these plugins and the orchestrator that coordinates them.
 
 Key Components
 ~~~~~~~~~~~~~~
 
-- **FluxnetShuttle**: Main orchestrator that coordinates multiple network plugins
-- **NetworkPlugin**: Abstract base class for network-specific implementations
+- **FluxnetShuttle**: Main orchestrator that coordinates multiple data hub plugins
+- **DataHubPlugin**: Abstract base class for data hub-specific implementations
 - **PluginRegistry**: Manages plugin registration and instantiation
 - **ErrorCollectingIterator**: Async iterator that collects errors while continuing to yield results
 
 Using FluxnetShuttle
 --------------------
 
-The ``FluxnetShuttle`` class provides an interface for working with multiple network plugins simultaneously.
+The ``FluxnetShuttle`` class provides an interface for working with multiple data hub plugins simultaneously.
 
 Basic Usage
 ~~~~~~~~~~~
@@ -31,7 +31,7 @@ Basic Usage
     # Create shuttle instance (automatically loads all registered plugins)
     shuttle = FluxnetShuttle()
 
-    # Fetch data from all networks asynchronously
+    # Fetch data from all data hubs asynchronously
     sites = []
     for site in shuttle.get_all_sites():
         sites.append(site)
@@ -54,7 +54,7 @@ Programmatic Error Handling
     # Create shuttle instance
     shuttle = FluxnetShuttle()
 
-    # Fetch data from all networks
+    # Fetch data from all data hubs
     sites = []
     for site in shuttle.get_all_sites():
         sites.append(site)
@@ -67,7 +67,7 @@ Programmatic Error Handling
 
     # Access detailed error information
     for error in error_summary.errors:
-        print(f"Network: {error.network}")
+        print(f"Data Hub: {error.data_hub}")
         print(f"Operation: {error.operation}")
         print(f"Error: {error.error}")
         print(f"Timestamp: {error.timestamp}")
@@ -76,12 +76,12 @@ The `ErrorSummary` model includes:
 
 - `total_errors` (int): Total number of errors encountered
 - `total_results` (int): Total number of successful results retrieved
-- `errors` (List[PluginErrorDetail]): Detailed error information with network, operation, error message, and ISO timestamp
+- `errors` (List[PluginErrorDetail]): Detailed error information with data hub, operation, error message, and ISO timestamp
 
 Working with Individual Plugins
 --------------------------------
 
-You can also work with individual network plugins directly:
+You can also work with individual data hub plugins directly:
 
 .. code-block:: python
 

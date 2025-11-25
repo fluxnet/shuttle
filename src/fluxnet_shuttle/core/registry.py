@@ -11,7 +11,7 @@ Plugin Registry and Error Collection
 .. currentmodule:: fluxnet_shuttle.core.registry
 
 
-This module provides the plugin registry for managing network plugins
+This module provides the plugin registry for managing data hub plugins
 and error collection capabilities.
 """
 
@@ -21,7 +21,7 @@ from datetime import datetime
 from typing import AsyncGenerator, Dict, List, Type
 
 from ..models import ErrorSummary, FluxnetDatasetMetadata, PluginErrorDetail
-from .base import NetworkPlugin
+from .base import DataHubPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ class ErrorCollectingIterator:
     from multiple plugins while isolating and collecting any errors that occur.
     """
 
-    def __init__(self, plugins: Dict[str, NetworkPlugin], operation: str, **kwargs):
+    def __init__(self, plugins: Dict[str, DataHubPlugin], operation: str, **kwargs):
         """
         Initialize the error collecting iterator.
 
@@ -166,7 +166,7 @@ class ErrorCollectingIterator:
         """
         error_details = [
             PluginErrorDetail(
-                network=error.plugin_name,
+                data_hub=error.plugin_name,
                 operation=error.operation,
                 error=str(error.error),
                 timestamp=error.timestamp.isoformat(),
@@ -183,26 +183,26 @@ class ErrorCollectingIterator:
 
 class PluginRegistry:
     """
-    Registry for managing network plugins with automatic discovery.
+    Registry for managing data hub plugins with automatic discovery.
 
-    This class manages the registration and instantiation of network plugins,
+    This class manages the registration and instantiation of data hub plugins,
     including automatic discovery through entry points.
     """
 
     def __init__(self):
         """Initialize the plugin registry."""
-        self._plugins: Dict[str, Type[NetworkPlugin]] = {}
-        self._instances: Dict[str, NetworkPlugin] = {}
+        self._plugins: Dict[str, Type[DataHubPlugin]] = {}
+        self._instances: Dict[str, DataHubPlugin] = {}
 
-    def register(self, plugin_class: Type[NetworkPlugin]) -> None:
+    def register(self, plugin_class: Type[DataHubPlugin]) -> None:
         """
-        Register a network plugin.
+        Register a data hub plugin.
 
         Args:
             plugin_class: The plugin class to register
         """
-        if not issubclass(plugin_class, NetworkPlugin):
-            raise TypeError("Plugin class must inherit from NetworkPlugin")
+        if not issubclass(plugin_class, DataHubPlugin):
+            raise TypeError("Plugin class must inherit from DataHubPlugin")
 
         # Check for duplicate names
         temp_instance = plugin_class()
@@ -216,7 +216,7 @@ class PluginRegistry:
         self._plugins[plugin_name] = plugin_class
         logger.debug(f"Registered plugin: {plugin_name}")
 
-    def get_plugin(self, name: str) -> Type[NetworkPlugin]:
+    def get_plugin(self, name: str) -> Type[DataHubPlugin]:
         """
         Get a plugin by name.
 
@@ -244,7 +244,7 @@ class PluginRegistry:
         """
         return list(self._plugins.keys())
 
-    def create_instance(self, name: str, **config) -> NetworkPlugin:
+    def create_instance(self, name: str, **config) -> DataHubPlugin:
         """
         Create an instance of a plugin.
 

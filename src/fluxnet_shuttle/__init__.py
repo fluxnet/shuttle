@@ -11,10 +11,10 @@
 
 
 FLUXNET Shuttle Library provides functionality for discovering, downloading, and cataloging
-FLUXNET data from multiple networks including AmeriFlux, ICOS, and FLUXNET2015.
+FLUXNET data from multiple data hubs including AmeriFlux, ICOS, and FLUXNET2015.
 
 The library offers both synchronous and asynchronous Python APIs with a plugin-based
-architecture for extending to new FLUXNET networks.
+architecture for extending to new FLUXNET data hubs.
 
 *Features*
 

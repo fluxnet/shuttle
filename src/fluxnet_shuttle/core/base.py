@@ -3,23 +3,23 @@ Base Plugin Interface
 =====================
 
 :module: fluxnet_shuttle.core.base
-:synopsis: Base class and interfaces for network plugins in the FLUXNET Shuttle library.
+:synopsis: Base class and interfaces for data hub plugins in the FLUXNET Shuttle library.
 :author: Valerie Hendrix <vchendrix@lbl.gov>
 :platform: Unix, Windows
 :created: 2025-10-09
 
 .. currentmodule:: fluxnet_shuttle.core.base
 
-This module defines the base class and interfaces for network plugins
+This module defines the base class and interfaces for data hub plugins
 in the FLUXNET Shuttle library.
 
-Network Plugin Implementation
-+++++++++++++++++++++++++++++
+Data Hub Plugin Implementation
+++++++++++++++++++++++++++++++
 
-The :class:`NetworkPlugin` abstract base class provides the interface
-that all network plugins must implement. It includes methods for
+The :class:`DataHubPlugin` abstract base class provides the interface
+that all data hub plugins must implement. It includes methods for
 retrieving site metadata and handling HTTP requests. When implementing
-a new network plugin, developers should subclass :class:`NetworkPlugin`
+a new data hub plugin, developers should subclass :class:`DataHubPlugin`
 and provide concrete implementations for the abstract methods.
 
 The :property name must return a unique identifier for the plugin, while the
@@ -30,33 +30,33 @@ available through the :func:`async_to_sync_generator` decorator.
 
 Implementation Basics
 ---------------------
-An example implementation of a network plugin might look like this::
+An example implementation of a data hub plugin might look like this::
 
-    from fluxnet_shuttle.core.base import NetworkPlugin
+    from fluxnet_shuttle.core.base import DataHubPlugin
     from fluxnet_shuttle.models import FluxnetDatasetMetadata
 
-    class MyNetworkPlugin(NetworkPlugin):
+    class MyDataHubPlugin(DataHubPlugin):
         @property
         def name(self) -> str:
-            return "mynetwork"
+            return "mydatahub"
 
         @property
         def display_name(self) -> str:
-            return "My Network"
+            return "My Data Hub"
 
     @async_to_sync_generator
     async def get_sites(self, **filters) -> AsyncGenerator[FluxnetDatasetMetadata, None]:
         # Implementation to fetch and yield site metadata
-        async with self._session_request("GET", "https://api.mynetwork.org/sites") as response:
+        async with self._session_request("GET", "https://api.mydatahub.org/sites") as response:
             data = await response.json()
             for site in data["sites"]:
                 yield FluxnetDatasetMetadata(...)  # Populate with actual data
 
 
 Each plugin must implement the abstract methods defined in the
-:class:`NetworkPlugin` base class.
+:class:`DataHubPlugin` base class.
 
-The :class:`NetworkPlugin` class provides both asynchronous and synchronous
+The :class:`DataHubPlugin` class provides both asynchronous and synchronous
 versions of the primary method for retrieving site metadata. The asynchronous
 version is defined as :func:`get_sites`, which is an async generator method.
 
@@ -94,11 +94,11 @@ from ..models import FluxnetDatasetMetadata
 _logger = logging.getLogger(__name__)
 
 
-class NetworkPlugin(ABC):
+class DataHubPlugin(ABC):
     """
-    Base class for all network plugins.
+    Base class for all data hub plugins.
 
-    This abstract base class defines the interface that all network plugins
+    This abstract base class defines the interface that all data hub plugins
     must implement. It provides both async and sync versions of the get_sites
     method through the sync_from_async decorator.
 
@@ -108,7 +108,7 @@ class NetworkPlugin(ABC):
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """
-        Initialize the network plugin.
+        Initialize the data hub plugin.
 
         Args:
             config: Optional configuration dictionary
@@ -118,10 +118,10 @@ class NetworkPlugin(ABC):
     @property
     def name(self) -> str:  # pragma: no cover
         """
-        Network name identifier.
+        Data hub name identifier.
 
         Returns:
-            str: Lowercase network identifier (e.g., 'ameriflux', 'icos')
+            str: Lowercase data hub identifier (e.g., 'ameriflux', 'icos')
         """
         raise NotImplementedError("Subclasses must implement the 'name' property")
 
@@ -129,10 +129,10 @@ class NetworkPlugin(ABC):
     @abstractmethod
     def display_name(self) -> str:
         """
-        Human-readable network name.
+        Human-readable data hub name.
 
         Returns:
-            str: Display name for the network (e.g., 'AmeriFlux', 'ICOS')
+            str: Display name for the data hub (e.g., 'AmeriFlux', 'ICOS')
         """
         pass
 
@@ -140,7 +140,7 @@ class NetworkPlugin(ABC):
     @abstractmethod
     async def get_sites(self, **filters) -> AsyncGenerator[FluxnetDatasetMetadata, None]:
         """
-        Get available sites from the network.
+        Get available sites from the data hub.
 
         This is the primary method that plugins must implement.
         A synchronous version is automatically available as get_sites_sync().
@@ -155,7 +155,7 @@ class NetworkPlugin(ABC):
             PluginError: If a shuttle plugin error occurs during site retrieval
 
         Example:
-            >>> plugin = SomeNetworkPlugin()
+            >>> plugin = SomeDataHubPlugin()
             >>> async for site in plugin.get_sites():
             ...     print(site.site_info.site_id)
 

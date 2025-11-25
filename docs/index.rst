@@ -5,15 +5,15 @@ Welcome to FLUXNET Shuttle Library's documentation!
 
 FLUXNET Shuttle Library is a Python library for FLUXNET shuttle operations providing
 functionality for discovering, downloading, and cataloging FLUXNET data from multiple
-networks including AmeriFlux, ICOS, and FLUXNET2015.
+data hubs including AmeriFlux, ICOS, and FLUXNET2015.
 
 Features
 --------
 
-- **Data Download**: Download FLUXNET data from AmeriFlux and ICOS networks
-- **Data Catalog**: List available datasets from multiple FLUXNET networks  
+- **Data Download**: Download FLUXNET data from AmeriFlux and ICOS data hubs
+- **Data Catalog**: List available datasets from multiple FLUXNET data hubs  
 - **Command Line Interface**: Easy-to-use CLI tool ``fluxnet-shuttle`` for common operations
-- **Network Support**: AmeriFlux (via AmeriFlux API), ICOS (via ICOS Carbon Portal), FLUXNET2015 (placeholder)
+- **Integrated Data Hubs**: AmeriFlux (via AmeriFlux API), ICOS (via ICOS Carbon Portal), FLUXNET2015 (placeholder)
 - **Comprehensive Logging**: Configurable logging with multiple outputs
 - **Error Handling**: Custom exception handling for FLUXNET operations
 - **Type Safety**: Full type hints for better development experience

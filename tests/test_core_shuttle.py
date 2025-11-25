@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from fluxnet_shuttle.core.config import NetworkConfig, ShuttleConfig
+from fluxnet_shuttle.core.config import DataHubConfig, ShuttleConfig
 from fluxnet_shuttle.core.decorators import async_to_sync_generator
 from fluxnet_shuttle.core.registry import PluginRegistry
 from fluxnet_shuttle.core.shuttle import FluxnetShuttle
@@ -56,7 +56,7 @@ class MockSuccessPlugin:
         for _ in range(4):  # Simulate some async operation
             await asyncio.sleep(0.1)
             site_info = BadmSiteGeneralInfo(
-                site_id="US-SUCCESS", network="Success", location_lat=45.0, location_long=-95.0, igbp="DBF"
+                site_id="US-SUCCESS", data_hub="Success", location_lat=45.0, location_long=-95.0, igbp="DBF"
             )
 
             product_data = DataFluxnetProduct(
@@ -75,35 +75,35 @@ class TestFluxnetShuttleIntegration:
 
         assert shuttle.registry is not None
         assert shuttle.config is not None
-        assert isinstance(shuttle.networks, list)
+        assert isinstance(shuttle.data_hubs, list)
 
-    def test_shuttle_with_enabled_network(self):
-        """Test shuttle initialization with enabled network."""
+    def test_shuttle_with_enabled_data_hub(self):
+        """Test shuttle initialization with enabled data hub."""
         config = ShuttleConfig()
-        config.networks["test"] = NetworkConfig(enabled=True)
+        config.data_hubs["test"] = DataHubConfig(enabled=True)
 
-        shuttle = FluxnetShuttle(networks=["test"], config=config)
+        shuttle = FluxnetShuttle(data_hubs=["test"], config=config)
 
-        assert "test" in shuttle.networks
+        assert "test" in shuttle.data_hubs
 
-    def test_shuttle_with_disabled_network(self):
-        """Test shuttle initialization with disabled network."""
+    def test_shuttle_with_disabled_data_hub(self):
+        """Test shuttle initialization with disabled data hub."""
         config = ShuttleConfig()
-        config.networks["test"] = NetworkConfig(enabled=False)
+        config.data_hubs["test"] = DataHubConfig(enabled=False)
 
-        shuttle = FluxnetShuttle(networks=["test"], config=config)
+        shuttle = FluxnetShuttle(data_hubs=["test"], config=config)
 
-        assert "test" in shuttle.networks  # Even if disabled, it's included because explicitly specified
-        assert not shuttle.config.networks["test"].enabled
+        assert "test" in shuttle.data_hubs  # Even if disabled, it's included because explicitly specified
+        assert not shuttle.config.data_hubs["test"].enabled
 
-        with pytest.raises(ValueError, match="Network 'test' is disabled."):
+        with pytest.raises(ValueError, match="Data hub 'test' is disabled."):
             shuttle._get_plugin_instance("test")
 
     @pytest.mark.asyncio
     async def test_get_all_sites_no_plugins(self):
         """Test get_all_sites when no plugins are available."""
-        # Create shuttle with non-existent networks
-        shuttle = FluxnetShuttle(networks=["nonexistent"])
+        # Create shuttle with non-existent data hubs
+        shuttle = FluxnetShuttle(data_hubs=["nonexistent"])
 
         sites = []
         async for site in shuttle.get_all_sites():
@@ -133,10 +133,10 @@ class TestFluxnetShuttleIntegration:
 
         # Create config with both plugins
         config = ShuttleConfig()
-        config.networks["failing"] = NetworkConfig(enabled=True)
-        config.networks["success"] = NetworkConfig(enabled=True)
+        config.data_hubs["failing"] = DataHubConfig(enabled=True)
+        config.data_hubs["success"] = DataHubConfig(enabled=True)
 
-        shuttle = FluxnetShuttle(networks=["failing", "success"], config=config)
+        shuttle = FluxnetShuttle(data_hubs=["failing", "success"], config=config)
         shuttle.registry.list_plugins = MagicMock(return_value=["failing", "success"])
         shuttle.registry.create_instance = mock_create
 
@@ -151,7 +151,7 @@ class TestFluxnetShuttleIntegration:
         # Should have one error from the failing plugin
         errors = shuttle.get_errors()
         assert errors.total_errors == 1
-        assert "failing" in errors.errors[0].network
+        assert "failing" in errors.errors[0].data_hub
         assert "Mock plugin failure" in errors.errors[0].error
 
     def test_sync_interface(self):
@@ -161,9 +161,9 @@ class TestFluxnetShuttleIntegration:
             mock_create.return_value = MockSuccessPlugin()
 
             config = ShuttleConfig()
-            config.networks["success"] = NetworkConfig(enabled=True)
+            config.data_hubs["success"] = DataHubConfig(enabled=True)
 
-            shuttle = FluxnetShuttle(networks=["success"], config=config)
+            shuttle = FluxnetShuttle(data_hubs=["success"], config=config)
 
             # Use the sync version
             sites = list(shuttle.get_all_sites())
@@ -171,18 +171,18 @@ class TestFluxnetShuttleIntegration:
             assert len(sites) == 4  # MockSuccessPlugin yields 4 sites
             assert sites[0].site_info.site_id == "US-SUCCESS"
 
-    def test_list_available_networks(self):
-        """Test listing available networks."""
+    def test_list_available_data_hubs(self):
+        """Test listing available data hubs."""
         shuttle = FluxnetShuttle()
 
-        networks = shuttle.list_available_networks()
-        assert isinstance(networks, list)
+        data_hubs = shuttle.list_available_data_hubs()
+        assert isinstance(data_hubs, list)
         # Should contain at least the built-in plugins
-        assert len(networks) >= 0  # May be empty if plugins failed to load
+        assert len(data_hubs) >= 0  # May be empty if plugins failed to load
 
     def test_invalid_plugin_instance(self):
         """Test that requesting an invalid plugin raises an error."""
-        shuttle = FluxnetShuttle(networks=["invalid"])
+        shuttle = FluxnetShuttle(data_hubs=["invalid"])
 
-        with pytest.raises(ValueError, match="Network 'invalid' not configured"):
+        with pytest.raises(ValueError, match="Data hub 'invalid' not configured"):
             shuttle._get_plugin_instance("invalid")

@@ -243,7 +243,7 @@ class TestDownload:
         # Create a mock snapshot file with multiple sites
         snapshot_file = tmp_path / "snapshot.csv"
         snapshot_file.write_text(
-            "network,site_id,first_year,last_year,download_link\n"
+            "data_hub,site_id,first_year,last_year,download_link\n"
             "AmeriFlux,US-Ha1,2000,2020,https://example.com/US-Ha1.zip\n"
             "AmeriFlux,US-MMS,2005,2021,https://example.com/US-MMS.zip\n"
         )
@@ -274,7 +274,7 @@ class TestDownload:
     @patch("os.path.exists")
     @patch(
         "builtins.open",
-        mock_open(read_data="site_id,network,download_link\n" "US-TEST,AmeriFlux,http://example.com/test.zip\n"),
+        mock_open(read_data="site_id,data_hub,download_link\n" "US-TEST,AmeriFlux,http://example.com/test.zip\n"),
     )
     def test_download_ameriflux_site_success(self, mock_exists, mock_download):
         """Test successful download of AmeriFlux site."""
@@ -286,7 +286,7 @@ class TestDownload:
         assert result == ["test.zip"]
         mock_download.assert_called_once_with(
             site_id="US-TEST",
-            network="AmeriFlux",
+            data_hub="AmeriFlux",
             filename="test.zip",
             download_link="http://example.com/test.zip",
             output_dir=".",
@@ -296,7 +296,7 @@ class TestDownload:
     @patch("os.path.exists")
     @patch(
         "builtins.open",
-        mock_open(read_data="site_id,network,download_link\n" "FI-HYY,ICOS,http://example.com/test.zip\n"),
+        mock_open(read_data="site_id,data_hub,download_link\n" "FI-HYY,ICOS,http://example.com/test.zip\n"),
     )
     def test_download_icos_site_success(self, mock_exists, mock_download):
         """Test successful download of ICOS site."""
@@ -308,7 +308,7 @@ class TestDownload:
         assert result == ["test.zip"]
         mock_download.assert_called_once_with(
             site_id="FI-HYY",
-            network="ICOS",
+            data_hub="ICOS",
             filename="test.zip",
             download_link="http://example.com/test.zip",
             output_dir=".",
@@ -319,7 +319,7 @@ class TestDownload:
     @patch(
         "builtins.open",
         mock_open(
-            read_data="site_id,network,download_link\n"
+            read_data="site_id,data_hub,download_link\n"
             "US-TEST,AmeriFlux,http://example.com/file.zip?=fluxnetshuttle\n"
         ),
     )
@@ -334,7 +334,7 @@ class TestDownload:
         # Verify that filename passed to _download_dataset has no query params
         mock_download.assert_called_once_with(
             site_id="US-TEST",
-            network="AmeriFlux",
+            data_hub="AmeriFlux",
             filename="file.zip",
             download_link="http://example.com/file.zip?=fluxnetshuttle",
             output_dir=".",
@@ -343,7 +343,7 @@ class TestDownload:
     @patch("os.path.exists")
     @patch(
         "builtins.open",
-        mock_open(read_data="site_id,network,download_link\n" "US-TEST,AmeriFlux,http://example.com/test.zip\n"),
+        mock_open(read_data="site_id,data_hub,download_link\n" "US-TEST,AmeriFlux,http://example.com/test.zip\n"),
     )
     def test_download_site_not_in_snapshot_file_raises_error(self, mock_exists):
         """Test that download raises error when site not in snapshot file."""
@@ -356,7 +356,7 @@ class TestDownload:
         """Test download function with real CSV file but missing site."""
         # Create temporary CSV file
         with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as tmp_file:
-            tmp_file.write("site_id,network,download_link\n")
+            tmp_file.write("site_id,data_hub,download_link\n")
             tmp_file.write("US-Ha1,AmeriFlux,http://example.com/test.zip\n")
             temp_filename = tmp_file.name
 
@@ -396,7 +396,7 @@ class TestListall:
         assert mock_write_header.called
         assert mock_write_header.call_count == 1
         assert mock_write_header.call_args == call()
-        assert not mock_write_row.called  # No rows should be written when no networks are enabled
+        assert not mock_write_row.called  # No rows should be written when no data hubs are enabled
 
     @pytest.mark.asyncio
     @patch("fluxnet_shuttle.shuttle.aiofiles.open")
@@ -404,16 +404,16 @@ class TestListall:
     @patch("fluxnet_shuttle.shuttle.csv.DictWriter.writeheader", new_callable=AsyncMock)
     @patch("fluxnet_shuttle.shuttle.datetime")
     @patch("fluxnet_shuttle.core.shuttle.FluxnetShuttle.get_all_sites", new_callable=MagicMock)
-    async def test_listall_with_networks(
+    async def test_listall_with_data_hubs(
         self, mock_get_all_sites, mock_datetime, mock_write_header, mock_write_row, mock_open
     ):
-        """Test listall with both networks enabled."""
+        """Test listall with both data hubs enabled."""
         mock_get_all_sites.return_value = AsyncMock()
         mock_get_all_sites.return_value.__aiter__.return_value = {
             MagicMock(
                 site_info=MagicMock(
                     site_id="US-TEST",
-                    network="AmeriFlux",
+                    data_hub="AmeriFlux",
                     location_lat=45.0,
                     location_long=-120.0,
                 ),
@@ -426,7 +426,7 @@ class TestListall:
             MagicMock(
                 site_info=MagicMock(
                     site_id="FI-HYY",
-                    network="ICOS",
+                    data_hub="ICOS",
                     location_lat=61.85,
                     location_long=24.29,
                 ),

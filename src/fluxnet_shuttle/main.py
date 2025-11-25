@@ -15,15 +15,15 @@ This module provides the command-line interface for the FLUXNET Shuttle Library,
 allowing users to discover and download FLUXNET data from the command line.
 
 The CLI supports operations for listing available datasets, downloading data,
-checking supported data sources, and testing network connectivity.
+checking supported data sources.
 
 Commands
 --------
 
-* ``listall`` - List all available datasets from supported networks
-* ``download`` - Download datasets from specified networks
-* ``sources`` - Display information about supported data sources
-* ``test`` - Test connectivity to data sources
+* ``listall`` - List all available datasets from supported data hubs
+* ``download`` - Download datasets from specified data hubs
+* ``listdatahubs`` - Display information about supported data hubs
+* ``test`` - Test connectivity to data hubs
 
 Examples
 --------
@@ -198,16 +198,16 @@ def cmd_download(args) -> List[str]:
     return downloaded_files
 
 
-def cmd_sources(args: Any) -> None:
-    """Execute the sources command - show available data source plugins."""
+def cmd_listdatahubs(args: Any) -> None:
+    """Execute the listdatahubs command - show available data hub plugins."""
     log = logging.getLogger(__name__)
     from .core.registry import registry
 
-    log.info("Available FLUXNET network plugins:")
+    log.info("Available FLUXNET data hub plugins:")
 
     plugin_names = registry.list_plugins()
     if not plugin_names:
-        log.warning("No network plugins found")
+        log.warning("No data hub plugins found")
         return
 
     for plugin_name in sorted(plugin_names):
@@ -224,7 +224,7 @@ def main() -> None:
     # Main parser
     parser = argparse.ArgumentParser(
         prog="fluxnet-shuttle",
-        description="FLUXNET Shuttle - Download and manage FLUXNET data from multiple networks",
+        description="FLUXNET Shuttle - Download and manage FLUXNET data from multiple data hubs",
         epilog="For more information, visit: https://github.com/AMF-FLX/fluxnet-shuttle-lib",
     )
 
@@ -251,7 +251,7 @@ def main() -> None:
     parser_listall = subparsers.add_parser(
         "listall",
         help="List all available FLUXNET datasets",
-        description="Fetch and save a snapshot of all available FLUXNET datasets from configured networks",
+        description="Fetch and save a snapshot of all available FLUXNET datasets from configured data hubs",
     )
     parser_listall.add_argument(
         "-o",
@@ -301,11 +301,11 @@ def main() -> None:
         dest="quiet",
     )
 
-    # sources command
+    # listdatahubs command
     subparsers.add_parser(
-        "sources",
-        help="List available data source plugins",
-        description="Display information about available FLUXNET network plugins",
+        "listdatahubs",
+        help="List available data hub plugins",
+        description="Display information about available FLUXNET data hub plugins",
     )
 
     args = parser.parse_args()
@@ -325,8 +325,8 @@ def main() -> None:
             cmd_listall(args)
         elif args.command == "download":
             cmd_download(args)
-        elif args.command == "sources":
-            cmd_sources(args)
+        elif args.command == "listdatahubs":
+            cmd_listdatahubs(args)
         else:
             log.error(f"Unknown command: {args.command}")
             sys.exit(1)

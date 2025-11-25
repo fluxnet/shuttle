@@ -1,5 +1,5 @@
 """
-Network-specific plugins for FLUXNET Shuttle Library
+Data hub-specific plugins for FLUXNET Shuttle Library
 
 :module:: fluxnet_shuttle.plugins
 :moduleauthor: Valerie Hendrix <vchendrix@lbl.gov>
@@ -8,7 +8,7 @@ Network-specific plugins for FLUXNET Shuttle Library
 
 .. currentmodule:: fluxnet_shuttle.plugins
 
-This module contains network-specific plugins for accessing different
+This module contains data hub-specific plugins for accessing different
 FLUXNET data sources.
 """
 
