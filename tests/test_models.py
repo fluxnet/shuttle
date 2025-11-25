@@ -27,7 +27,7 @@ def sample_site_info():
     """Fixture providing sample site general information."""
     return BadmSiteGeneralInfo(
         site_id="US-ARc",
-        network="AmeriFlux",
+        data_hub="AmeriFlux",
         location_lat=68.1396,
         location_long=-149.5892,
         igbp="WET",
@@ -53,7 +53,7 @@ def sample_metadata(sample_site_info, sample_product_data):
 def test_badm_site_general_info_valid_creation(sample_site_info):
     """Test creating a valid BadmSiteGeneralInfo instance."""
     assert sample_site_info.site_id == "US-ARc"
-    assert sample_site_info.network == "AmeriFlux"
+    assert sample_site_info.data_hub == "AmeriFlux"
     assert sample_site_info.location_lat == 68.1396
     assert sample_site_info.location_long == -149.5892
     assert sample_site_info.igbp == "WET"
@@ -66,7 +66,7 @@ def test_badm_site_general_info_site_id_validation():
     for site_id in valid_site_ids:
         site_info = BadmSiteGeneralInfo(
             site_id=site_id,
-            network="AmeriFlux",
+            data_hub="AmeriFlux",
             location_lat=45.0,
             location_long=2.0,
             igbp="ENF",
@@ -79,7 +79,7 @@ def test_badm_site_general_info_site_id_validation():
         with pytest.raises(ValidationError):
             BadmSiteGeneralInfo(
                 site_id=site_id,
-                network="AmeriFlux",
+                data_hub="AmeriFlux",
                 location_lat=45.0,
                 location_long=2.0,
                 igbp="ENF",
@@ -93,7 +93,7 @@ def test_badm_site_general_info_latitude_validation():
     for lat in valid_lats:
         site_info = BadmSiteGeneralInfo(
             site_id="US-ARc",
-            network="AmeriFlux",
+            data_hub="AmeriFlux",
             location_lat=lat,
             location_long=0.0,
             igbp="WET",
@@ -106,7 +106,7 @@ def test_badm_site_general_info_latitude_validation():
         with pytest.raises(ValidationError):
             BadmSiteGeneralInfo(
                 site_id="US-ARc",
-                network="AmeriFlux",
+                data_hub="AmeriFlux",
                 location_lat=lat,
                 location_long=0.0,
                 igbp="WET",
@@ -120,7 +120,7 @@ def test_badm_site_general_info_longitude_validation():
     for lon in valid_lons:
         site_info = BadmSiteGeneralInfo(
             site_id="US-ARc",
-            network="AmeriFlux",
+            data_hub="AmeriFlux",
             location_lat=0.0,
             location_long=lon,
             igbp="WET",
@@ -133,7 +133,7 @@ def test_badm_site_general_info_longitude_validation():
         with pytest.raises(ValidationError):
             BadmSiteGeneralInfo(
                 site_id="US-ARc",
-                network="AmeriFlux",
+                data_hub="AmeriFlux",
                 location_lat=0.0,
                 location_long=lon,
                 igbp="WET",
@@ -149,7 +149,7 @@ def test_badm_site_general_info_required_fields():
         BadmSiteGeneralInfo(site_id="US-ARc")
 
     with pytest.raises(ValidationError):
-        BadmSiteGeneralInfo(site_id="US-ARc", network="AmeriFlux")
+        BadmSiteGeneralInfo(site_id="US-ARc", data_hub="AmeriFlux")
 
 
 # Tests for DataFluxnetProduct
@@ -236,7 +236,7 @@ def test_fluxnet_dataset_metadata_nested_validation():
         FluxnetDatasetMetadata(
             site_info=BadmSiteGeneralInfo(
                 site_id="INVALID",  # Bad format
-                network="AmeriFlux",
+                data_hub="AmeriFlux",
                 location_lat=68.1396,
                 location_long=-149.5892,
                 igbp="WET",
@@ -253,7 +253,7 @@ def test_fluxnet_dataset_metadata_nested_validation():
         FluxnetDatasetMetadata(
             site_info=BadmSiteGeneralInfo(
                 site_id="US-ARc",
-                network="AmeriFlux",
+                data_hub="AmeriFlux",
                 location_lat=68.1396,
                 location_long=-149.5892,
                 igbp="WET",
@@ -271,7 +271,7 @@ def test_site_info_json_serialization(sample_site_info):
     """Test JSON serialization of BadmSiteGeneralInfo."""
     json_data = sample_site_info.model_dump()
     assert json_data["site_id"] == "US-ARc"
-    assert json_data["network"] == "AmeriFlux"
+    assert json_data["data_hub"] == "AmeriFlux"
     assert json_data["location_lat"] == 68.1396
     assert json_data["location_long"] == -149.5892
     assert json_data["igbp"] == "WET"
@@ -308,12 +308,12 @@ def test_plugin_error_detail_valid_creation():
     """Test creating a valid PluginErrorDetail instance."""
     timestamp = datetime.now().isoformat()
     error_detail = PluginErrorDetail(
-        network="ameriflux",
+        data_hub="ameriflux",
         operation="get_sites",
         error="Connection timeout",
         timestamp=timestamp,
     )
-    assert error_detail.network == "ameriflux"
+    assert error_detail.data_hub == "ameriflux"
     assert error_detail.operation == "get_sites"
     assert error_detail.error == "Connection timeout"
     assert error_detail.timestamp == timestamp
@@ -331,7 +331,7 @@ def test_plugin_error_detail_timestamp_validation():
     ]
     for timestamp in valid_timestamps:
         error_detail = PluginErrorDetail(
-            network="ameriflux",
+            data_hub="ameriflux",
             operation="get_sites",
             error="Test error",
             timestamp=timestamp,
@@ -348,7 +348,7 @@ def test_plugin_error_detail_timestamp_validation():
     for timestamp in invalid_timestamps:
         with pytest.raises(ValidationError) as exc_info:
             PluginErrorDetail(
-                network="ameriflux",
+                data_hub="ameriflux",
                 operation="get_sites",
                 error="Test error",
                 timestamp=timestamp,
@@ -358,7 +358,7 @@ def test_plugin_error_detail_timestamp_validation():
     # Empty string should fail with min_length validation
     with pytest.raises(ValidationError):
         PluginErrorDetail(
-            network="ameriflux",
+            data_hub="ameriflux",
             operation="get_sites",
             error="Test error",
             timestamp="",
@@ -371,10 +371,10 @@ def test_plugin_error_detail_required_fields():
         PluginErrorDetail()
 
     with pytest.raises(ValidationError):
-        PluginErrorDetail(network="ameriflux")
+        PluginErrorDetail(data_hub="ameriflux")
 
     with pytest.raises(ValidationError):
-        PluginErrorDetail(network="ameriflux", operation="get_sites")
+        PluginErrorDetail(data_hub="ameriflux", operation="get_sites")
 
 
 def test_plugin_error_detail_min_length_validation():
@@ -383,13 +383,13 @@ def test_plugin_error_detail_min_length_validation():
 
     # Empty strings should fail
     with pytest.raises(ValidationError):
-        PluginErrorDetail(network="", operation="get_sites", error="Test error", timestamp=timestamp)
+        PluginErrorDetail(data_hub="", operation="get_sites", error="Test error", timestamp=timestamp)
 
     with pytest.raises(ValidationError):
-        PluginErrorDetail(network="ameriflux", operation="", error="Test error", timestamp=timestamp)
+        PluginErrorDetail(data_hub="ameriflux", operation="", error="Test error", timestamp=timestamp)
 
     with pytest.raises(ValidationError):
-        PluginErrorDetail(network="ameriflux", operation="get_sites", error="", timestamp=timestamp)
+        PluginErrorDetail(data_hub="ameriflux", operation="get_sites", error="", timestamp=timestamp)
 
 
 # Tests for ErrorSummary
@@ -397,7 +397,7 @@ def test_error_summary_valid_creation():
     """Test creating a valid ErrorSummary instance."""
     timestamp = datetime.now().isoformat()
     error_detail = PluginErrorDetail(
-        network="ameriflux",
+        data_hub="ameriflux",
         operation="get_sites",
         error="Connection timeout",
         timestamp=timestamp,
@@ -430,13 +430,13 @@ def test_error_summary_multiple_errors():
     timestamp = datetime.now().isoformat()
     errors = [
         PluginErrorDetail(
-            network="ameriflux",
+            data_hub="ameriflux",
             operation="get_sites",
             error="Connection timeout",
             timestamp=timestamp,
         ),
         PluginErrorDetail(
-            network="icos",
+            data_hub="icos",
             operation="get_sites",
             error="API rate limit exceeded",
             timestamp=timestamp,
@@ -456,7 +456,7 @@ def test_error_summary_non_negative_validation():
     """Test that total_errors and total_results must be non-negative."""
     timestamp = datetime.now().isoformat()
     error_detail = PluginErrorDetail(
-        network="ameriflux",
+        data_hub="ameriflux",
         operation="get_sites",
         error="Test error",
         timestamp=timestamp,
@@ -475,7 +475,7 @@ def test_error_summary_json_serialization():
     """Test JSON serialization of ErrorSummary."""
     timestamp = datetime.now().isoformat()
     error_detail = PluginErrorDetail(
-        network="ameriflux",
+        data_hub="ameriflux",
         operation="get_sites",
         error="Connection timeout",
         timestamp=timestamp,
@@ -491,7 +491,7 @@ def test_error_summary_json_serialization():
     assert json_data["total_errors"] == 1
     assert json_data["total_results"] == 10
     assert len(json_data["errors"]) == 1
-    assert json_data["errors"][0]["network"] == "ameriflux"
+    assert json_data["errors"][0]["data_hub"] == "ameriflux"
 
     # Test round-trip
     reconstructed = ErrorSummary(**json_data)

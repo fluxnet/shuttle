@@ -1,15 +1,15 @@
 """
-ICOS Network Plugin
-===================
+ICOS Data Hub Plugin
+====================
 
-ICOS Carbon Portal network implementation for the FLUXNET Shuttle plugin system.
+ICOS Carbon Portal data hub implementation for the FLUXNET Shuttle plugin system.
 """
 
 import asyncio
 import logging
 from typing import Any, AsyncGenerator, Dict, Generator
 
-from ..core.base import NetworkPlugin
+from ..core.base import DataHubPlugin
 from ..core.decorators import async_to_sync_generator
 from ..models import BadmSiteGeneralInfo, DataFluxnetProduct, FluxnetDatasetMetadata
 
@@ -51,8 +51,8 @@ order by desc(?fileName)
 """
 
 
-class ICOSPlugin(NetworkPlugin):
-    """ICOS Carbon Portal network plugin implementation."""
+class ICOSPlugin(DataHubPlugin):
+    """ICOS Carbon Portal data hub plugin implementation."""
 
     @property
     def name(self) -> str:
@@ -162,7 +162,7 @@ class ICOSPlugin(NetworkPlugin):
 
                 site_info = BadmSiteGeneralInfo(
                     site_id=station_id,
-                    network="ICOS",
+                    data_hub="ICOS",
                     location_lat=location_lat,
                     location_long=location_long,
                     igbp=igbp,

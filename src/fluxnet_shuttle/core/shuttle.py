@@ -12,7 +12,7 @@ Main Shuttle Orchestrator
 
 
 This module provides the main FluxnetShuttle class that orchestrates
-operations across multiple network plugins.
+operations across multiple data hub plugins.
 """
 
 import logging
@@ -32,45 +32,45 @@ class FluxnetShuttle:
     Main orchestrator for FLUXNET operations with error collection.
 
     This class provides the main interface for interacting with multiple
-    FLUXNET networks through their respective plugins. It handles error
+    FLUXNET data hubs through their respective plugins. It handles error
     collection and provides both sync and async interfaces.
     """
 
-    def __init__(self, networks: Optional[List[str]] = None, config: Optional[ShuttleConfig] = None):
+    def __init__(self, data_hubs: Optional[List[str]] = None, config: Optional[ShuttleConfig] = None):
         """
         Initialize the FLUXNET Shuttle.
 
         Args:
-            networks: List of network names to enable. If None, all configured networks are used.
+            data_hubs: List of data hub names to enable. If None, all configured data hubs are used.
             config: Optional configuration object. If None, default config is loaded.
         """
         self.registry = registry
         self.config = config or ShuttleConfig.load_default()
-        if networks is None:
-            # Use all enabled networks from config if none specified
-            self.networks = [name for name, net in self.config.networks.items()]
+        if data_hubs is None:
+            # Use all enabled data hubs from config if none specified
+            self.data_hubs = [name for name, _ in self.config.data_hubs.items()]
         else:
-            self.networks = [name for name, net in self.config.networks.items() if name in networks]
+            self.data_hubs = [name for name, _ in self.config.data_hubs.items() if name in data_hubs]
 
         self._last_error_collector: Optional[ErrorCollectingIterator] = None
 
-        logger.info(f"Initialized FluxnetShuttle with networks: {self.networks}")
+        logger.info(f"Initialized FluxnetShuttle with data hubs: {self.data_hubs}")
 
     @async_to_sync_generator
     async def get_all_sites(self, **filters) -> AsyncGenerator[FluxnetDatasetMetadata, None]:
         """
-        Get sites from all enabled networks.
+        Get sites from all enabled data hubs.
 
         Args:
             **filters: Optional filters to apply to site selection
 
         Yields:
-            FluxnetDatasetMetadata: Site metadata objects from all networks
+            FluxnetDatasetMetadata: Site metadata objects from all data hubs
 
         Example:
             >>> shuttle = FluxnetShuttle()
             >>> async for site in shuttle.get_all_sites():
-            ...     print(f"{site.site_info.site_id} from {site.site_info.network}")
+            ...     print(f"{site.site_info.site_id} from {site.site_info.data_hub}")
         """
         plugins = self._get_enabled_plugins()
 
@@ -103,12 +103,12 @@ class FluxnetShuttle:
             return self._last_error_collector.get_error_summary()
         return ErrorSummary(total_errors=0, total_results=0, errors=[])
 
-    def list_available_networks(self) -> List[str]:
+    def list_available_data_hubs(self) -> List[str]:
         """
-        List all available network plugins.
+        List all available data hub plugins.
 
         Returns:
-            List of available network names
+            List of available data hub names
         """
         return self.registry.list_plugins()
 
@@ -117,33 +117,33 @@ class FluxnetShuttle:
         Get instances of enabled plugins.
 
         Returns:
-            Dict mapping network names to plugin instances
+            Dict mapping data hub names to plugin instances
         """
         plugins = {}
-        for network_name in self.networks:
-            plugin = self._get_plugin_instance(network_name)
-            plugins[network_name] = plugin
+        for data_hub_name in self.data_hubs:
+            plugin = self._get_plugin_instance(data_hub_name)
+            plugins[data_hub_name] = plugin
 
         return plugins
 
-    def _get_plugin_instance(self, network_name: str):
+    def _get_plugin_instance(self, data_hub_name: str):
         """
-        Get a plugin instance for the specified network.
+        Get a plugin instance for the specified data hub.
 
         Args:
-            network_name: Name of the network
+            data_hub_name: Name of the data hub
 
         Returns:
-            NetworkPlugin instance
+            DataHubPlugin instance
 
         Raises:
-            ValueError: If network is not configured or plugin not found
+            ValueError: If data hub is not configured or plugin not found
         """
-        if network_name not in self.config.networks:
-            raise ValueError(f"Network '{network_name}' not configured")
+        if data_hub_name not in self.config.data_hubs:
+            raise ValueError(f"Data hub '{data_hub_name}' not configured")
 
-        network_config = self.config.networks[network_name]
-        if not network_config.enabled:
-            raise ValueError(f"Network '{network_name}' is disabled.")
+        data_hub_config = self.config.data_hubs[data_hub_name]
+        if not data_hub_config.enabled:
+            raise ValueError(f"Data hub '{data_hub_name}' is disabled.")
 
-        return self.registry.create_instance(network_name, **network_config.__dict__)
+        return self.registry.create_instance(data_hub_name, **data_hub_config.__dict__)

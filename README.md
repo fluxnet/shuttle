@@ -2,13 +2,13 @@
 
 ![CI](https://github.com/AMF-FLX/fluxnet-shuttle-lib/actions/workflows/python-ci.yml/badge.svg)
 
-A Python library for FLUXNET shuttle operations providing functionality for downloading and cataloging FLUXNET data from multiple networks including AmeriFlux, ICOS, and FLUXNET2015.
+A Python library for FLUXNET shuttle operations providing functionality for downloading and cataloging FLUXNET data from multiple data hubs including AmeriFlux, ICOS, and FLUXNET2015.
 
 ## Features
-- **Data Download**: Download FLUXNET data from AmeriFlux and ICOS networks
-- **Data Catalog**: List available datasets from multiple FLUXNET networks
+- **Data Download**: Download FLUXNET data from AmeriFlux and ICOS data hubs
+- **Data Catalog**: List available datasets from multiple FLUXNET data hubs
 - **Command Line Interface**: Easy-to-use CLI tool `fluxnet-shuttle` for common operations
-- **Network Support**: 
+- **Integrated Data Hubs**:
   - AmeriFlux (via AmeriFlux API)
   - ICOS (via ICOS Carbon Portal)
   - FLUXNET2015 (placeholder for future implementation)
@@ -76,7 +76,7 @@ Discover and catalog all available FLUXNET datasets:
 ```bash
 fluxnet-shuttle listall --verbose
 ```
-- Queries both AmeriFlux and ICOS networks
+- Queries both AmeriFlux and ICOS data hubs
 - Creates a timestamped CSV file with download information
 - Takes 1-2 minutes to complete due to API processing time
 

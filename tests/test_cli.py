@@ -15,7 +15,7 @@ from unittest.mock import patch
 
 import pytest
 
-from fluxnet_shuttle.main import cmd_download, cmd_listall, cmd_sources, main, setup_logging
+from fluxnet_shuttle.main import cmd_download, cmd_listall, cmd_listdatahubs, main, setup_logging
 
 
 class TestCLIIntegration:
@@ -215,7 +215,7 @@ class TestCLIFunctions:
     @patch("fluxnet_shuttle.main.listall")
     def test_cmd_listall_basic(self, mock_listall):
         """Test cmd_listall function."""
-        mock_listall.return_value = [{"site_id": "US-Ha1", "network": "AmeriFlux", "data_url": "http://example.com"}]
+        mock_listall.return_value = [{"site_id": "US-Ha1", "data_hub": "AmeriFlux", "data_url": "http://example.com"}]
 
         # Create mock args
         args = argparse.Namespace(output="test_output.csv", logfile="test.log", no_logfile=False, verbose=False)
@@ -243,7 +243,7 @@ class TestCLIFunctions:
 
         # Create a temporary CSV file
         with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as tmp:
-            tmp.write("site_id,network\nUS-Ha1,AmeriFlux\nUS-MMS,AmeriFlux\n")
+            tmp.write("site_id,data_hub\nUS-Ha1,AmeriFlux\nUS-MMS,AmeriFlux\n")
             csv_file = tmp.name
 
         try:
@@ -275,7 +275,7 @@ class TestCLIFunctions:
 
         # Create a temporary CSV file
         with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as tmp:
-            tmp.write("site_id,network\nUS-Ha1,AmeriFlux\nUS-MMS,AmeriFlux\n")
+            tmp.write("site_id,data_hub\nUS-Ha1,AmeriFlux\nUS-MMS,AmeriFlux\n")
             csv_file = tmp.name
 
         try:
@@ -338,7 +338,7 @@ class TestCLIFunctions:
         """Test cmd_download with CSV file missing site_id column."""
         # Create a temporary CSV file without site_id column
         with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as tmp:
-            tmp.write("name,network\nTest Site,AmeriFlux\n")
+            tmp.write("name,data_hub\nTest Site,AmeriFlux\n")
             csv_file = tmp.name
 
         try:
@@ -376,12 +376,12 @@ class TestCLIFunctions:
             cmd_download(args)
         assert exc_info.value.code == 1
 
-    def test_cmd_sources(self):
-        """Test cmd_sources function."""
+    def test_cmd_listdatahubs(self):
+        """Test cmd_listdatahubs function."""
         args = argparse.Namespace(logfile="test.log", no_logfile=False, verbose=False)
 
         # Should not raise any exception
-        cmd_sources(args)
+        cmd_listdatahubs(args)
 
     def test_main_with_version(self):
         """Test main function with --version argument."""
@@ -410,10 +410,10 @@ class TestCLIFunctions:
             main()
             mock_cmd.assert_called_once()
 
-    @patch("fluxnet_shuttle.main.cmd_sources")
-    def test_main_with_sources_command(self, mock_cmd):
-        """Test main function with sources command."""
-        test_args = ["fluxnet-shuttle", "--no-logfile", "sources"]
+    @patch("fluxnet_shuttle.main.cmd_listdatahubs")
+    def test_main_with_listdatahubs_command(self, mock_cmd):
+        """Test main function with listdatahubs command."""
+        test_args = ["fluxnet-shuttle", "--no-logfile", "listdatahubs"]
 
         with patch("sys.argv", test_args):
             main()
@@ -436,26 +436,26 @@ class TestCLIFunctions:
                     main()
                 assert exc_info.value.code == 1
 
-    @patch("fluxnet_shuttle.main.cmd_sources")
+    @patch("fluxnet_shuttle.main.cmd_listdatahubs")
     def test_main_fluxnet_shuttle_error(self, mock_cmd):
         """Test main function error handling for FLUXNETShuttleError."""
         from fluxnet_shuttle import FLUXNETShuttleError
 
         mock_cmd.side_effect = FLUXNETShuttleError("Test error")
 
-        test_args = ["fluxnet-shuttle", "--no-logfile", "sources"]
+        test_args = ["fluxnet-shuttle", "--no-logfile", "listdatahubs"]
 
         with patch("sys.argv", test_args):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 1
 
-    @patch("fluxnet_shuttle.main.cmd_sources")
+    @patch("fluxnet_shuttle.main.cmd_listdatahubs")
     def test_main_unexpected_error(self, mock_cmd):
         """Test main function error handling for unexpected exceptions."""
         mock_cmd.side_effect = RuntimeError("Unexpected error")
 
-        test_args = ["fluxnet-shuttle", "--no-logfile", "sources"]
+        test_args = ["fluxnet-shuttle", "--no-logfile", "listdatahubs"]
 
         with patch("sys.argv", test_args):
             with pytest.raises(SystemExit) as exc_info:
@@ -466,7 +466,7 @@ class TestCLIFunctions:
         """Test cmd_download with CSV file that causes read error."""
         # Create a temporary file that's not readable (permission error)
         with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as tmp:
-            tmp.write("site_id,network\nUS-Ha1,AmeriFlux\n")
+            tmp.write("site_id,data_hub\nUS-Ha1,AmeriFlux\n")
             csv_file = tmp.name
 
         try:
@@ -540,7 +540,7 @@ class TestCLIFunctions:
     def test_cmd_download_input_confirmation_no(self):
         """Test cmd_download with user declining confirmation."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as tmp:
-            tmp.write("site_id,network\nUS-Ha1,AmeriFlux\n")
+            tmp.write("site_id,data_hub\nUS-Ha1,AmeriFlux\n")
             csv_file = tmp.name
 
         try:
@@ -577,16 +577,16 @@ class TestCLIFunctions:
                 assert tmpdir in result
                 mock_listall.assert_called_once()
 
-    def test_cmd_sources_no_plugins(self):
-        """Test cmd_sources when no plugins are registered."""
-        from fluxnet_shuttle.main import cmd_sources
+    def test_cmd_listdatahubs_no_plugins(self):
+        """Test cmd_listdatahubs when no plugins are registered."""
+        from fluxnet_shuttle.main import cmd_listdatahubs
 
         args = argparse.Namespace(logfile="test.log", no_logfile=False, verbose=False)
 
         # Mock registry to return empty list
         with patch("fluxnet_shuttle.core.registry.registry.list_plugins", return_value=[]):
             # Should not raise exception, just log warning
-            cmd_sources(args)
+            cmd_listdatahubs(args)
 
     def test_version_import_error(self):
         """Test version fallback when package is not found."""

@@ -25,14 +25,14 @@ class TestFluxnetShuttle:
 
     def test_get_all_sites_no_plugins(self):
         """Test getting all sites when no plugins are specified."""
-        shuttle = FluxnetShuttle(networks=[])
+        shuttle = FluxnetShuttle(data_hubs=[])
         sites = list(shuttle.get_all_sites())
         assert sites == []
 
     def test_get_all_sites_with_plugins(self):
         """Test getting all sites with specified plugins."""
         # This test assumes that the 'ameriflux' and 'icos' plugins are available.
-        shuttle = FluxnetShuttle(networks=["ameriflux", "icos"])
+        shuttle = FluxnetShuttle(data_hubs=["ameriflux", "icos"])
         sites = list(shuttle.get_all_sites())
         assert isinstance(sites, list)
         # We can't guarantee there are sites without network access,
@@ -41,7 +41,7 @@ class TestFluxnetShuttle:
     def test_get_all_sites_with_plugins_only_icos(self):
         """Test getting all sites with specified plugins."""
         # This test assumes that the 'icos' plugin is available.
-        shuttle = FluxnetShuttle(networks=["icos"])
+        shuttle = FluxnetShuttle(data_hubs=["icos"])
         sites = list(shuttle.get_all_sites())
         assert isinstance(sites, list)
         # We can't guarantee there are sites without network access,

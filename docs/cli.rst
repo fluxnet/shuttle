@@ -19,7 +19,7 @@ Commands
 listall
 ~~~~~~~
 
-List all available FLUXNET datasets from AmeriFlux and ICOS networks. Creates a snapshot CSV file containing available site metadata and download links. The timestamp of the request is included in the filename.
+List all available FLUXNET datasets from AmeriFlux and ICOS data hubs. Creates a snapshot CSV file containing available site metadata and download links. The timestamp of the request is included in the filename.
 
 .. code-block:: bash
 
@@ -33,7 +33,7 @@ List all available FLUXNET datasets from AmeriFlux and ICOS networks. Creates a 
 
 Creates a file named ``fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv`` containing:
 
-- Network name
+- Data hub name
 - Site ID
 - First year of data
 - Last year of data
@@ -92,24 +92,24 @@ Download FLUXNET data products (zip files) for specified sites using a snapshot 
     # Download ALL sites without confirmation (automation)
     fluxnet-shuttle download -f fluxnet_shuttle_snapshot_20251114T113216.csv --quiet
 
-sources
-~~~~~~~
+listdatahubs
+~~~~~~~~~~~~
 
-List available FLUXNET network plugins dynamically registered in the system.
+List available FLUXNET data hub plugins dynamically registered in the system.
 
 .. code-block:: bash
 
-    fluxnet-shuttle sources
+    fluxnet-shuttle listdatahubs
 
 **Output:**
 
-Displays all registered network plugins with their display names and identifiers.
+Displays all registered data hub plugins with their display names and identifiers.
 
 **Example:**
 
 .. code-block:: bash
 
-    fluxnet-shuttle sources
+    fluxnet-shuttle listdatahubs
     # Output:
     #   - AmeriFlux (ameriflux)
     #   - ICOS (icos)
@@ -132,8 +132,8 @@ Complete workflow from discovery to download:
 
 .. code-block:: bash
 
-    # Step 1: Check available network plugins
-    fluxnet-shuttle sources
+    # Step 1: Check available data hub plugins
+    fluxnet-shuttle listdatahubs
 
     # Step 2: Create directories for snapshots and downloads
     mkdir /data/snapshots /data/fluxnet

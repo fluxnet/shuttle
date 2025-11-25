@@ -4,12 +4,12 @@ Test Registry
 
 import pytest
 
-from fluxnet_shuttle.core.base import NetworkPlugin
+from fluxnet_shuttle.core.base import DataHubPlugin
 from fluxnet_shuttle.core.decorators import async_to_sync_generator
 from fluxnet_shuttle.core.registry import ErrorCollectingIterator, PluginRegistry
 
 
-class DummyPlugin(NetworkPlugin):
+class DummyPlugin(DataHubPlugin):
     @property
     def name(self):
         return "dummy"
@@ -53,7 +53,7 @@ class TestPluginRegistry:
         class InvalidPlugin:
             pass
 
-        with pytest.raises(TypeError, match="Plugin class must inherit from NetworkPlugin"):
+        with pytest.raises(TypeError, match="Plugin class must inherit from DataHubPlugin"):
             registry.register(InvalidPlugin)
 
     def test_get_nonexistent_plugin(self):

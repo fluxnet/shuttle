@@ -26,8 +26,8 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class NetworkConfig:
-    """Configuration for a specific network."""
+class DataHubConfig:
+    """Configuration for a specific data hub."""
 
     enabled: bool = True
 
@@ -36,7 +36,7 @@ class NetworkConfig:
 class ShuttleConfig:
     """Main shuttle configuration."""
 
-    networks: Dict[str, NetworkConfig] = field(default_factory=dict)
+    data_hubs: Dict[str, DataHubConfig] = field(default_factory=dict)
     parallel_requests: int = 2
 
     @classmethod
@@ -69,13 +69,13 @@ class ShuttleConfig:
 
             # Parse configuration
             config = cls()
-            if "networks" in config_dict:
-                for network_name, network_data in config_dict["networks"].items():
-                    config.networks[network_name] = NetworkConfig(**network_data)
+            if "data_hubs" in config_dict:
+                for data_hub_name, data_hub_data in config_dict["data_hubs"].items():
+                    config.data_hubs[data_hub_name] = DataHubConfig(**data_hub_data)
 
             # Update other settings
             for key, value in config_dict.items():
-                if key != "networks" and hasattr(config, key):
+                if key != "data_hubs" and hasattr(config, key):
                     setattr(config, key, value)
 
             return config
@@ -106,12 +106,12 @@ class ShuttleConfig:
             # Start with default config and override with file config
             config = cls.load_default()
 
-            if "networks" in config_dict:
-                for network_name, network_data in config_dict["networks"].items():
-                    config.networks[network_name] = NetworkConfig(**network_data)
+            if "data_hubs" in config_dict:
+                for data_hub_name, data_hub_data in config_dict["data_hubs"].items():
+                    config.data_hubs[data_hub_name] = DataHubConfig(**data_hub_data)
 
             for key, value in config_dict.items():
-                if key != "networks" and hasattr(config, key):
+                if key != "data_hubs" and hasattr(config, key):
                     setattr(config, key, value)
 
             logger.info(f"Loaded configuration from {config_path}")
@@ -126,7 +126,7 @@ class ShuttleConfig:
         """Get hardcoded default configuration."""
         return {
             "parallel_requests": 2,
-            "networks": {
+            "data_hubs": {
                 "ameriflux": {"enabled": True},
                 "icos": {"enabled": True},
                 "fluxnet2015": {"enabled": False},
@@ -139,11 +139,11 @@ class ShuttleConfig:
         config_dict = cls._get_hardcoded_defaults()
         config = cls()
 
-        for network_name, network_data in config_dict["networks"].items():
-            config.networks[network_name] = NetworkConfig(**network_data)
+        for data_hub_name, data_hub_data in config_dict["data_hubs"].items():
+            config.data_hubs[data_hub_name] = DataHubConfig(**data_hub_data)
 
         for key, value in config_dict.items():
-            if key != "networks" and hasattr(config, key):
+            if key != "data_hubs" and hasattr(config, key):
                 setattr(config, key, value)
 
         return config

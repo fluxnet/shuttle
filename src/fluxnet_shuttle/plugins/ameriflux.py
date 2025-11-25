@@ -1,8 +1,8 @@
 """
-AmeriFlux Network Plugin
-========================
+AmeriFlux Data Hub Plugin
+=========================
 
-AmeriFlux network implementation for the FLUXNET Shuttle plugin system.
+AmeriFlux data hub implementation for the FLUXNET Shuttle plugin system.
 """
 
 import asyncio
@@ -13,7 +13,7 @@ from pydantic import HttpUrl
 
 from fluxnet_shuttle.core.exceptions import PluginError
 
-from ..core.base import NetworkPlugin
+from ..core.base import DataHubPlugin
 from ..core.decorators import async_to_sync_generator
 from ..models import BadmSiteGeneralInfo, DataFluxnetProduct, FluxnetDatasetMetadata
 
@@ -27,8 +27,8 @@ AMERIFLUX_DOWNLOAD_PATH = "amf_shuttle_data_files_and_manifest"
 AMERIFLUX_HEADERS = {"Content-Type": "application/json"}
 
 
-class AmeriFluxPlugin(NetworkPlugin):
-    """AmeriFlux network plugin implementation."""
+class AmeriFluxPlugin(DataHubPlugin):
+    """AmeriFlux data hub plugin implementation."""
 
     @property
     def name(self) -> str:
@@ -160,7 +160,7 @@ class AmeriFluxPlugin(NetworkPlugin):
 
         return BadmSiteGeneralInfo(
             site_id=site_id,
-            network="AmeriFlux",
+            data_hub="AmeriFlux",
             location_lat=location_lat,
             location_long=location_long,
             igbp=igbp,

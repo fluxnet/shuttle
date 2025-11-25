@@ -10,7 +10,7 @@ Core functionality for FLUXNET Shuttle operations
 
 This module provides the core functionality for FLUXNET Shuttle operations,
 including data discovery, download, and source management across multiple
-FLUXNET networks.
+FLUXNET data hubs.
 
 The shuttle module serves as the main interface for interacting with different
 FLUXNET data sources through a unified API.
@@ -23,7 +23,7 @@ Ideal MVP fields:
     * SITE_ID
     * SITE_NAME
     * TEAM_MEMBER_NAME
-    * NETWORK
+    * DATA_HUB
     * PUBLISHER
     * LOCATION_LAT
     * LOCATION_LONG
@@ -36,7 +36,7 @@ Ideal MVP fields:
 
 Minimal MVP fields:
     * SITE_ID
-    * NETWORK
+    * DATA_HUB
     * PUBLISHER
     * FIRST-YEAR
     * LAST-YEAR
@@ -111,17 +111,17 @@ def _extract_filename_from_headers(headers: Dict[str, str]) -> Optional[str]:
     return None
 
 
-def _download_dataset(site_id: str, network: str, filename: str, download_link: str, output_dir: str = ".") -> str:
+def _download_dataset(site_id: str, data_hub: str, filename: str, download_link: str, output_dir: str = ".") -> str:
     """
-    Download dataset file from any FLUXNET network.
+    Download dataset file from any FLUXNET data hub.
 
-    This is a private generic download function that works for all networks.
-    Network plugins are responsible for providing ready-to-use download URLs.
+    This is a private generic download function that works for all data hubs.
+    Data hub plugins are responsible for providing ready-to-use download URLs.
 
     :param site_id: Site identifier
     :type site_id: str
-    :param network: Network name (e.g., "AmeriFlux", "ICOS")
-    :type network: str
+    :param data_hub: Data hub name (e.g., "AmeriFlux", "ICOS")
+    :type data_hub: str
     :param filename: Local filename to save data (may be overridden by Content-Disposition header)
     :type filename: str
     :param download_link: Ready-to-use URL to download data from
@@ -132,7 +132,7 @@ def _download_dataset(site_id: str, network: str, filename: str, download_link: 
     :rtype: str
     :raises FLUXNETShuttleError: If download fails
     """
-    _log.info(f"{network}: downloading site {site_id} data file: {filename}")
+    _log.info(f"{data_hub}: downloading site {site_id} data file: {filename}")
     try:
         response = requests.get(download_link, stream=True)
         if response.status_code == 200:
@@ -147,19 +147,19 @@ def _download_dataset(site_id: str, network: str, filename: str, download_link: 
 
             # Warn if file already exists and will be overwritten
             if os.path.exists(filepath):
-                _log.warning(f"{network}: file already exists and will be overwritten: {filepath}")
+                _log.warning(f"{data_hub}: file already exists and will be overwritten: {filepath}")
 
             with open(filepath, "wb") as file:
                 for chunk in response.iter_content(chunk_size=8192):
                     file.write(chunk)
-            _log.info(f"{network}: file downloaded successfully to {filepath}")
+            _log.info(f"{data_hub}: file downloaded successfully to {filepath}")
             return filepath
         else:
-            msg = f"Failed to download {network} file. Status code: {response.status_code}"
+            msg = f"Failed to download {data_hub} file. Status code: {response.status_code}"
             _log.error(msg)
             raise FLUXNETShuttleError(msg)
     except requests.RequestException as e:
-        msg = f"Failed to download {network} file: {e}"
+        msg = f"Failed to download {data_hub} file: {e}"
         _log.error(msg)
         raise FLUXNETShuttleError(msg)
 
@@ -169,7 +169,7 @@ def download(site_ids: Optional[List[str]] = None, snapshot_file: str = "", outp
     Download FLUXNET data for specified sites using configuration from a snapshot file.
 
     .. versionadded:: 0.1.0
-       Initial download functionality for AmeriFlux and ICOS networks.
+       Initial download functionality for AmeriFlux and ICOS data hubs.
 
     :param site_ids: List of site IDs to download data for. If None or empty, downloads all sites from snapshot file.
     :type site_ids: Optional[List[str]]
@@ -222,15 +222,15 @@ def download(site_ids: Optional[List[str]] = None, snapshot_file: str = "", outp
     downloaded_filenames = []
     for site_id in site_ids:
         site = sites[site_id]
-        network = site["network"]
+        data_hub = site["data_hub"]
         download_link = site["download_link"]
         # Extract clean filename from URL (without query parameters)
         filename = _extract_filename_from_url(download_link)
-        _log.info(f"Downloading data for site {site_id} from network {network}")
+        _log.info(f"Downloading data for site {site_id} from data hub {data_hub}")
 
         # _download_dataset may override filename from Content-Disposition header
         actual_filename = _download_dataset(
-            site_id=site_id, network=network, filename=filename, download_link=download_link, output_dir=output_dir
+            site_id=site_id, data_hub=data_hub, filename=filename, download_link=download_link, output_dir=output_dir
         )
         downloaded_filenames.append(actual_filename)
     _log.info(f"Downloaded data for {len(site_ids)} sites: {site_ids}")
@@ -240,10 +240,10 @@ def download(site_ids: Optional[List[str]] = None, snapshot_file: str = "", outp
 @async_to_sync
 async def listall(*args, **kwargs) -> str:
     """
-    List all available FLUXNET data from specified networks.
+    List all available FLUXNET data from specified data hubs.
 
     .. versionadded:: 0.1.0
-       Initial data discovery functionality for AmeriFlux and ICOS networks.
+       Initial data discovery functionality for AmeriFlux and ICOS data hubs.
     .. versionchanged:: 0.2.0
        Refactored to use FluxnetShuttle class for unified data retrieval.
 
@@ -261,15 +261,15 @@ async def listall(*args, **kwargs) -> str:
     # Extract output_dir from kwargs if present
     output_dir = kwargs.pop("output_dir", ".")
 
-    networks = [k for k, v in kwargs.items() if v]
-    _log.debug(f"Networks to include: {networks}")
-    shuttle = FluxnetShuttle(networks=networks)
+    data_hubs = [k for k, v in kwargs.items() if v]
+    _log.debug(f"Data hubs to include: {data_hubs}")
+    shuttle = FluxnetShuttle(data_hubs=data_hubs)
 
     # FLUXNET2015 TODO: add FLUXNET2015 data
 
-    # Combine data from all networks
+    # Combine data from all data hubs
     fields = [
-        "network",
+        "data_hub",
         # "publisher",  # don't have this
         "site_id",
         "first_year",
@@ -284,7 +284,7 @@ async def listall(*args, **kwargs) -> str:
     counts = await _write_data_availability(shuttle, fields, csv_filepath)
 
     _log.info(f"Wrote data availability to {csv_filepath}")
-    _log.info(f"Network counts: {counts}")
+    _log.info(f"Data hub counts: {counts}")
     return csv_filepath
 
 
@@ -296,18 +296,18 @@ async def _write_data_availability(shuttle, fields, csv_filename):
     :param shuttle: FluxnetShuttle instance
     :param fields: List of fields to include in the CSV
     :param csv_filename: Output CSV filename
-    :return: Dictionary with counts of sites per network
+    :return: Dictionary with counts of sites per data hub
     """
     counts: Dict[str, int] = {}
-    # map expansion for network counts
+    # map expansion for data hub counts
     # Write to CSV file, using asyncio file operations
     async with aiofiles.open(csv_filename, "w") as csvfile:
         csv_writer = csv.DictWriter(csvfile, fieldnames=fields)
         await csv_writer.writeheader()
         async for site in shuttle.get_all_sites():
-            counts.setdefault(site.site_info.network, 0)
-            counts[site.site_info.network] += 1
-            site_dict = site.site_info.model_dump(include={"network", "site_id"})
+            counts.setdefault(site.site_info.data_hub, 0)
+            counts[site.site_info.data_hub] += 1
+            site_dict = site.site_info.model_dump(include={"data_hub", "site_id"})
             site_dict.update(site.product_data.model_dump(include={"first_year", "last_year", "download_link"}))
             await csv_writer.writerow(site_dict)
     return counts

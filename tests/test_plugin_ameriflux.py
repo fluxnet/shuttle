@@ -60,7 +60,7 @@ class TestAmeriFluxPlugin:
             str(sites[0].product_data.download_link)
             == "https://ftp.fluxdata.org/.ameriflux_downloads/FLUXNET/AMF_AR-Bal_FLUXNET_FULLSET_2012-2013_3-7.zip"
         )
-        assert sites[0].site_info.network == "AmeriFlux"
+        assert sites[0].site_info.data_hub == "AmeriFlux"
         assert sites[0].site_info.location_lat == -37.7596  # Real value from metadata
         assert sites[0].site_info.location_long == -58.3024  # Real value from metadata
         assert sites[0].site_info.igbp == "CRO"  # Real value from metadata
@@ -72,7 +72,7 @@ class TestAmeriFluxPlugin:
             str(sites[1].product_data.download_link)
             == "https://ftp.fluxdata.org/.ameriflux_downloads/FLUXNET/AMF_AR-CCa_FLUXNET_FULLSET_2012-2020_3-7.zip"
         )
-        assert sites[1].site_info.network == "AmeriFlux"
+        assert sites[1].site_info.data_hub == "AmeriFlux"
         assert sites[1].site_info.location_lat == -31.4821  # Real value from metadata
         assert sites[1].site_info.location_long == -63.6458  # Real value from metadata
         assert sites[1].site_info.igbp == "GRA"  # Real value from metadata
@@ -105,7 +105,7 @@ class TestAmeriFluxPlugin:
         assert sites[0].product_data.first_year == 2005  # From publish_years
         assert sites[0].product_data.last_year == 2007  # From publish_years
         assert str(sites[0].product_data.download_link) == "http://example.com/US-XYZ_invalidformat.zip"
-        assert sites[0].site_info.network == "AmeriFlux"
+        assert sites[0].site_info.data_hub == "AmeriFlux"
         assert sites[0].site_info.location_lat == 45.0  # From metadata
         assert sites[0].site_info.location_long == -90.0  # From metadata
         assert sites[0].site_info.igbp == "DBF"  # From metadata
@@ -151,7 +151,7 @@ class TestAmeriFluxPlugin:
         assert (
             str(sites[0].product_data.download_link) == "http://example.com/US-ABC__FLUXNET_FULLSET_2005-2012_3-7.zip"
         )
-        assert sites[0].site_info.network == "AmeriFlux"
+        assert sites[0].site_info.data_hub == "AmeriFlux"
         assert sites[0].site_info.location_lat == 40.0  # From metadata
         assert sites[0].site_info.location_long == -100.0  # From metadata
         assert sites[0].site_info.igbp == "GRA"  # From metadata
@@ -197,7 +197,7 @@ class TestAmeriFluxPlugin:
         assert len(sites) == 0  # No valid sites should be returned due to malformed data
 
     @pytest.mark.asyncio
-    @patch("fluxnet_shuttle.plugins.ameriflux.NetworkPlugin._session_request")
+    @patch("fluxnet_shuttle.plugins.ameriflux.DataHubPlugin._session_request")
     async def test__get_site_metadata(self, mock_request):
         """Test _get_site_metadata handles _session_request correctly."""
         mock_response = AsyncMock()
@@ -227,7 +227,7 @@ class TestAmeriFluxPlugin:
 
     @pytest.mark.asyncio
     @patch(
-        "fluxnet_shuttle.plugins.ameriflux.NetworkPlugin._session_request",
+        "fluxnet_shuttle.plugins.ameriflux.DataHubPlugin._session_request",
         side_effect=PluginError("ameriflux", "Test error"),
     )
     async def test__get_site_metadata_failure(self, mock_request):
@@ -240,7 +240,7 @@ class TestAmeriFluxPlugin:
 
     @pytest.mark.asyncio
     @patch(
-        "fluxnet_shuttle.plugins.ameriflux.NetworkPlugin._session_request",
+        "fluxnet_shuttle.plugins.ameriflux.DataHubPlugin._session_request",
         side_effect=PluginError("ameriflux", "Test error"),
     )
     async def test__get_download_links_with_failure(self, mock_request):
@@ -252,7 +252,7 @@ class TestAmeriFluxPlugin:
         assert mock_request.call_count == 1  # Ensure the request was attempted
 
     @pytest.mark.asyncio
-    @patch("fluxnet_shuttle.plugins.ameriflux.NetworkPlugin._session_request")
+    @patch("fluxnet_shuttle.plugins.ameriflux.DataHubPlugin._session_request")
     async def test__get_download_links_success(self, mock_request):
         """Test _get_download_links returns expected data on success."""
         mock_response = MagicMock()
@@ -307,7 +307,7 @@ class TestAmeriFluxPlugin:
             str(results[0].product_data.download_link)
             == "http://example.com/US-TEST__FLUXNET_FULLSET_2005-2012_3-7.zip"
         )
-        assert results[0].site_info.network == "AmeriFlux"
+        assert results[0].site_info.data_hub == "AmeriFlux"
 
     def test_parse_response_filters_sites_without_publish_years(self):
         """Test _parse_response filters out sites with no publish years."""
