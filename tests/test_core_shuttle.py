@@ -56,11 +56,21 @@ class MockSuccessPlugin:
         for _ in range(4):  # Simulate some async operation
             await asyncio.sleep(0.1)
             site_info = BadmSiteGeneralInfo(
-                site_id="US-SUCCESS", data_hub="Success", location_lat=45.0, location_long=-95.0, igbp="DBF"
+                site_id="US-SUCCESS",
+                site_name="Success Site",
+                data_hub="Success",
+                location_lat=45.0,
+                location_long=-95.0,
+                igbp="DBF",
             )
 
             product_data = DataFluxnetProduct(
-                first_year=2019, last_year=2020, download_link="https://example.com/success.zip"
+                first_year=2019,
+                last_year=2020,
+                download_link="https://example.com/success.zip",
+                product_citation="Test citation",
+                product_id="test-id",
+                code_version="v1",
             )
 
             yield FluxnetDatasetMetadata(site_info=site_info, product_data=product_data)

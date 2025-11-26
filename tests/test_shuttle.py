@@ -12,7 +12,9 @@ from fluxnet_shuttle.shuttle import (
     _extract_filename_from_headers,
     _extract_filename_from_url,
     download,
+    extract_code_version_from_filename,
     listall,
+    validate_fluxnet_filename_format,
 )
 
 
@@ -91,6 +93,77 @@ class TestExtractFilenameFromHeaders:
         headers = {"Content-Disposition": "attachment"}
         result = _extract_filename_from_headers(headers)
         assert result is None
+
+
+class TestExtractCodeVersionFromFilename:
+    """Test cases for the extract_code_version_from_filename function."""
+
+    def test_valid_zip_format(self):
+        """Test extracting version from valid ZIP filename."""
+        filename = "AMF_US-Ha1_FLUXNET_2005-2012_v3_r7.zip"
+        result = extract_code_version_from_filename(filename)
+        assert result == "v3"
+
+    def test_valid_zip_format_with_url(self):
+        """Test extracting version from full URL with ZIP file."""
+        url = "https://example.com/AMF_AR-Bal_FLUXNET_2012-2013_v3_r7.zip"
+        result = extract_code_version_from_filename(url)
+        assert result == "v3"
+
+    def test_valid_zip_format_different_version(self):
+        """Test extracting different version number."""
+        filename = "AMF_IT-Niv_FLUXNET_2010-2015_v1_r0.zip"
+        result = extract_code_version_from_filename(filename)
+        assert result == "v1"
+
+    def test_invalid_filename_format(self):
+        """Test with filename that doesn't match pattern."""
+        filename = "invalid_filename.zip"
+        result = extract_code_version_from_filename(filename)
+        assert result == ""
+
+    def test_empty_filename(self):
+        """Test with empty filename."""
+        result = extract_code_version_from_filename("")
+        assert result == ""
+
+    def test_none_filename(self):
+        """Test with None filename."""
+        result = extract_code_version_from_filename(None)
+        assert result == ""
+
+
+class TestValidateFluxnetFilenameFormat:
+    """Test cases for the validate_fluxnet_filename_format function."""
+
+    def test_valid_ameriflux_format(self):
+        """Test valid AmeriFlux filename format."""
+        filename = "AMF_US-Ha1_FLUXNET_2005-2012_v3_r7.zip"
+        assert validate_fluxnet_filename_format(filename) is True
+
+    def test_valid_icos_format(self):
+        """Test valid ICOS filename format."""
+        filename = "FLX_DE-Hte_FLUXNET_2009-2018_v1_r0.zip"
+        assert validate_fluxnet_filename_format(filename) is True
+
+    def test_valid_format_with_url(self):
+        """Test valid filename within URL."""
+        url = "https://example.com/AMF_AR-Bal_FLUXNET_2012-2013_v3_r7.zip"
+        assert validate_fluxnet_filename_format(url) is True
+
+    def test_invalid_format(self):
+        """Test invalid filename format."""
+        filename = "invalid_filename.zip"
+        assert validate_fluxnet_filename_format(filename) is False
+
+    def test_empty_filename(self):
+        """Test empty filename."""
+        assert validate_fluxnet_filename_format("") is False
+
+    def test_partial_format(self):
+        """Test filename with partial format."""
+        filename = "US-Ha1_FLUXNET_2005-2012.zip"
+        assert validate_fluxnet_filename_format(filename) is False
 
 
 class TestDownloadDataset:
@@ -413,27 +486,71 @@ class TestListall:
             MagicMock(
                 site_info=MagicMock(
                     site_id="US-TEST",
+                    site_name="Test Site",
                     data_hub="AmeriFlux",
                     location_lat=45.0,
                     location_long=-120.0,
+                    igbp="DBF",
+                    group_team_member=[],
+                    model_dump=lambda exclude=None: {
+                        "site_id": "US-TEST",
+                        "site_name": "Test Site",
+                        "data_hub": "AmeriFlux",
+                        "location_lat": 45.0,
+                        "location_long": -120.0,
+                        "igbp": "DBF",
+                    },
                 ),
                 product_data=MagicMock(
                     first_year=2000,
                     last_year=2020,
                     download_link="http://example.com/test.zip",
+                    product_citation="Test citation",
+                    product_id="test-id",
+                    code_version="v1",
+                    model_dump=lambda: {
+                        "first_year": 2000,
+                        "last_year": 2020,
+                        "download_link": "http://example.com/test.zip",
+                        "product_citation": "Test citation",
+                        "product_id": "test-id",
+                        "code_version": "v1",
+                    },
                 ),
             ),
             MagicMock(
                 site_info=MagicMock(
                     site_id="FI-HYY",
+                    site_name="Hyytiälä",
                     data_hub="ICOS",
                     location_lat=61.85,
                     location_long=24.29,
+                    igbp="ENF",
+                    group_team_member=[],
+                    model_dump=lambda exclude=None: {
+                        "site_id": "FI-HYY",
+                        "site_name": "Hyytiälä",
+                        "data_hub": "ICOS",
+                        "location_lat": 61.85,
+                        "location_long": 24.29,
+                        "igbp": "ENF",
+                    },
                 ),
                 product_data=MagicMock(
                     first_year=2005,
                     last_year=2018,
                     download_link="http://example.com/icos.zip",
+                    product_citation="ICOS citation",
+                    product_id="icos-id",
+                    code_version="v2",
+                    model_dump=lambda: {
+                        "first_year": 2005,
+                        "last_year": 2018,
+                        "download_link": "http://example.com/icos.zip",
+                        "product_citation": "ICOS citation",
+                        "product_id": "icos-id",
+                        "code_version": "v2",
+                    },
                 ),
             ),
         }
