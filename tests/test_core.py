@@ -34,10 +34,22 @@ class MockDataHubPlugin(DataHubPlugin):
     async def get_sites(self, **filters) -> AsyncGenerator[FluxnetDatasetMetadata, None]:
         """Mock implementation that yields test data."""
         site_info = BadmSiteGeneralInfo(
-            site_id="US-TEST", data_hub="Mock", location_lat=40.0, location_long=-100.0, igbp="DBF"
+            site_id="US-TEST",
+            site_name="Test Site",
+            data_hub="Mock",
+            location_lat=40.0,
+            location_long=-100.0,
+            igbp="DBF",
         )
 
-        product_data = DataFluxnetProduct(first_year=2020, last_year=2021, download_link="https://example.com/test.zip")
+        product_data = DataFluxnetProduct(
+            first_year=2020,
+            last_year=2021,
+            download_link="https://example.com/test.zip",
+            product_citation="Test citation",
+            product_id="test-id",
+            code_version="v1",
+        )
 
         yield FluxnetDatasetMetadata(site_info=site_info, product_data=product_data)
 

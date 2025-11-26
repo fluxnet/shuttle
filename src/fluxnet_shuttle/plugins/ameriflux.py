@@ -15,7 +15,16 @@ from fluxnet_shuttle.core.exceptions import PluginError
 
 from ..core.base import DataHubPlugin
 from ..core.decorators import async_to_sync_generator
-from ..models import BadmSiteGeneralInfo, DataFluxnetProduct, FluxnetDatasetMetadata
+from ..models import (
+    BadmSiteGeneralInfo,
+    DataFluxnetProduct,
+    FluxnetDatasetMetadata,
+    TeamMember,
+)
+from ..shuttle import (
+    extract_code_version_from_filename,
+    validate_fluxnet_filename_format,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +33,7 @@ AMERIFLUX_BASE_URL = "https://amfcdn.lbl.gov/"
 AMERIFLUX_BASE_PATH = "api/v2/"
 AMERIFLUX_SITE_INFO_PATH = "site_info_display/AmeriFlux"
 AMERIFLUX_DOWNLOAD_PATH = "amf_shuttle_data_files_and_manifest"
+AMERIFLUX_CITATIONS_PATH = "citations/FLUXNET"
 AMERIFLUX_HEADERS = {"Content-Type": "application/json"}
 
 
@@ -75,7 +85,12 @@ class AmeriFluxPlugin(DataHubPlugin):
                     logger.warning("No AmeriFlux download links found")
                 else:
                     logger.info(f"Retrieved download links for {len(download_data.get('data_urls', []))} sites")
-                    for site_data in self._parse_response(download_data, site_metadata):
+
+                    # Fetch citations for all sites
+                    citations = await self._get_citations(api_url, site_ids)
+                    logger.info(f"Retrieved citations for {len(citations)} sites")
+
+                    for site_data in self._parse_response(download_data, site_metadata, citations):
                         await asyncio.sleep(0.001)  # Yield control to event loop
                         yield site_data
 
@@ -128,6 +143,46 @@ class AmeriFluxPlugin(DataHubPlugin):
             # Re-raise PluginError - download links are critical for plugin operation
             raise
 
+    async def _get_citations(self, base_url: str, site_ids: List[str]) -> Dict[str, str]:
+        """
+        Get citations for specified AmeriFlux sites using v2 citations endpoint.
+
+        Args:
+            base_url: Base API URL
+            site_ids: List of site IDs to get citations for
+
+        Returns:
+            Dictionary mapping site_id to citation string
+        """
+        url_post_query = f"{base_url}{AMERIFLUX_CITATIONS_PATH}"
+
+        json_query = {"site_ids": site_ids}
+
+        try:
+            async with self._session_request(
+                "POST", url_post_query, headers=AMERIFLUX_HEADERS, json=json_query
+            ) as response:
+                data: Dict[str, Any] = await response.json()
+
+                # Build dictionary mapping site_id to citation
+                citations_dict = {}
+                for item in data.get("values", []):
+                    site_id = item.get("site_id")
+                    citation = item.get("citation", "")
+                    if site_id:
+                        citations_dict[site_id] = citation
+
+                return citations_dict
+
+        except PluginError:
+            # Log warning but don't fail - citations are optional
+            logger.warning(f"Failed to fetch citations for {len(site_ids)} sites")
+            return {}
+        except Exception as e:
+            # Log warning but don't fail - citations are optional
+            logger.warning(f"Error fetching citations: {e}")
+            return {}
+
     @staticmethod
     def _build_site_info(site_id: str, site_metadata: Dict[str, Any]) -> BadmSiteGeneralInfo:
         """
@@ -147,6 +202,9 @@ class AmeriFluxPlugin(DataHubPlugin):
         grp_location = site_meta.get("grp_location", {})
         grp_igbp = site_meta.get("grp_igbp", {})
 
+        # Extract site name
+        site_name = site_meta.get("site_name", "")
+
         # Extract lat, lon, and IGBP from metadata
         try:
             location_lat = float(grp_location.get("location_lat", 0.0))
@@ -158,22 +216,45 @@ class AmeriFluxPlugin(DataHubPlugin):
 
         igbp = grp_igbp.get("igbp", "UNK")
 
+        # Extract team member information
+        team_members = []
+        grp_team_member = site_meta.get("grp_team_member", [])
+        if isinstance(grp_team_member, list):
+            for member in grp_team_member:
+                try:
+                    team_member = TeamMember(
+                        team_member_name=member.get("team_member_name", ""),
+                        team_member_role=member.get("team_member_role", ""),
+                        team_member_email=member.get("team_member_email", ""),
+                    )
+                    team_members.append(team_member)
+                except Exception as e:
+                    logger.warning(f"Error parsing team member for site {site_id}: {e}")
+                    continue
+
         return BadmSiteGeneralInfo(
             site_id=site_id,
+            site_name=site_name,
             data_hub="AmeriFlux",
             location_lat=location_lat,
             location_long=location_long,
             igbp=igbp,
+            group_team_member=team_members,
         )
 
     @staticmethod
-    def _build_product_data(publish_years: List[int], download_link: str) -> DataFluxnetProduct:
+    def _build_product_data(
+        publish_years: List[int], download_link: str, product_id: str, citation: str, code_version: str
+    ) -> DataFluxnetProduct:
         """
         Build DataFluxnetProduct model from publish years and download link.
 
         Args:
             publish_years: List of years with published data
             download_link: URL to download the data
+            product_id: Product identifier (e.g., hashtag, DOI, PID)
+            citation: Citation string for the data product
+            code_version: Code version extracted from filename
 
         Returns:
             DataFluxnetProduct: Validated product data model
@@ -189,11 +270,16 @@ class AmeriFluxPlugin(DataHubPlugin):
 
         # Pydantic will validate and convert the string to HttpUrl
         return DataFluxnetProduct(
-            first_year=first_year, last_year=last_year, download_link=cast(HttpUrl, download_link)
+            first_year=first_year,
+            last_year=last_year,
+            download_link=cast(HttpUrl, download_link),
+            product_citation=citation,
+            product_id=product_id,
+            code_version=code_version,
         )
 
     def _parse_response(
-        self, data: Dict[str, Any], site_metadata: Dict[str, Any]
+        self, data: Dict[str, Any], site_metadata: Dict[str, Any], citations: Dict[str, str]
     ) -> Generator[FluxnetDatasetMetadata, None, None]:
         """
         Parse AmeriFlux API response to extract site information with complete metadata.
@@ -201,6 +287,7 @@ class AmeriFluxPlugin(DataHubPlugin):
         Args:
             data: AmeriFlux API response data with download links
             site_metadata: Dictionary of site metadata indexed by site_id
+            citations: Dictionary mapping site_id to citation string
 
         Returns:
             Generator yielding FluxnetDatasetMetadata objects
@@ -210,15 +297,45 @@ class AmeriFluxPlugin(DataHubPlugin):
                 site_id = s["site_id"]
                 download_link = s["url"]
 
+                # Validate filename format
+                if not validate_fluxnet_filename_format(download_link):
+                    logger.info(
+                        f"Skipping site {site_id} - filename does not follow standard format "
+                        f"(<datahub_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.<extension>): "
+                        f"{download_link}"
+                    )
+                    continue
+
                 # Get years from site_metadata (from data_availability endpoint)
                 publish_years = site_metadata.get(site_id, {}).get("grp_publish_fluxnet", [])
                 if not publish_years:
                     logger.debug(f"Skipping site {site_id} - no publish years available")
                     continue
 
+                # Extract FLUXNET DOI from site metadata
+                doi_info = site_metadata.get(site_id, {}).get("doi", {})
+                product_id = doi_info.get("FLUXNET", "") if isinstance(doi_info, dict) else ""
+
+                # Extract code version from download URL
+                # URL path typically contains the filename at the end
+                code_version = extract_code_version_from_filename(download_link)
+
+                # Get citation for this site
+                citation = citations.get(site_id, "")
+
+                # Skip site if citation is not available
+                if not citation:
+                    logger.warning(
+                        f"Skipping site {site_id} - no citation available. "
+                        f"Please contact AmeriFlux Management Project (AMP) at ameriflux-support@lbl.gov."
+                    )
+                    continue
+
                 # Build site info and product data models using helper functions
                 site_info = self._build_site_info(site_id, site_metadata)
-                product_data = self._build_product_data(publish_years, download_link)
+                product_data = self._build_product_data(
+                    publish_years, download_link, product_id=product_id, citation=citation, code_version=code_version
+                )
 
                 metadata = FluxnetDatasetMetadata(site_info=site_info, product_data=product_data)
 

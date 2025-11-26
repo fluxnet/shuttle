@@ -27,6 +27,7 @@ def sample_site_info():
     """Fixture providing sample site general information."""
     return BadmSiteGeneralInfo(
         site_id="US-ARc",
+        site_name="Utqiaġvik (Barrow)",
         data_hub="AmeriFlux",
         location_lat=68.1396,
         location_long=-149.5892,
@@ -37,7 +38,14 @@ def sample_site_info():
 @pytest.fixture
 def sample_product_data():
     """Fixture providing sample product data."""
-    return DataFluxnetProduct(first_year=2018, last_year=2023, download_link="https://example.com/dataset.zip")
+    return DataFluxnetProduct(
+        first_year=2018,
+        last_year=2023,
+        download_link="https://example.com/dataset.zip",
+        product_citation="Test citation",
+        product_id="test-id-123",
+        code_version="v1",
+    )
 
 
 @pytest.fixture
@@ -66,6 +74,7 @@ def test_badm_site_general_info_site_id_validation():
     for site_id in valid_site_ids:
         site_info = BadmSiteGeneralInfo(
             site_id=site_id,
+            site_name="Test Site",
             data_hub="AmeriFlux",
             location_lat=45.0,
             location_long=2.0,
@@ -79,6 +88,7 @@ def test_badm_site_general_info_site_id_validation():
         with pytest.raises(ValidationError):
             BadmSiteGeneralInfo(
                 site_id=site_id,
+                site_name="Test Site",
                 data_hub="AmeriFlux",
                 location_lat=45.0,
                 location_long=2.0,
@@ -93,6 +103,7 @@ def test_badm_site_general_info_latitude_validation():
     for lat in valid_lats:
         site_info = BadmSiteGeneralInfo(
             site_id="US-ARc",
+            site_name="Test Site",
             data_hub="AmeriFlux",
             location_lat=lat,
             location_long=0.0,
@@ -106,6 +117,7 @@ def test_badm_site_general_info_latitude_validation():
         with pytest.raises(ValidationError):
             BadmSiteGeneralInfo(
                 site_id="US-ARc",
+                site_name="Test Site",
                 data_hub="AmeriFlux",
                 location_lat=lat,
                 location_long=0.0,
@@ -120,6 +132,7 @@ def test_badm_site_general_info_longitude_validation():
     for lon in valid_lons:
         site_info = BadmSiteGeneralInfo(
             site_id="US-ARc",
+            site_name="Test Site",
             data_hub="AmeriFlux",
             location_lat=0.0,
             location_long=lon,
@@ -133,6 +146,7 @@ def test_badm_site_general_info_longitude_validation():
         with pytest.raises(ValidationError):
             BadmSiteGeneralInfo(
                 site_id="US-ARc",
+                site_name="Test Site",
                 data_hub="AmeriFlux",
                 location_lat=0.0,
                 location_long=lon,
@@ -169,6 +183,9 @@ def test_data_fluxnet_product_year_validation():
             first_year=first_year,
             last_year=last_year,
             download_link="https://example.com/dataset.zip",
+            product_citation="Test citation",
+            product_id="test-id",
+            code_version="v1",
         )
         assert product.first_year == first_year
         assert product.last_year == last_year
@@ -179,6 +196,9 @@ def test_data_fluxnet_product_year_validation():
             first_year=1899,  # Below minimum
             last_year=2000,
             download_link="https://example.com/dataset.zip",
+            product_citation="Test citation",
+            product_id="test-id",
+            code_version="v1",
         )
 
     with pytest.raises(ValidationError):
@@ -186,6 +206,9 @@ def test_data_fluxnet_product_year_validation():
             first_year=2000,
             last_year=2101,  # Above maximum
             download_link="https://example.com/dataset.zip",
+            product_citation="Test citation",
+            product_id="test-id",
+            code_version="v1",
         )
 
     # Invalid year range (last_year < first_year)
@@ -194,6 +217,9 @@ def test_data_fluxnet_product_year_validation():
             first_year=2023,
             last_year=2020,
             download_link="https://example.com/dataset.zip",
+            product_citation="Test citation",
+            product_id="test-id",
+            code_version="v1",
         )
 
 
@@ -206,7 +232,14 @@ def test_data_fluxnet_product_url_validation():
         "https://icos-cp.eu/data/file.nc",
     ]
     for url in valid_urls:
-        product = DataFluxnetProduct(first_year=2018, last_year=2023, download_link=url)
+        product = DataFluxnetProduct(
+            first_year=2018,
+            last_year=2023,
+            download_link=url,
+            product_citation="Test citation",
+            product_id="test-id",
+            code_version="v1",
+        )
         assert str(product.download_link) == url
 
     # Invalid URLs
@@ -219,7 +252,14 @@ def test_data_fluxnet_product_url_validation():
     ]
     for url in invalid_urls:
         with pytest.raises(ValidationError):
-            DataFluxnetProduct(first_year=2018, last_year=2023, download_link=url)
+            DataFluxnetProduct(
+                first_year=2018,
+                last_year=2023,
+                download_link=url,
+                product_citation="Test citation",
+                product_id="test-id",
+                code_version="v1",
+            )
 
 
 # Tests for FluxnetDatasetMetadata
@@ -236,6 +276,7 @@ def test_fluxnet_dataset_metadata_nested_validation():
         FluxnetDatasetMetadata(
             site_info=BadmSiteGeneralInfo(
                 site_id="INVALID",  # Bad format
+                site_name="Test Site",
                 data_hub="AmeriFlux",
                 location_lat=68.1396,
                 location_long=-149.5892,
@@ -245,6 +286,9 @@ def test_fluxnet_dataset_metadata_nested_validation():
                 first_year=2018,
                 last_year=2023,
                 download_link="https://example.com/dataset.zip",
+                product_citation="Test citation",
+                product_id="test-id",
+                code_version="v1",
             ),
         )
 
@@ -253,6 +297,7 @@ def test_fluxnet_dataset_metadata_nested_validation():
         FluxnetDatasetMetadata(
             site_info=BadmSiteGeneralInfo(
                 site_id="US-ARc",
+                site_name="Test Site",
                 data_hub="AmeriFlux",
                 location_lat=68.1396,
                 location_long=-149.5892,
@@ -262,6 +307,9 @@ def test_fluxnet_dataset_metadata_nested_validation():
                 first_year=2023,
                 last_year=2020,  # Invalid range
                 download_link="https://example.com/dataset.zip",
+                product_citation="Test citation",
+                product_id="test-id",
+                code_version="v1",
             ),
         )
 

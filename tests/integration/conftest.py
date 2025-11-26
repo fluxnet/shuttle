@@ -109,11 +109,11 @@ def sample_ameriflux_response():
         "data_urls": [
             {
                 "site_id": "US-ARM",
-                "url": "https://example.com/FLX_US-ARM_FLUXNET2015_FULLSET_2003-2012_1.zip",
+                "url": "https://example.com/FLX_US-ARM_FLUXNET_2003-2012_v1_r0.zip",
             },
             {
                 "site_id": "US-Ton",
-                "url": "https://example.com/FLX_US-Ton_FLUXNET2015_FULLSET_2001-2014_1.zip",
+                "url": "https://example.com/FLX_US-Ton_FLUXNET_2001-2014_v1_r0.zip",
             },
         ]
     }

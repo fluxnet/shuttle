@@ -59,6 +59,7 @@ Version
 import csv
 import logging
 import os
+import re
 import sys
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -72,6 +73,12 @@ from fluxnet_shuttle.core.decorators import async_to_sync
 from fluxnet_shuttle.core.shuttle import FluxnetShuttle
 
 _log = logging.getLogger(__name__)
+
+# FLUXNET filename pattern: <datahub_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.zip
+_FLUXNET_ZIP_PATTERN = r"^[A-Z]{2,10}_[A-Z]{2}-[A-Za-z0-9]{3}_FLUXNET_(\d{4})-(\d{4})_(v\d+(?:\.\d+)?)_(r\d+)\.zip$"
+
+# Delimiter for concatenating multiple values in CSV (e.g., team members)
+CSV_MULTI_VALUE_DELIMITER = ";"
 
 
 def _extract_filename_from_url(url: str) -> str:
@@ -89,6 +96,79 @@ def _extract_filename_from_url(url: str) -> str:
     # Extract the last part of the path as filename
     filename = unquote(path.split("/")[-1])
     return filename
+
+
+def extract_code_version_from_filename(filename: str) -> str:
+    """
+    Extract code version from FLUXNET filename.
+
+    FLUXNET filenames follow the archive format (ZIP):
+       <datahub_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.zip
+
+    The version component follows the format vX or vX.Y (e.g., v1, v1.2, v1.4)
+
+    Examples:
+    - AMF_US-Ha1_FLUXNET_1991-2020_v1.2_r2.zip -> version "v1.2"
+    - ICOSETC_BE-Bra_FLUXNET_2020-2024_v1.4_r1.zip -> version "v1.4"
+
+    Args:
+        filename: The filename to extract version from
+
+    Returns:
+        The code version string (e.g., "v1.2"), or empty string if not found
+
+    Examples:
+        >>> extract_code_version_from_filename("AMF_US-Ha1_FLUXNET_1991-2020_v1.2_r2.zip")
+        'v1.2'
+        >>> extract_code_version_from_filename("invalid_filename.zip")
+        ''
+    """
+    if not filename:
+        return ""
+
+    filename_only = _extract_filename_from_url(filename)
+
+    # ZIP format: <datahub_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.zip
+    zip_match = re.match(_FLUXNET_ZIP_PATTERN, filename_only, re.IGNORECASE)
+    if zip_match:
+        version = zip_match.group(3)  # Group 3 is the version
+        return version
+
+    return ""
+
+
+def validate_fluxnet_filename_format(filename: str) -> bool:
+    """
+    Validate that a filename follows the standard FLUXNET filename format.
+
+    Valid format (ZIP archive):
+       <datahub_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.zip
+
+    Examples:
+    - AMF_US-Ha1_FLUXNET_1991-2020_v1.2_r2.zip
+    - ICOSETC_BE-Bra_FLUXNET_2020-2024_v1.4_r1.zip
+
+    Args:
+        filename: The filename (or URL containing filename) to validate
+
+    Returns:
+        True if the filename matches the expected format, False otherwise
+
+    Examples:
+        >>> validate_fluxnet_filename_format("AMF_US-Ha1_FLUXNET_1991-2020_v1.2_r2.zip")
+        True
+        >>> validate_fluxnet_filename_format("invalid_filename.zip")
+        False
+        >>> validate_fluxnet_filename_format("AMF_US-Ha1 FLUXNET_1991-2020_v1.2_r2.zip")
+        False
+    """
+    if not filename:
+        return False
+
+    filename_only = _extract_filename_from_url(filename)
+
+    # ZIP format: <datahub_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.zip
+    return bool(re.match(_FLUXNET_ZIP_PATTERN, filename_only, re.IGNORECASE))
 
 
 def _extract_filename_from_headers(headers: Dict[str, str]) -> Optional[str]:
@@ -269,33 +349,47 @@ async def listall(*args, **kwargs) -> str:
 
     # Combine data from all data hubs
     fields = [
+        # Site information fields
         "data_hub",
-        # "publisher",  # don't have this
         "site_id",
+        "site_name",
+        "location_lat",
+        "location_long",
+        "igbp",
+        # Team member fields (concatenated with delimiter)
+        "team_member_name",
+        "team_member_role",
+        "team_member_email",
+        # Product data fields
         "first_year",
         "last_year",
-        # "version",  # don't have this
-        # "filename", # don't have this
         "download_link",
+        "product_citation",
+        "product_id",
+        "code_version",
     ]
 
     csv_filename = f"fluxnet_shuttle_snapshot_{datetime.now().strftime('%Y%m%dT%H%M%S')}.csv"
     csv_filepath = os.path.join(output_dir, csv_filename)
-    counts = await _write_data_availability(shuttle, fields, csv_filepath)
+    counts = await _write_snapshot_file(shuttle, fields, csv_filepath)
 
-    _log.info(f"Wrote data availability to {csv_filepath}")
+    _log.info(f"Wrote FLUXNET dataset snapshot to {csv_filepath}")
     _log.info(f"Data hub counts: {counts}")
     return csv_filepath
 
 
 @async_to_sync
-async def _write_data_availability(shuttle, fields, csv_filename):
+async def _write_snapshot_file(shuttle, fields, csv_filename):
     """
-    Write data availability information to a CSV file.
+    Write FLUXNET dataset snapshot to a CSV file.
+
+    Creates a snapshot file containing complete metadata for all available
+    FLUXNET datasets from configured data hubs, including site information,
+    team members, and product details.
 
     :param shuttle: FluxnetShuttle instance
     :param fields: List of fields to include in the CSV
-    :param csv_filename: Output CSV filename
+    :param csv_filename: Output CSV filename path
     :return: Dictionary with counts of sites per data hub
     """
     counts: Dict[str, int] = {}
@@ -307,8 +401,28 @@ async def _write_data_availability(shuttle, fields, csv_filename):
         async for site in shuttle.get_all_sites():
             counts.setdefault(site.site_info.data_hub, 0)
             counts[site.site_info.data_hub] += 1
-            site_dict = site.site_info.model_dump(include={"data_hub", "site_id"})
-            site_dict.update(site.product_data.model_dump(include={"first_year", "last_year", "download_link"}))
+
+            # Get site info fields (excluding team members which need special handling)
+            site_dict = site.site_info.model_dump(exclude={"group_team_member"})
+
+            # Concatenate team member fields with delimiter
+            team_members = site.site_info.group_team_member
+            site_dict["team_member_name"] = (
+                CSV_MULTI_VALUE_DELIMITER.join([tm.team_member_name for tm in team_members]) if team_members else ""
+            )
+            site_dict["team_member_role"] = (
+                CSV_MULTI_VALUE_DELIMITER.join([tm.team_member_role for tm in team_members]) if team_members else ""
+            )
+            site_dict["team_member_email"] = (
+                CSV_MULTI_VALUE_DELIMITER.join([tm.team_member_email for tm in team_members]) if team_members else ""
+            )
+
+            # Add product data fields
+            product_dict = site.product_data.model_dump()
+            # Convert HttpUrl to string for CSV
+            product_dict["download_link"] = str(product_dict["download_link"])
+            site_dict.update(product_dict)
+
             await csv_writer.writerow(site_dict)
     return counts
 

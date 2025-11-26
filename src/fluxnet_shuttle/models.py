@@ -16,6 +16,7 @@ in the FLUXNET Shuttle Library. These models ensure type safety and provide
 automatic validation for FLUXNET dataset metadata and operations.
 
 Classes:
+    TeamMember: Team member information for a site
     BadmSiteGeneralInfo: Site general information from BADM format
     DataFluxnetProduct: FLUXNET product data information
     FluxnetDatasetMetadata: Combined model for complete dataset metadata
@@ -34,6 +35,7 @@ Example:
     >>> from fluxnet_shuttle.models.schema import FluxnetDatasetMetadata
     >>> site_info = BadmSiteGeneralInfo(
     ...     site_id="US-Ha1",
+    ...     site_name="Harvard Forest",
     ...     data_hub="AmeriFlux",
     ...     location_lat=42.5378,
     ...     location_long=-72.1715,
@@ -64,6 +66,41 @@ from typing import List
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
 
 
+class TeamMember(BaseModel):
+    """
+    Pydantic model for team member information.
+
+    This model represents information about a team member associated with a site,
+    including their name, role, and contact email.
+
+    Attributes:
+        team_member_name (str): Team member name (First/Given Last/Family)
+        team_member_role (str): Team member role (e.g., PI, Researcher, Data Manager)
+        team_member_email (str): Team member email address
+    """
+
+    model_config = ConfigDict(str_strip_whitespace=True, validate_assignment=True, extra="forbid")
+
+    team_member_name: str = Field(
+        ...,
+        description="Team member name (First/Given Last/Family)",
+        min_length=1,
+        max_length=200,
+    )
+
+    team_member_role: str = Field(
+        default="",
+        description="Team member role (e.g., PI, Researcher, Data Manager)",
+        max_length=100,
+    )
+
+    team_member_email: str = Field(
+        default="",
+        description="Team member email address",
+        max_length=200,
+    )
+
+
 class BadmSiteGeneralInfo(BaseModel):
     """
     Pydantic model for BADM Site General Information.
@@ -73,10 +110,12 @@ class BadmSiteGeneralInfo(BaseModel):
 
     Attributes:
         site_id (str): Site identifier by country using first two chars or clusters
+        site_name (str): Site name
         data_hub (str): Data hub name (e.g., AmeriFlux, ICOS)
         location_lat (float): Site latitude in decimal degrees
         location_long (float): Site longitude in decimal degrees
         igbp (str): IGBP land cover type classification
+        group_team_member (List[TeamMember]): List of team member information for this site
     """
 
     model_config = ConfigDict(str_strip_whitespace=True, validate_assignment=True, extra="forbid")
@@ -86,6 +125,13 @@ class BadmSiteGeneralInfo(BaseModel):
         description="Site identifier by country using first two chars or clusters",
         min_length=1,
         max_length=20,
+    )
+
+    site_name: str = Field(
+        ...,
+        description="Site name",
+        min_length=1,
+        max_length=200,
     )
 
     # data_hub is not part of the BADM Standard but including in the BADM SGI model"
@@ -105,6 +151,11 @@ class BadmSiteGeneralInfo(BaseModel):
         description="IGBP land cover type classification",
         min_length=1,
         max_length=10,
+    )
+
+    group_team_member: List[TeamMember] = Field(
+        default_factory=list,
+        description="List of team member information for this site",
     )
 
     @field_validator("site_id")
@@ -127,6 +178,9 @@ class DataFluxnetProduct(BaseModel):
         first_year (int): First year of data coverage (YYYY format)
         last_year (int): Last year of data coverage (YYYY format)
         download_link (HttpUrl): URL for downloading the data product
+        product_citation (str): Citation string for the data product
+        product_id (str): Product identifier (e.g., hashtag, DOI, PID)
+        code_version (str): ONEFlux code version used in the data processing
     """
 
     model_config = ConfigDict(str_strip_whitespace=True, validate_assignment=True, extra="forbid")
@@ -136,6 +190,12 @@ class DataFluxnetProduct(BaseModel):
     last_year: int = Field(..., description="Last year of data coverage in YYYY format", ge=1900, le=2100)
 
     download_link: HttpUrl = Field(..., description="URL for downloading the data product")
+
+    product_citation: str = Field(..., description="Citation string for the data product")
+
+    product_id: str = Field(..., description="Product identifier (e.g., hashtag, DOI, PID)")
+
+    code_version: str = Field(..., description="ONEFlux code version used in the data processing")
 
     @model_validator(mode="after")
     def validate_year_range(self) -> "DataFluxnetProduct":

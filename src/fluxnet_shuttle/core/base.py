@@ -129,7 +129,7 @@ class DataHubPlugin(ABC):
     @abstractmethod
     def display_name(self) -> str:
         """
-        Human-readable data hub name.
+        Data hub name.
 
         Returns:
             str: Display name for the data hub (e.g., 'AmeriFlux', 'ICOS')
