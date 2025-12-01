@@ -404,7 +404,12 @@ class TestAmeriFluxPlugin:
 
         with pytest.raises(ValueError) as exc_info:
             plugin._build_product_data(
-                [], "http://example.com/test.zip", product_id="test-id", citation="test citation", code_version="v1"
+                [],
+                "http://example.com/test.zip",
+                product_id="test-id",
+                citation="test citation",
+                code_version="v1",
+                product_source_network="AMF",
             )
 
         assert "publish_years cannot be empty" in str(exc_info.value)

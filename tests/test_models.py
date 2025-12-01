@@ -45,6 +45,7 @@ def sample_product_data():
         product_citation="Test citation",
         product_id="test-id-123",
         code_version="v1",
+        product_source_network="AMF",
     )
 
 
@@ -186,6 +187,7 @@ def test_data_fluxnet_product_year_validation():
             product_citation="Test citation",
             product_id="test-id",
             code_version="v1",
+            product_source_network="AMF",
         )
         assert product.first_year == first_year
         assert product.last_year == last_year
@@ -199,6 +201,7 @@ def test_data_fluxnet_product_year_validation():
             product_citation="Test citation",
             product_id="test-id",
             code_version="v1",
+            product_source_network="AMF",
         )
 
     with pytest.raises(ValidationError):
@@ -209,6 +212,7 @@ def test_data_fluxnet_product_year_validation():
             product_citation="Test citation",
             product_id="test-id",
             code_version="v1",
+            product_source_network="AMF",
         )
 
     # Invalid year range (last_year < first_year)
@@ -220,6 +224,7 @@ def test_data_fluxnet_product_year_validation():
             product_citation="Test citation",
             product_id="test-id",
             code_version="v1",
+            product_source_network="AMF",
         )
 
 
@@ -239,6 +244,7 @@ def test_data_fluxnet_product_url_validation():
             product_citation="Test citation",
             product_id="test-id",
             code_version="v1",
+            product_source_network="AMF",
         )
         assert str(product.download_link) == url
 
@@ -259,6 +265,7 @@ def test_data_fluxnet_product_url_validation():
                 product_citation="Test citation",
                 product_id="test-id",
                 code_version="v1",
+                product_source_network="AMF",
             )
 
 
@@ -289,6 +296,7 @@ def test_fluxnet_dataset_metadata_nested_validation():
                 product_citation="Test citation",
                 product_id="test-id",
                 code_version="v1",
+                product_source_network="AMF",
             ),
         )
 
@@ -310,6 +318,7 @@ def test_fluxnet_dataset_metadata_nested_validation():
                 product_citation="Test citation",
                 product_id="test-id",
                 code_version="v1",
+                product_source_network="AMF",
             ),
         )
 

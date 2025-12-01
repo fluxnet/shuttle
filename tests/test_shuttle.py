@@ -12,7 +12,7 @@ from fluxnet_shuttle.shuttle import (
     _extract_filename_from_headers,
     _extract_filename_from_url,
     download,
-    extract_code_version_from_filename,
+    extract_fluxnet_filename_metadata,
     listall,
     validate_fluxnet_filename_format,
 )
@@ -95,42 +95,48 @@ class TestExtractFilenameFromHeaders:
         assert result is None
 
 
-class TestExtractCodeVersionFromFilename:
-    """Test cases for the extract_code_version_from_filename function."""
+class TestExtractFluxnetFilenameMetadata:
+    """Test cases for the extract_fluxnet_filename_metadata function (combined extraction)."""
 
-    def test_valid_zip_format(self):
-        """Test extracting version from valid ZIP filename."""
+    def test_valid_amf_filename(self):
+        """Test extracting both metadata from AmeriFlux filename."""
         filename = "AMF_US-Ha1_FLUXNET_2005-2012_v3_r7.zip"
-        result = extract_code_version_from_filename(filename)
-        assert result == "v3"
+        source_network, version = extract_fluxnet_filename_metadata(filename)
+        assert source_network == "AMF"
+        assert version == "v3"
 
-    def test_valid_zip_format_with_url(self):
-        """Test extracting version from full URL with ZIP file."""
+    def test_valid_icosetc_filename(self):
+        """Test extracting both metadata from ICOS filename."""
+        filename = "ICOSETC_BE-Bra_FLUXNET_2020-2024_v1.4_r1.zip"
+        source_network, version = extract_fluxnet_filename_metadata(filename)
+        assert source_network == "ICOSETC"
+        assert version == "v1.4"
+
+    def test_valid_filename_with_url(self):
+        """Test extracting both metadata from full URL."""
         url = "https://example.com/AMF_AR-Bal_FLUXNET_2012-2013_v3_r7.zip"
-        result = extract_code_version_from_filename(url)
-        assert result == "v3"
-
-    def test_valid_zip_format_different_version(self):
-        """Test extracting different version number."""
-        filename = "AMF_IT-Niv_FLUXNET_2010-2015_v1_r0.zip"
-        result = extract_code_version_from_filename(filename)
-        assert result == "v1"
+        source_network, version = extract_fluxnet_filename_metadata(url)
+        assert source_network == "AMF"
+        assert version == "v3"
 
     def test_invalid_filename_format(self):
         """Test with filename that doesn't match pattern."""
         filename = "invalid_filename.zip"
-        result = extract_code_version_from_filename(filename)
-        assert result == ""
+        source_network, version = extract_fluxnet_filename_metadata(filename)
+        assert source_network == ""
+        assert version == ""
 
     def test_empty_filename(self):
         """Test with empty filename."""
-        result = extract_code_version_from_filename("")
-        assert result == ""
+        source_network, version = extract_fluxnet_filename_metadata("")
+        assert source_network == ""
+        assert version == ""
 
     def test_none_filename(self):
         """Test with None filename."""
-        result = extract_code_version_from_filename(None)
-        assert result == ""
+        source_network, version = extract_fluxnet_filename_metadata(None)
+        assert source_network == ""
+        assert version == ""
 
 
 class TestValidateFluxnetFilenameFormat:

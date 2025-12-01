@@ -18,7 +18,7 @@ from ..models import (
     TeamMember,
 )
 from ..shuttle import (
-    extract_code_version_from_filename,
+    extract_fluxnet_filename_metadata,
     validate_fluxnet_filename_format,
 )
 
@@ -251,7 +251,7 @@ class ICOSPlugin(DataHubPlugin):
                 if not validate_fluxnet_filename_format(filename):
                     logger.info(
                         f"Skipping site {station_id} - filename does not follow standard format "
-                        f"(<datahub_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.<extension>): "
+                        f"(<network_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.<extension>): "
                         f"{filename}"
                     )
                     continue
@@ -264,7 +264,8 @@ class ICOSPlugin(DataHubPlugin):
                 igbp = self._map_ecosystem_to_igbp(site_data["ecosystem_type"])
                 download_id = dobj_uri.split("/")[-1]
                 download_link = f"https://data.icos-cp.eu/licence_accept?ids=%5B%22{download_id}%22%5D"
-                code_version = extract_code_version_from_filename(filename)
+                # Extract both product source network and code version from filename in one pass
+                product_source_network, code_version = extract_fluxnet_filename_metadata(filename)
                 citation = site_data["citation"]
 
                 # Skip site if citation is not available
@@ -282,6 +283,7 @@ class ICOSPlugin(DataHubPlugin):
                     location_lat=location_lat,
                     location_long=location_long,
                     igbp=igbp,
+                    network=[],  # Update when network information is available from SPARQL
                     group_team_member=site_data["team_members"],
                 )
 
@@ -292,6 +294,7 @@ class ICOSPlugin(DataHubPlugin):
                     product_citation=citation,
                     product_id=download_id,
                     code_version=code_version,
+                    product_source_network=product_source_network,
                 )
 
                 yield FluxnetDatasetMetadata(site_info=site_info, product_data=product_data)
