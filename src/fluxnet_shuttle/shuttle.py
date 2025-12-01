@@ -74,8 +74,9 @@ from fluxnet_shuttle.core.shuttle import FluxnetShuttle
 
 _log = logging.getLogger(__name__)
 
-# FLUXNET filename pattern: <datahub_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.zip
-_FLUXNET_ZIP_PATTERN = r"^[A-Z]{2,10}_[A-Z]{2}-[A-Za-z0-9]{3}_FLUXNET_(\d{4})-(\d{4})_(v\d+(?:\.\d+)?)_(r\d+)\.zip$"
+# FLUXNET filename pattern: <network_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.zip
+# Capture groups: 1=network_id, 2=site_id, 3=first_year, 4=last_year, 5=version, 6=run
+_FLUXNET_ZIP_PATTERN = r"^([A-Z]{2,10})_([A-Z]{2}-[A-Za-z0-9]{3})_FLUXNET_(\d{4})-(\d{4})_(v\d+(?:\.\d+)?)_(r\d+)\.zip$"
 
 # Delimiter for concatenating multiple values in CSV (e.g., team members)
 CSV_MULTI_VALUE_DELIMITER = ";"
@@ -98,43 +99,39 @@ def _extract_filename_from_url(url: str) -> str:
     return filename
 
 
-def extract_code_version_from_filename(filename: str) -> str:
+def extract_fluxnet_filename_metadata(filename: str) -> tuple[str, str]:
     """
-    Extract code version from FLUXNET filename.
+    Extract both product source network and code version from FLUXNET filename.
 
     FLUXNET filenames follow the archive format (ZIP):
-       <datahub_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.zip
-
-    The version component follows the format vX or vX.Y (e.g., v1, v1.2, v1.4)
-
-    Examples:
-    - AMF_US-Ha1_FLUXNET_1991-2020_v1.2_r2.zip -> version "v1.2"
-    - ICOSETC_BE-Bra_FLUXNET_2020-2024_v1.4_r1.zip -> version "v1.4"
+       <network_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.zip
 
     Args:
-        filename: The filename to extract version from
+        filename: The filename or URL to extract metadata from
 
     Returns:
-        The code version string (e.g., "v1.2"), or empty string if not found
+        Tuple of (product_source_network, code_version). Returns ("", "") if filename is invalid.
 
     Examples:
-        >>> extract_code_version_from_filename("AMF_US-Ha1_FLUXNET_1991-2020_v1.2_r2.zip")
-        'v1.2'
-        >>> extract_code_version_from_filename("invalid_filename.zip")
-        ''
+        >>> extract_fluxnet_filename_metadata("AMF_US-Ha1_FLUXNET_1991-2020_v1.2_r2.zip")
+        ('AMF', 'v1.2')
+        >>> extract_fluxnet_filename_metadata("invalid_filename.zip")
+        ('', '')
     """
     if not filename:
-        return ""
+        return ("", "")
 
     filename_only = _extract_filename_from_url(filename)
 
-    # ZIP format: <datahub_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.zip
+    # ZIP format: <network_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.zip
     zip_match = re.match(_FLUXNET_ZIP_PATTERN, filename_only, re.IGNORECASE)
     if zip_match:
-        version = zip_match.group(3)  # Group 3 is the version
-        return version
+        # Extract network_id from group 1 and version from group 5
+        product_source_network = zip_match.group(1)
+        code_version = zip_match.group(5)
+        return (product_source_network, code_version)
 
-    return ""
+    return ("", "")
 
 
 def validate_fluxnet_filename_format(filename: str) -> bool:
@@ -142,7 +139,7 @@ def validate_fluxnet_filename_format(filename: str) -> bool:
     Validate that a filename follows the standard FLUXNET filename format.
 
     Valid format (ZIP archive):
-       <datahub_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.zip
+       <network_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.zip
 
     Examples:
     - AMF_US-Ha1_FLUXNET_1991-2020_v1.2_r2.zip
@@ -167,7 +164,7 @@ def validate_fluxnet_filename_format(filename: str) -> bool:
 
     filename_only = _extract_filename_from_url(filename)
 
-    # ZIP format: <datahub_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.zip
+    # ZIP format: <network_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.zip
     return bool(re.match(_FLUXNET_ZIP_PATTERN, filename_only, re.IGNORECASE))
 
 
@@ -356,6 +353,7 @@ async def listall(*args, **kwargs) -> str:
         "location_lat",
         "location_long",
         "igbp",
+        "network",
         # Team member fields (concatenated with delimiter)
         "team_member_name",
         "team_member_role",
@@ -367,6 +365,7 @@ async def listall(*args, **kwargs) -> str:
         "product_citation",
         "product_id",
         "code_version",
+        "product_source_network",
     ]
 
     csv_filename = f"fluxnet_shuttle_snapshot_{datetime.now().strftime('%Y%m%dT%H%M%S')}.csv"
@@ -402,8 +401,12 @@ async def _write_snapshot_file(shuttle, fields, csv_filename):
             counts.setdefault(site.site_info.data_hub, 0)
             counts[site.site_info.data_hub] += 1
 
-            # Get site info fields (excluding team members which need special handling)
-            site_dict = site.site_info.model_dump(exclude={"group_team_member"})
+            # Get site info fields (excluding team members and network which need special handling)
+            site_dict = site.site_info.model_dump(exclude={"group_team_member", "network"})
+
+            # Concatenate network values with delimiter
+            network_list = site.site_info.network
+            site_dict["network"] = CSV_MULTI_VALUE_DELIMITER.join(network_list) if network_list else ""
 
             # Concatenate team member fields with delimiter
             team_members = site.site_info.group_team_member

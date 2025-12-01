@@ -115,6 +115,7 @@ class BadmSiteGeneralInfo(BaseModel):
         location_lat (float): Site latitude in decimal degrees
         location_long (float): Site longitude in decimal degrees
         igbp (str): IGBP land cover type classification
+        network (List[str]): Network affiliation(s) of the site
         group_team_member (List[TeamMember]): List of team member information for this site
     """
 
@@ -153,6 +154,11 @@ class BadmSiteGeneralInfo(BaseModel):
         max_length=10,
     )
 
+    network: List[str] = Field(
+        default_factory=list,
+        description="Network affiliation(s) of the site",
+    )
+
     group_team_member: List[TeamMember] = Field(
         default_factory=list,
         description="List of team member information for this site",
@@ -181,6 +187,7 @@ class DataFluxnetProduct(BaseModel):
         product_citation (str): Citation string for the data product
         product_id (str): Product identifier (e.g., hashtag, DOI, PID)
         code_version (str): ONEFlux code version used in the data processing
+        product_source_network (str): Source network identifier extracted from filename (e.g., AMF, ICOSETC)
     """
 
     model_config = ConfigDict(str_strip_whitespace=True, validate_assignment=True, extra="forbid")
@@ -196,6 +203,10 @@ class DataFluxnetProduct(BaseModel):
     product_id: str = Field(..., description="Product identifier (e.g., hashtag, DOI, PID)")
 
     code_version: str = Field(..., description="ONEFlux code version used in the data processing")
+
+    product_source_network: str = Field(
+        ..., description="Source network identifier extracted from filename (e.g., AMF, ICOSETC)"
+    )
 
     @model_validator(mode="after")
     def validate_year_range(self) -> "DataFluxnetProduct":

@@ -22,7 +22,7 @@ from ..models import (
     TeamMember,
 )
 from ..shuttle import (
-    extract_code_version_from_filename,
+    extract_fluxnet_filename_metadata,
     validate_fluxnet_filename_format,
 )
 
@@ -216,6 +216,10 @@ class AmeriFluxPlugin(DataHubPlugin):
 
         igbp = grp_igbp.get("igbp", "UNK")
 
+        # Extract network information from grp_network (list of strings)
+        grp_network = site_meta.get("grp_network", [])
+        network = grp_network if isinstance(grp_network, list) else []
+
         # Extract team member information
         team_members = []
         grp_team_member = site_meta.get("grp_team_member", [])
@@ -239,12 +243,18 @@ class AmeriFluxPlugin(DataHubPlugin):
             location_lat=location_lat,
             location_long=location_long,
             igbp=igbp,
+            network=network,
             group_team_member=team_members,
         )
 
     @staticmethod
     def _build_product_data(
-        publish_years: List[int], download_link: str, product_id: str, citation: str, code_version: str
+        publish_years: List[int],
+        download_link: str,
+        product_id: str,
+        citation: str,
+        code_version: str,
+        product_source_network: str,
     ) -> DataFluxnetProduct:
         """
         Build DataFluxnetProduct model from publish years and download link.
@@ -255,6 +265,7 @@ class AmeriFluxPlugin(DataHubPlugin):
             product_id: Product identifier (e.g., hashtag, DOI, PID)
             citation: Citation string for the data product
             code_version: Code version extracted from filename
+            product_source_network: Source network identifier extracted from filename
 
         Returns:
             DataFluxnetProduct: Validated product data model
@@ -276,6 +287,7 @@ class AmeriFluxPlugin(DataHubPlugin):
             product_citation=citation,
             product_id=product_id,
             code_version=code_version,
+            product_source_network=product_source_network,
         )
 
     def _parse_response(
@@ -301,7 +313,7 @@ class AmeriFluxPlugin(DataHubPlugin):
                 if not validate_fluxnet_filename_format(download_link):
                     logger.info(
                         f"Skipping site {site_id} - filename does not follow standard format "
-                        f"(<datahub_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.<extension>): "
+                        f"(<network_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.<extension>): "
                         f"{download_link}"
                     )
                     continue
@@ -316,9 +328,9 @@ class AmeriFluxPlugin(DataHubPlugin):
                 doi_info = site_metadata.get(site_id, {}).get("doi", {})
                 product_id = doi_info.get("FLUXNET", "") if isinstance(doi_info, dict) else ""
 
-                # Extract code version from download URL
+                # Extract both product source network and code version from download URL in one pass
                 # URL path typically contains the filename at the end
-                code_version = extract_code_version_from_filename(download_link)
+                product_source_network, code_version = extract_fluxnet_filename_metadata(download_link)
 
                 # Get citation for this site
                 citation = citations.get(site_id, "")
@@ -334,7 +346,12 @@ class AmeriFluxPlugin(DataHubPlugin):
                 # Build site info and product data models using helper functions
                 site_info = self._build_site_info(site_id, site_metadata)
                 product_data = self._build_product_data(
-                    publish_years, download_link, product_id=product_id, citation=citation, code_version=code_version
+                    publish_years,
+                    download_link,
+                    product_id=product_id,
+                    citation=citation,
+                    code_version=code_version,
+                    product_source_network=product_source_network,
                 )
 
                 metadata = FluxnetDatasetMetadata(site_info=site_info, product_data=product_data)

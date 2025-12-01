@@ -71,6 +71,7 @@ class MockSuccessPlugin:
                 product_citation="Test citation",
                 product_id="test-id",
                 code_version="v1",
+                product_source_network="SUCCESS",
             )
 
             yield FluxnetDatasetMetadata(site_info=site_info, product_data=product_data)
