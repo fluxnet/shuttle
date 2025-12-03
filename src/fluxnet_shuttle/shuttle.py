@@ -110,7 +110,7 @@ def extract_fluxnet_filename_metadata(filename: str) -> tuple[str, str]:
         filename: The filename or URL to extract metadata from
 
     Returns:
-        Tuple of (product_source_network, code_version). Returns ("", "") if filename is invalid.
+        Tuple of (product_source_network, oneflux_code_version). Returns ("", "") if filename is invalid.
 
     Examples:
         >>> extract_fluxnet_filename_metadata("AMF_US-Ha1_FLUXNET_1991-2020_v1.2_r2.zip")
@@ -128,8 +128,8 @@ def extract_fluxnet_filename_metadata(filename: str) -> tuple[str, str]:
     if zip_match:
         # Extract network_id from group 1 and version from group 5
         product_source_network = zip_match.group(1)
-        code_version = zip_match.group(5)
-        return (product_source_network, code_version)
+        oneflux_code_version = zip_match.group(5)
+        return (product_source_network, oneflux_code_version)
 
     return ("", "")
 
@@ -364,7 +364,7 @@ async def listall(*args, **kwargs) -> str:
         "download_link",
         "product_citation",
         "product_id",
-        "code_version",
+        "oneflux_code_version",
         "product_source_network",
     ]
 

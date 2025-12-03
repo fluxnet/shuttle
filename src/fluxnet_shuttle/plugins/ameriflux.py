@@ -253,7 +253,7 @@ class AmeriFluxPlugin(DataHubPlugin):
         download_link: str,
         product_id: str,
         citation: str,
-        code_version: str,
+        oneflux_code_version: str,
         product_source_network: str,
     ) -> DataFluxnetProduct:
         """
@@ -264,7 +264,7 @@ class AmeriFluxPlugin(DataHubPlugin):
             download_link: URL to download the data
             product_id: Product identifier (e.g., hashtag, DOI, PID)
             citation: Citation string for the data product
-            code_version: Code version extracted from filename
+            oneflux_code_version: Code version extracted from filename
             product_source_network: Source network identifier extracted from filename
 
         Returns:
@@ -286,7 +286,7 @@ class AmeriFluxPlugin(DataHubPlugin):
             download_link=cast(HttpUrl, download_link),
             product_citation=citation,
             product_id=product_id,
-            code_version=code_version,
+            oneflux_code_version=oneflux_code_version,
             product_source_network=product_source_network,
         )
 
@@ -330,7 +330,7 @@ class AmeriFluxPlugin(DataHubPlugin):
 
                 # Extract both product source network and code version from download URL in one pass
                 # URL path typically contains the filename at the end
-                product_source_network, code_version = extract_fluxnet_filename_metadata(download_link)
+                product_source_network, oneflux_code_version = extract_fluxnet_filename_metadata(download_link)
 
                 # Get citation for this site
                 citation = citations.get(site_id, "")
@@ -350,7 +350,7 @@ class AmeriFluxPlugin(DataHubPlugin):
                     download_link,
                     product_id=product_id,
                     citation=citation,
-                    code_version=code_version,
+                    oneflux_code_version=oneflux_code_version,
                     product_source_network=product_source_network,
                 )
 
