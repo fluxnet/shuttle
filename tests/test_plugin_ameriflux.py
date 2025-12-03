@@ -408,7 +408,7 @@ class TestAmeriFluxPlugin:
                 "http://example.com/test.zip",
                 product_id="test-id",
                 citation="test citation",
-                code_version="v1",
+                oneflux_code_version="v1",
                 product_source_network="AMF",
             )
 

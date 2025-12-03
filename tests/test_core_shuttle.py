@@ -70,7 +70,7 @@ class MockSuccessPlugin:
                 download_link="https://example.com/success.zip",
                 product_citation="Test citation",
                 product_id="test-id",
-                code_version="v1",
+                oneflux_code_version="v1",
                 product_source_network="SUCCESS",
             )
 

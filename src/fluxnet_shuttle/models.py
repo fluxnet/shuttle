@@ -186,7 +186,8 @@ class DataFluxnetProduct(BaseModel):
         download_link (HttpUrl): URL for downloading the data product
         product_citation (str): Citation string for the data product
         product_id (str): Product identifier (e.g., hashtag, DOI, PID)
-        code_version (str): ONEFlux code version used in the data processing
+        oneflux_code_version (str): ONEFlux processing code used, extracted from filename
+            (major.minor version designation only)
         product_source_network (str): Source network identifier extracted from filename (e.g., AMF, ICOSETC)
     """
 
@@ -202,7 +203,9 @@ class DataFluxnetProduct(BaseModel):
 
     product_id: str = Field(..., description="Product identifier (e.g., hashtag, DOI, PID)")
 
-    code_version: str = Field(..., description="ONEFlux code version used in the data processing")
+    oneflux_code_version: str = Field(
+        ..., description="ONEFlux processing code used, extracted from filename (major.minor version designation only)"
+    )
 
     product_source_network: str = Field(
         ..., description="Source network identifier extracted from filename (e.g., AMF, ICOSETC)"

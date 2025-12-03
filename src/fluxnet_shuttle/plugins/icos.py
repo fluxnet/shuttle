@@ -265,7 +265,7 @@ class ICOSPlugin(DataHubPlugin):
                 download_id = dobj_uri.split("/")[-1]
                 download_link = f"https://data.icos-cp.eu/licence_accept?ids=%5B%22{download_id}%22%5D"
                 # Extract both product source network and code version from filename in one pass
-                product_source_network, code_version = extract_fluxnet_filename_metadata(filename)
+                product_source_network, oneflux_code_version = extract_fluxnet_filename_metadata(filename)
                 citation = site_data["citation"]
 
                 # Skip site if citation is not available
@@ -293,7 +293,7 @@ class ICOSPlugin(DataHubPlugin):
                     download_link=download_link,  # type: ignore[arg-type]
                     product_citation=citation,
                     product_id=download_id,
-                    code_version=code_version,
+                    oneflux_code_version=oneflux_code_version,
                     product_source_network=product_source_network,
                 )
 

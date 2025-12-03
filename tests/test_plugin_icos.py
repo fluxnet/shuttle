@@ -74,7 +74,7 @@ class TestICOSPlugin:
         # Product ID should be the hashsum (last part of dobj URI)
         assert sites[0].product_data.product_id == "US-ABC"
         # Code version should be extracted from filename
-        assert sites[0].product_data.code_version == "v1"
+        assert sites[0].product_data.oneflux_code_version == "v1"
 
     @pytest.mark.asyncio
     @patch("fluxnet_shuttle.plugins.icos.DataHubPlugin._session_request")
@@ -328,7 +328,7 @@ class TestICOSPlugin:
         site = sites[0]
         assert site.site_info.site_id == "DE-Hte"
         assert site.site_info.site_name == "Huetelmoor"
-        assert site.product_data.code_version == "v1"
+        assert site.product_data.oneflux_code_version == "v1"
 
         # Verify team members
         team_members = site.site_info.group_team_member
