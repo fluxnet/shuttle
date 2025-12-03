@@ -193,7 +193,24 @@ def cmd_download(args) -> List[str]:
 
     log.debug(f"Running download command with {len(sites)} site IDs: {sites} and snapshot file: {snapshot_file}")
 
-    downloaded_files = download(site_ids=sites, snapshot_file=snapshot_file, output_dir=output_dir)
+    # Build kwargs from CLI arguments for plugins
+    # Plugins will extract what they need from these kwargs
+    plugin_kwargs = {}
+    if hasattr(args, "user_id") and args.user_id:
+        plugin_kwargs["user_id"] = args.user_id
+    if hasattr(args, "user_email") and args.user_email:
+        plugin_kwargs["user_email"] = args.user_email
+    if hasattr(args, "intended_use") and args.intended_use:
+        plugin_kwargs["intended_use"] = args.intended_use
+    if hasattr(args, "description") and args.description:
+        plugin_kwargs["description"] = args.description
+
+    downloaded_files: List[str] = download(
+        site_ids=sites,
+        snapshot_file=snapshot_file,
+        output_dir=output_dir,
+        **plugin_kwargs,
+    )
     log.info(f"Downloaded {len(downloaded_files)} files")
     return downloaded_files
 
@@ -299,6 +316,34 @@ def main() -> None:
         help="Skip confirmation prompt when downloading all sites",
         action="store_true",
         dest="quiet",
+    )
+    parser_download.add_argument(
+        "--user-id",
+        help="User ID for data hub tracking (required by some data hubs like AmeriFlux)",
+        type=str,
+        dest="user_id",
+        default=None,
+    )
+    parser_download.add_argument(
+        "--user-email",
+        help="User email for data hub tracking (required by some data hubs like AmeriFlux)",
+        type=str,
+        dest="user_email",
+        default=None,
+    )
+    parser_download.add_argument(
+        "--intended-use",
+        help="Intended use for data hub tracking (e.g., synthesis, model, remote_sensing)",
+        type=str,
+        dest="intended_use",
+        default=None,
+    )
+    parser_download.add_argument(
+        "--description",
+        help="Brief description of intended use (optional, used by some data hubs)",
+        type=str,
+        dest="description",
+        default="",
     )
 
     # listdatahubs command

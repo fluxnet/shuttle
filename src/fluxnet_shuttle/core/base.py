@@ -165,6 +165,28 @@ class DataHubPlugin(ABC):
         """
         pass
 
+    async def prepare_download(self, site_id: str, download_link: str, **kwargs) -> str:
+        """
+        Prepare a download URL for a specific site.
+
+        This optional method allows plugins to customize the download URL
+        (e.g., for user tracking, authentication, or personalized links).
+        The default implementation returns the download_link unchanged.
+
+        Args:
+            site_id: Site identifier
+            download_link: Original download link from site metadata
+            **kwargs: Additional plugin-specific parameters
+
+        Returns:
+            str: Download URL ready to use (may be same as input or customized)
+
+        Raises:
+            PluginError: If preparation fails
+        """
+        # Default implementation: return the original link unchanged
+        return download_link
+
     @asynccontextmanager
     async def _session_request(self, method: str, url: str, **kwargs) -> AsyncGenerator[aiohttp.ClientResponse, None]:
         """

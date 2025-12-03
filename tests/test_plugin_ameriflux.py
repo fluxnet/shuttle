@@ -19,7 +19,7 @@ class TestAmeriFluxPlugin:
         assert plugin.display_name == "AmeriFlux"
 
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_site_metadata")
-    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_links")
+    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_manifest")
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_citations")
     def test_get_sites_success(self, mock_get_citations, mock_get_links, mock_get_metadata):
         """Test successful retrieval of sites."""
@@ -91,7 +91,7 @@ class TestAmeriFluxPlugin:
         assert sites[1].product_data.product_id == "10.17190/AMF/2571134"  # FLUXNET DOI
 
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_site_metadata")
-    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_links")
+    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_manifest")
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_citations")
     def test_get_sites_with_unexpected_filename_format(self, mock_get_citations, mock_get_links, mock_get_metadata):
         """Test get_sites skips files with invalid filename format."""
@@ -130,7 +130,7 @@ class TestAmeriFluxPlugin:
         assert len(sites) == 0  # No sites should be returned
 
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_site_metadata")
-    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_links")
+    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_manifest")
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_citations")
     def test_get_sites_partial_failure(self, mock_get_citations, mock_get_links, mock_get_metadata):
         """Test get_sites handles partial failures in download link retrieval."""
@@ -170,7 +170,7 @@ class TestAmeriFluxPlugin:
         assert sites[0].product_data.last_year == 2012  # From publish_years
 
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_site_metadata")
-    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_links")
+    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_manifest")
     def test_get_sites_api_failure(self, mock_get_links, mock_get_metadata):
         """Test get_sites handles API failure gracefully."""
         mock_get_metadata.side_effect = Exception("API failure")
@@ -182,7 +182,7 @@ class TestAmeriFluxPlugin:
         assert "API failure" in str(excinfo.value)
 
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_site_metadata")
-    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_links")
+    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_manifest")
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_citations")
     def test_get_sites_download_links_failure(self, mock_get_citations, mock_get_links, mock_get_metadata):
         """Test get_sites handles download links API failure gracefully."""
@@ -196,7 +196,7 @@ class TestAmeriFluxPlugin:
         assert "Download links API failure" in str(excinfo.value)
 
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_site_metadata")
-    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_links")
+    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_manifest")
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_citations")
     def test_get_sites_with_no_download_links(self, mock_get_citations, mock_get_links, mock_get_metadata):
         """Test get_sites handles missing download links gracefully."""
@@ -258,18 +258,18 @@ class TestAmeriFluxPlugin:
         "fluxnet_shuttle.plugins.ameriflux.DataHubPlugin._session_request",
         side_effect=PluginError("ameriflux", "Test error"),
     )
-    async def test__get_download_links_with_failure(self, mock_request):
-        """Test _get_download_links raises PluginError on failure."""
+    async def test__get_manifest_with_failure(self, mock_request):
+        """Test _get_manifest raises PluginError on failure."""
         with pytest.raises(PluginError) as exc_info:
-            await ameriflux.AmeriFluxPlugin()._get_download_links(base_url="http://example.com", site_ids=["US-Tst"])
+            await ameriflux.AmeriFluxPlugin()._get_manifest(base_url="http://example.com", site_ids=["US-Tst"])
 
         assert "ameriflux" in str(exc_info.value).lower()
         assert mock_request.call_count == 1  # Ensure the request was attempted
 
     @pytest.mark.asyncio
     @patch("fluxnet_shuttle.plugins.ameriflux.DataHubPlugin._session_request")
-    async def test__get_download_links_success(self, mock_request):
-        """Test _get_download_links returns expected data on success."""
+    async def test__get_manifest_success(self, mock_request):
+        """Test _get_manifest returns expected data on success."""
         mock_response = MagicMock()
         mock_request.return_value.__aenter__.return_value = mock_response
         mock_response.raise_for_status.side_effect = None
@@ -281,11 +281,61 @@ class TestAmeriFluxPlugin:
 
         mock_response.json = mock_json
 
-        links = await ameriflux.AmeriFluxPlugin()._get_download_links(
-            base_url="http://example.com", site_ids=["US-Tst"]
+        links = await ameriflux.AmeriFluxPlugin()._get_manifest(
+            base_url="http://example.com",
+            site_ids=["US-Tst"],
         )
         assert links == {
             "data_urls": [{"site_id": "US-Tst", "url": "http://example.com/AMF_US-Tst_FLUXNET_2005-2012_v3_r7.zip"}]
+        }
+
+    @pytest.mark.asyncio
+    @patch(
+        "fluxnet_shuttle.plugins.ameriflux.DataHubPlugin._session_request",
+        side_effect=PluginError("ameriflux", "Test error"),
+    )
+    async def test__get_download_url_with_failure(self, mock_request):
+        """Test _get_download_url raises PluginError on failure."""
+        with pytest.raises(PluginError) as exc_info:
+            await ameriflux.AmeriFluxPlugin()._get_download_url(
+                base_url="http://example.com",
+                site_ids=["US-Tst"],
+                user_id="test_user",
+                user_email="test@example.com",
+                intended_use="synthesis",
+                description="test",
+            )
+
+        assert "ameriflux" in str(exc_info.value).lower()
+        assert mock_request.call_count == 1  # Ensure the request was attempted
+
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle.plugins.ameriflux.DataHubPlugin._session_request")
+    async def test__get_download_url_success(self, mock_request):
+        """Test _get_download_url returns expected data on success."""
+        mock_response = MagicMock()
+        mock_request.return_value.__aenter__.return_value = mock_response
+        mock_response.raise_for_status.side_effect = None
+
+        async def mock_json():
+            return {
+                "data_urls": [
+                    {"site_id": "US-Tst", "url": "https://example.com/AMF_US-Tst_FLUXNET_2005-2012_v3_r7.zip"}
+                ]
+            }
+
+        mock_response.json = mock_json
+
+        result = await ameriflux.AmeriFluxPlugin()._get_download_url(
+            base_url="http://example.com",
+            site_ids=["US-Tst"],
+            user_id="test_user",
+            user_email="test@example.com",
+            intended_use="synthesis",
+            description="Test download",
+        )
+        assert result == {
+            "data_urls": [{"site_id": "US-Tst", "url": "https://example.com/AMF_US-Tst_FLUXNET_2005-2012_v3_r7.zip"}]
         }
 
     def test_parse_response_with_invalid_format(self):
@@ -350,9 +400,11 @@ class TestAmeriFluxPlugin:
         assert results[0].site_info.site_id == "US-Tst"
 
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_site_metadata")
-    def test_get_sites_no_data_availability(self, mock_get_metadata):
+    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_manifest")
+    def test_get_sites_no_data_availability(self, mock_get_links, mock_get_metadata):
         """Test get_sites returns empty when site has no grp_publish_fluxnet."""
         mock_get_metadata.return_value = {"US-Tst": {}}
+        mock_get_links.return_value = {"data_urls": []}
 
         plugin = ameriflux.AmeriFluxPlugin()
         sites = list(plugin.get_sites())
@@ -360,12 +412,14 @@ class TestAmeriFluxPlugin:
         assert len(sites) == 0
 
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_site_metadata")
-    def test_get_sites_all_sites_have_empty_publish_years(self, mock_get_metadata):
+    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_manifest")
+    def test_get_sites_all_sites_have_empty_publish_years(self, mock_get_links, mock_get_metadata):
         """Test get_sites returns empty when all sites have empty grp_publish_fluxnet."""
         mock_get_metadata.return_value = {
             "US-Tst": {"grp_publish_fluxnet": []},
             "US-EXM": {"grp_publish_fluxnet": []},
         }
+        mock_get_links.return_value = {"data_urls": []}
 
         plugin = ameriflux.AmeriFluxPlugin()
         sites = list(plugin.get_sites())
@@ -416,7 +470,7 @@ class TestAmeriFluxPlugin:
 
     @pytest.mark.asyncio
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_site_metadata")
-    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_links")
+    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_manifest")
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_citations")
     async def test_get_sites_reraises_plugin_error(self, mock_get_citations, mock_get_links, mock_get_metadata):
         """Test get_sites re-raises PluginError from processing."""
@@ -442,7 +496,7 @@ class TestAmeriFluxPlugin:
             assert "ameriflux" in str(exc_info.value).lower()
 
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_site_metadata")
-    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_links")
+    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_manifest")
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_citations")
     def test_get_sites_with_doi(self, mock_get_citations, mock_get_links, mock_get_metadata):
         """Test that DOI is properly extracted from site metadata."""
@@ -499,7 +553,7 @@ class TestAmeriFluxPlugin:
         assert sites[2].product_data.product_id == ""
 
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_site_metadata")
-    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_links")
+    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_manifest")
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_citations")
     def test_get_sites_with_team_members(self, mock_get_citations, mock_get_links, mock_get_metadata):
         """Test successful retrieval of sites with team member information."""
@@ -553,7 +607,7 @@ class TestAmeriFluxPlugin:
         assert team_members[1].team_member_email == "jane.smith@harvard.edu"
 
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_site_metadata")
-    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_links")
+    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_manifest")
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_citations")
     def test_get_sites_with_citations(self, mock_get_citations, mock_get_links, mock_get_metadata):
         """Test successful retrieval of sites with citation information."""
@@ -690,7 +744,7 @@ class TestAmeriFluxPlugin:
         assert mock_request.call_count == 1  # Ensure the request was attempted
 
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_site_metadata")
-    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_links")
+    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_manifest")
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_citations")
     def test_get_sites_with_invalid_team_member(self, mock_get_citations, mock_get_links, mock_get_metadata, caplog):
         """Test handling of invalid team member data."""
@@ -754,3 +808,253 @@ class TestAmeriFluxPlugin:
 
         # Check debug message was logged
         assert "Skipping site US-NoY - no publish years available" in caplog.text
+
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_url")
+    async def test_prepare_download_with_user_info(self, mock_get_download_url):
+        """Test prepare_download generates fresh URL with user tracking."""
+        mock_get_download_url.return_value = {
+            "data_urls": [{"site_id": "US-Ha1", "url": "https://example.com/fresh_url_with_tracking.zip"}]
+        }
+
+        plugin = ameriflux.AmeriFluxPlugin()
+        user_info = {
+            "user_id": "test_user",
+            "user_email": "test@example.com",
+            "intended_use": "synthesis",
+            "description": "Test download",
+        }
+
+        fresh_url = await plugin.prepare_download(
+            site_id="US-Ha1",
+            download_link="https://example.com/old_url.zip",
+            user_info=user_info,
+        )
+
+        assert fresh_url == "https://example.com/fresh_url_with_tracking.zip"
+        mock_get_download_url.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_url")
+    async def test_prepare_download_with_defaults(self, mock_get_download_url):
+        """Test prepare_download uses provided user info (no interactive prompts)."""
+        mock_get_download_url.return_value = {
+            "data_urls": [{"site_id": "US-Ha1", "url": "https://example.com/default_url.zip"}]
+        }
+
+        plugin = ameriflux.AmeriFluxPlugin()
+
+        # Provide all required fields to avoid interactive prompts
+        user_info = {
+            "user_id": "fluxnetshuttle",
+            "user_email": "support@fluxnet.org",
+            "intended_use": "synthesis",
+            "description": "FLUXNET data download via fluxnet-shuttle",
+        }
+
+        fresh_url = await plugin.prepare_download(
+            site_id="US-Ha1",
+            download_link="https://example.com/old_url.zip",
+            user_info=user_info,
+        )
+
+        assert fresh_url == "https://example.com/default_url.zip"
+        # Verify the values were used in the call
+        call_args = mock_get_download_url.call_args
+        assert call_args[0][1] == ["US-Ha1"]  # site_ids
+        assert call_args[0][2] == "fluxnetshuttle"  # user_id
+        assert call_args[0][3] == "support@fluxnet.org"  # user_email
+
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_url")
+    async def test_prepare_download_fallback_on_error(self, mock_get_download_url):
+        """Test prepare_download returns original link on error."""
+        mock_get_download_url.side_effect = Exception("API error")
+
+        plugin = ameriflux.AmeriFluxPlugin()
+        user_info = {
+            "user_id": "test_user",
+            "user_email": "test@example.com",
+            "intended_use": "synthesis",
+            "description": "test",
+        }
+
+        fresh_url = await plugin.prepare_download(
+            site_id="US-Ha1",
+            download_link="https://example.com/original_url.zip",
+            user_info=user_info,
+        )
+
+        # Should return original link as fallback
+        assert fresh_url == "https://example.com/original_url.zip"
+
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_url")
+    async def test_prepare_download_with_invalid_intended_use(self, mock_get_download_url, caplog):
+        """Test prepare_download with invalid intended_use falls back to default."""
+        mock_get_download_url.return_value = {
+            "data_urls": [{"site_id": "US-Ha1", "url": "https://example.com/fresh_url.zip"}]
+        }
+
+        plugin = ameriflux.AmeriFluxPlugin()
+        user_info = {
+            "user_id": "test_user",
+            "user_email": "test@example.com",
+            "intended_use": "invalid_use",  # Invalid intended_use
+            "description": "test",  # Must provide to avoid interactive prompt
+        }
+
+        fresh_url = await plugin.prepare_download(
+            site_id="US-Ha1",
+            download_link="https://example.com/old_url.zip",
+            user_info=user_info,
+        )
+
+        assert fresh_url == "https://example.com/fresh_url.zip"
+        # Check that warning was logged about invalid intended_use
+        assert "Invalid intended_use 'invalid_use'" in caplog.text
+        # Verify default was used in the API call
+        call_args = mock_get_download_url.call_args[0]
+        assert call_args[4] == "synthesis"  # Default intended_use
+
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_url")
+    async def test_prepare_download_site_not_found_in_response(self, mock_get_download_url, caplog):
+        """Test prepare_download when site is not found in API response."""
+        # API returns data for different site
+        mock_get_download_url.return_value = {
+            "data_urls": [{"site_id": "US-Other", "url": "https://example.com/other.zip"}]
+        }
+
+        plugin = ameriflux.AmeriFluxPlugin()
+        user_info = {
+            "user_id": "test_user",
+            "user_email": "test@example.com",
+            "intended_use": "synthesis",
+            "description": "test",
+        }
+
+        fresh_url = await plugin.prepare_download(
+            site_id="US-Ha1",
+            download_link="https://example.com/original_url.zip",
+            user_info=user_info,
+        )
+
+        # Should return original link when site not found
+        assert fresh_url == "https://example.com/original_url.zip"
+        # Check that warning was logged
+        assert "No download URL found for site US-Ha1" in caplog.text
+
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_url")
+    @patch("builtins.input")
+    async def test_prepare_download_interactive_prompts_user_id(self, mock_input, mock_get_download_url):
+        """Test interactive prompts when user_id is missing."""
+        # Simulate user providing values via input()
+        mock_input.side_effect = [
+            "interactive_user",  # user_id
+            "test@interactive.com",  # user_email
+            "2",  # intended_use choice (model)
+            "Interactive test description",  # description
+        ]
+
+        mock_get_download_url.return_value = {
+            "data_urls": [{"site_id": "US-Ha1", "url": "https://example.com/interactive_url.zip"}]
+        }
+
+        plugin = ameriflux.AmeriFluxPlugin()
+
+        fresh_url = await plugin.prepare_download(
+            site_id="US-Ha1",
+            download_link="https://example.com/old_url.zip",
+            user_info={},  # Empty user_info to trigger prompts
+        )
+
+        assert fresh_url == "https://example.com/interactive_url.zip"
+        # Verify that _get_download_url was called with the interactive values
+        call_args = mock_get_download_url.call_args[0]
+        assert call_args[2] == "interactive_user"  # user_id
+        assert call_args[3] == "test@interactive.com"  # user_email
+        assert call_args[4] == "model"  # intended_use mapped from choice "2"
+        assert call_args[5] == "Interactive test description"  # description
+
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_url")
+    @patch("builtins.input")
+    async def test_prepare_download_interactive_prompts_with_defaults(self, mock_input, mock_get_download_url, caplog):
+        """Test interactive prompts fall back to defaults when user enters empty strings."""
+        # Simulate user pressing Enter without providing values (empty strings)
+        mock_input.side_effect = [
+            "",  # user_id - will use default
+            "",  # user_email - will use default
+            "",  # intended_use choice - will use default "1" (synthesis)
+            "",  # description - will use default
+        ]
+
+        mock_get_download_url.return_value = {
+            "data_urls": [{"site_id": "US-Ha1", "url": "https://example.com/default_url.zip"}]
+        }
+
+        plugin = ameriflux.AmeriFluxPlugin()
+
+        fresh_url = await plugin.prepare_download(
+            site_id="US-Ha1",
+            download_link="https://example.com/old_url.zip",
+            user_info={},  # Empty user_info to trigger prompts
+        )
+
+        assert fresh_url == "https://example.com/default_url.zip"
+        # Verify that _get_download_url was called with default values
+        call_args = mock_get_download_url.call_args[0]
+        assert call_args[2] == "fluxnetshuttle"  # user_id (default)
+        assert call_args[3] == "support@fluxnet.org"  # user_email (default)
+        assert call_args[4] == "synthesis"  # intended_use (default mapped from "1")
+        assert call_args[5] == "FLUXNET data download via fluxnet-shuttle"  # description (default)
+
+        # Check that warnings were logged
+        assert "No user name provided, using default" in caplog.text
+        assert "No email provided, using default" in caplog.text
+
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_url")
+    @patch("builtins.input")
+    async def test_prepare_download_interactive_prompts_intended_use_variations(
+        self, mock_input, mock_get_download_url
+    ):
+        """Test interactive prompts with different intended_use choices."""
+        test_cases = [
+            ("1", "synthesis"),
+            ("2", "model"),
+            ("3", "remote_sensing"),
+            ("4", "other_research"),
+            ("5", "education"),
+            ("6", "other"),
+            ("99", "synthesis"),  # Invalid choice falls back to default
+        ]
+
+        for choice, expected_use in test_cases:
+            mock_input.side_effect = [
+                "test_user",  # user_id
+                "test@example.com",  # user_email
+                choice,  # intended_use choice
+                "test description",  # description
+            ]
+
+            mock_get_download_url.return_value = {
+                "data_urls": [{"site_id": "US-Ha1", "url": "https://example.com/url.zip"}]
+            }
+
+            plugin = ameriflux.AmeriFluxPlugin()
+
+            await plugin.prepare_download(
+                site_id="US-Ha1",
+                download_link="https://example.com/old_url.zip",
+                user_info={},
+            )
+
+            # Verify that _get_download_url was called with correct intended_use
+            call_args = mock_get_download_url.call_args[0]
+            assert call_args[4] == expected_use, f"Choice '{choice}' should map to '{expected_use}'"
+
+            # Reset mock for next iteration
+            mock_get_download_url.reset_mock()

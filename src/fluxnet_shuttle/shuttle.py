@@ -241,12 +241,59 @@ def _download_dataset(site_id: str, data_hub: str, filename: str, download_link:
         raise FLUXNETShuttleError(msg)
 
 
-def download(site_ids: Optional[List[str]] = None, snapshot_file: str = "", output_dir: str = ".") -> List[str]:
+async def _prepare_download_url(
+    site_id: str, data_hub: str, download_link: str, plugin_kwargs: Optional[Dict[str, Any]] = None
+) -> str:
+    """
+    Prepare download URL using the appropriate data hub plugin.
+
+    This function uses the plugin's prepare_download method to customize the download URL
+    if needed (e.g., for user tracking, authentication). If the plugin doesn't have
+    a custom implementation, the original download_link is returned unchanged.
+
+    :param site_id: Site ID to prepare download for
+    :param data_hub: Data hub name (e.g., "AmeriFlux", "ICOS")
+    :param download_link: Original download link from snapshot
+    :param plugin_kwargs: Optional dictionary with plugin-specific parameters
+    :return: Prepared download URL
+    """
+    from fluxnet_shuttle.core.registry import registry
+
+    try:
+        # Get the plugin instance
+        plugin_class = registry.get_plugin(data_hub.lower())
+        plugin = plugin_class()
+
+        # Use plugin's prepare_download method, passing all kwargs
+        # Each plugin extracts what it needs from the kwargs
+        kwargs_to_pass = plugin_kwargs if plugin_kwargs else {}
+        prepared_url = await plugin.prepare_download(site_id, download_link, **kwargs_to_pass)
+        return prepared_url
+
+    except ValueError as e:
+        # Plugin not found - log warning and use original URL
+        _log.warning(f"Plugin not found for data hub '{data_hub}': {e}. Using original download link.")
+        return download_link
+    except Exception as e:
+        # Other errors - log and use original URL as fallback
+        _log.warning(f"Error preparing download URL for {site_id} from {data_hub}: {e}. Using original download link.")
+        return download_link
+
+
+@async_to_sync
+async def download(
+    site_ids: Optional[List[str]] = None,
+    snapshot_file: str = "",
+    output_dir: str = ".",
+    **plugin_kwargs,
+) -> List[str]:
     """
     Download FLUXNET data for specified sites using configuration from a snapshot file.
 
     .. versionadded:: 0.1.0
        Initial download functionality for AmeriFlux and ICOS data hubs.
+    .. versionchanged:: 0.2.0
+       Refactored to use plugin-based download URL preparation with kwargs.
 
     :param site_ids: List of site IDs to download data for. If None or empty, downloads all sites from snapshot file.
     :type site_ids: Optional[List[str]]
@@ -254,6 +301,9 @@ def download(site_ids: Optional[List[str]] = None, snapshot_file: str = "", outp
     :type snapshot_file: str
     :param output_dir: Directory to save downloaded files (default: current directory)
     :type output_dir: str
+    :param plugin_kwargs: Additional keyword arguments passed to plugins (e.g., user_id, user_email,
+        intended_use, description for AmeriFlux)
+    :type plugin_kwargs: dict
     :return: List of downloaded filenames
     :rtype: list
     :raises FLUXNETShuttleError: If snapshot_file is invalid or sites not found
@@ -301,6 +351,11 @@ def download(site_ids: Optional[List[str]] = None, snapshot_file: str = "", outp
         site = sites[site_id]
         data_hub = site["data_hub"]
         download_link = site["download_link"]
+
+        # Prepare download URL using plugin (allows plugins to customize URLs)
+        # Pass all plugin_kwargs to the plugin - each plugin decides what it needs
+        download_link = await _prepare_download_url(site_id, data_hub, download_link, plugin_kwargs)
+
         # Extract clean filename from URL (without query parameters)
         filename = _extract_filename_from_url(download_link)
         _log.info(f"Downloading data for site {site_id} from data hub {data_hub}")

@@ -562,6 +562,43 @@ class TestCLIFunctions:
         finally:
             os.unlink(csv_file)
 
+    @patch("fluxnet_shuttle.main.download")
+    def test_cmd_download_with_all_plugin_kwargs(self, mock_download):
+        """Test cmd_download with all plugin kwargs (user_id, user_email, intended_use, description)."""
+        mock_download.return_value = []
+
+        # Create a temporary CSV file
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as tmp:
+            tmp.write("site_id,data_hub\nUS-Ha1,AmeriFlux\n")
+            csv_file = tmp.name
+
+        try:
+            args = argparse.Namespace(
+                sites=["US-Ha1"],
+                snapshot_file=csv_file,
+                output_dir=".",
+                user_id="test_user",
+                user_email="test@example.com",
+                intended_use="synthesis",
+                description="Test project",
+                logfile="test.log",
+                no_logfile=False,
+                verbose=False,
+            )
+
+            cmd_download(args)
+
+            # Verify download was called with plugin kwargs
+            mock_download.assert_called_once()
+            call_kwargs = mock_download.call_args[1]
+            assert call_kwargs["user_id"] == "test_user"
+            assert call_kwargs["user_email"] == "test@example.com"
+            assert call_kwargs["intended_use"] == "synthesis"
+            assert call_kwargs["description"] == "Test project"
+
+        finally:
+            os.unlink(csv_file)
+
     def test_cmd_listall_with_output_dir(self):
         """Test cmd_listall with custom output directory."""
         import tempfile

@@ -317,8 +317,39 @@ class TestDownloadDataset:
 class TestDownload:
     """Test cases for the download function."""
 
-    def test_download_no_site_ids_downloads_all(self, tmp_path):
+    @pytest.fixture(autouse=True)
+    def setup_event_loop(self):
+        """Ensure a fresh event loop for each test."""
+        import asyncio
+
+        # Close any existing event loop
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_closed():
+                asyncio.set_event_loop(asyncio.new_event_loop())
+        except RuntimeError:
+            asyncio.set_event_loop(asyncio.new_event_loop())
+        yield
+        # Cleanup after test
+        try:
+            loop = asyncio.get_event_loop()
+            if not loop.is_closed():
+                loop.close()
+        except RuntimeError:
+            pass
+
+    @patch("fluxnet_shuttle.shuttle._download_dataset")
+    @patch("fluxnet_shuttle.shuttle._prepare_download_url")
+    def test_download_no_site_ids_downloads_all(self, mock_prepare, mock_download, tmp_path):
         """Test that download downloads all sites when no site IDs provided."""
+
+        # Mock _prepare_download_url to return the original download_link as a coroutine
+        async def passthrough_url(site_id, data_hub, download_link, plugin_kwargs):
+            return download_link
+
+        mock_prepare.side_effect = passthrough_url
+        mock_download.side_effect = ["US-Ha1.zip", "US-MMS.zip"]
+
         # Create a mock snapshot file with multiple sites
         snapshot_file = tmp_path / "snapshot.csv"
         snapshot_file.write_text(
@@ -327,17 +358,13 @@ class TestDownload:
             "AmeriFlux,US-MMS,2005,2021,https://example.com/US-MMS.zip\n"
         )
 
-        # Mock the _download_dataset function
-        with patch("fluxnet_shuttle.shuttle._download_dataset") as mock_download:
-            mock_download.side_effect = ["US-Ha1.zip", "US-MMS.zip"]
+        # Call download with no site IDs (None or empty list)
+        result = download(site_ids=None, snapshot_file=str(snapshot_file), output_dir=str(tmp_path))
 
-            # Call download with no site IDs (None or empty list)
-            result = download(site_ids=None, snapshot_file=str(snapshot_file), output_dir=str(tmp_path))
-
-            # Verify all sites were downloaded
-            assert len(result) == 2
-            assert result == ["US-Ha1.zip", "US-MMS.zip"]
-            assert mock_download.call_count == 2
+        # Verify all sites were downloaded
+        assert len(result) == 2
+        assert result == ["US-Ha1.zip", "US-MMS.zip"]
+        assert mock_download.call_count == 2
 
     def test_download_no_snapshot_file_raises_error(self):
         """Test that download raises error when no snapshot file provided."""
@@ -349,14 +376,20 @@ class TestDownload:
         with pytest.raises(FLUXNETShuttleError, match="does not exist"):
             download(["US-Ha1"], "nonexistent.csv")
 
+    @patch("fluxnet_shuttle.shuttle._prepare_download_url")
     @patch("fluxnet_shuttle.shuttle._download_dataset")
     @patch("os.path.exists")
     @patch(
         "builtins.open",
         mock_open(read_data="site_id,data_hub,download_link\n" "US-TEST,AmeriFlux,http://example.com/test.zip\n"),
     )
-    def test_download_ameriflux_site_success(self, mock_exists, mock_download):
+    def test_download_ameriflux_site_success(self, mock_exists, mock_download, mock_prepare):
         """Test successful download of AmeriFlux site."""
+
+        async def passthrough_url(site_id, data_hub, download_link, plugin_kwargs):
+            return download_link
+
+        mock_prepare.side_effect = passthrough_url
         mock_exists.return_value = True
         mock_download.return_value = "test.zip"
 
@@ -371,14 +404,20 @@ class TestDownload:
             output_dir=".",
         )
 
+    @patch("fluxnet_shuttle.shuttle._prepare_download_url")
     @patch("fluxnet_shuttle.shuttle._download_dataset")
     @patch("os.path.exists")
     @patch(
         "builtins.open",
         mock_open(read_data="site_id,data_hub,download_link\n" "FI-HYY,ICOS,http://example.com/test.zip\n"),
     )
-    def test_download_icos_site_success(self, mock_exists, mock_download):
+    def test_download_icos_site_success(self, mock_exists, mock_download, mock_prepare):
         """Test successful download of ICOS site."""
+
+        async def passthrough_url(site_id, data_hub, download_link, plugin_kwargs):
+            return download_link
+
+        mock_prepare.side_effect = passthrough_url
         mock_exists.return_value = True
         mock_download.return_value = "test.zip"
 
@@ -393,6 +432,7 @@ class TestDownload:
             output_dir=".",
         )
 
+    @patch("fluxnet_shuttle.shuttle._prepare_download_url")
     @patch("fluxnet_shuttle.shuttle._download_dataset")
     @patch("os.path.exists")
     @patch(
@@ -402,8 +442,13 @@ class TestDownload:
             "US-TEST,AmeriFlux,http://example.com/file.zip?=fluxnetshuttle\n"
         ),
     )
-    def test_download_with_query_params_in_url(self, mock_exists, mock_download):
+    def test_download_with_query_params_in_url(self, mock_exists, mock_download, mock_prepare):
         """Test that download correctly handles URLs with query parameters."""
+
+        async def passthrough_url(site_id, data_hub, download_link, plugin_kwargs):
+            return download_link
+
+        mock_prepare.side_effect = passthrough_url
         mock_exists.return_value = True
         mock_download.return_value = "file.zip"
 
@@ -419,20 +464,33 @@ class TestDownload:
             output_dir=".",
         )
 
+    @patch("fluxnet_shuttle.shuttle._prepare_download_url")
     @patch("os.path.exists")
     @patch(
         "builtins.open",
         mock_open(read_data="site_id,data_hub,download_link\n" "US-TEST,AmeriFlux,http://example.com/test.zip\n"),
     )
-    def test_download_site_not_in_snapshot_file_raises_error(self, mock_exists):
+    def test_download_site_not_in_snapshot_file_raises_error(self, mock_exists, mock_prepare):
         """Test that download raises error when site not in snapshot file."""
+
+        async def passthrough_url(site_id, data_hub, download_link, plugin_kwargs):
+            return download_link
+
+        mock_prepare.side_effect = passthrough_url
         mock_exists.return_value = True
 
         with pytest.raises(FLUXNETShuttleError, match="not found in snapshot file"):
             download(["NonExistent"], "test.csv")
 
-    def test_download_with_real_csv_file(self):
+    @patch("fluxnet_shuttle.shuttle._prepare_download_url")
+    def test_download_with_real_csv_file(self, mock_prepare):
         """Test download function with real CSV file but missing site."""
+
+        async def passthrough_url(site_id, data_hub, download_link, plugin_kwargs):
+            return download_link
+
+        mock_prepare.side_effect = passthrough_url
+
         # Create temporary CSV file
         with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as tmp_file:
             tmp_file.write("site_id,data_hub,download_link\n")
@@ -578,6 +636,75 @@ class TestListall:
         assert mock_get_all_sites.call_count == 1
         assert mock_write_row.called
         assert mock_write_row.call_count == 2  # Two rows should be written for two sites
+
+
+class TestPrepareDownloadUrl:
+    """Test cases for _prepare_download_url function."""
+
+    @pytest.mark.asyncio
+    async def test_prepare_download_url_with_ameriflux_plugin(self):
+        """Test _prepare_download_url with AmeriFlux plugin."""
+        from fluxnet_shuttle.shuttle import _prepare_download_url
+
+        # Mock the registry.get_plugin call inside the function
+        with patch("fluxnet_shuttle.core.registry.registry.get_plugin") as mock_get_plugin:
+            mock_plugin = MagicMock()
+            mock_plugin.prepare_download = AsyncMock(return_value="https://new.url/test.zip")
+            mock_plugin_class = MagicMock(return_value=mock_plugin)
+            mock_get_plugin.return_value = mock_plugin_class
+
+            result = await _prepare_download_url(
+                site_id="US-Ha1",
+                data_hub="ameriflux",
+                download_link="https://old.url/test.zip",
+                plugin_kwargs={"user_id": "test_user"},
+            )
+
+            assert result == "https://new.url/test.zip"
+            mock_get_plugin.assert_called_once_with("ameriflux")
+            # Now we pass kwargs directly, not as user_info parameter
+            mock_plugin.prepare_download.assert_called_once_with(
+                "US-Ha1", "https://old.url/test.zip", user_id="test_user"
+            )
+
+    @pytest.mark.asyncio
+    async def test_prepare_download_url_plugin_not_found(self):
+        """Test _prepare_download_url when plugin is not found."""
+        from fluxnet_shuttle.shuttle import _prepare_download_url
+
+        with patch("fluxnet_shuttle.core.registry.registry.get_plugin") as mock_get_plugin:
+            mock_get_plugin.side_effect = ValueError("Plugin not found")
+
+            result = await _prepare_download_url(
+                site_id="US-Ha1",
+                data_hub="unknown",
+                download_link="https://original.url/test.zip",
+                plugin_kwargs={},
+            )
+
+            # Should return original URL when plugin not found
+            assert result == "https://original.url/test.zip"
+
+    @pytest.mark.asyncio
+    async def test_prepare_download_url_plugin_error(self):
+        """Test _prepare_download_url when plugin raises exception."""
+        from fluxnet_shuttle.shuttle import _prepare_download_url
+
+        with patch("fluxnet_shuttle.core.registry.registry.get_plugin") as mock_get_plugin:
+            mock_plugin = MagicMock()
+            mock_plugin.prepare_download = AsyncMock(side_effect=Exception("API error"))
+            mock_plugin_class = MagicMock(return_value=mock_plugin)
+            mock_get_plugin.return_value = mock_plugin_class
+
+            result = await _prepare_download_url(
+                site_id="US-Ha1",
+                data_hub="ameriflux",
+                download_link="https://original.url/test.zip",
+                plugin_kwargs={},
+            )
+
+            # Should return original URL when plugin fails
+            assert result == "https://original.url/test.zip"
 
 
 class TestModuleFunctions:

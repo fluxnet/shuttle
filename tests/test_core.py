@@ -206,6 +206,19 @@ class TestDataHubPlugin:
         assert "Unexpected error during HTTP request" in error.message
         assert isinstance(error.original_error, ValueError)
 
+    @pytest.mark.asyncio
+    async def test_default_prepare_download(self):
+        """Test default prepare_download implementation returns original link."""
+        plugin = MockDataHubPlugin()
+
+        # The default implementation should return the original download_link unchanged
+        original_link = "https://example.com/data/file.zip"
+        result = await plugin.prepare_download(
+            site_id="US-TEST", download_link=original_link, user_info={"user_id": "test_user"}
+        )
+
+        assert result == original_link
+
 
 class TestShuttleConfig:
     """Test cases for ShuttleConfig."""
