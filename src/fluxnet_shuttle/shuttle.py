@@ -315,7 +315,7 @@ def download(site_ids: Optional[List[str]] = None, snapshot_file: str = "", outp
 
 
 @async_to_sync
-async def listall(*args, **kwargs) -> str:
+async def listall(data_hubs: Optional[List[str]] = None, output_dir: str = ".") -> str:
     """
     List all available FLUXNET data from specified data hubs.
 
@@ -324,22 +324,20 @@ async def listall(*args, **kwargs) -> str:
     .. versionchanged:: 0.2.0
        Refactored to use FluxnetShuttle class for unified data retrieval.
 
-    :param ameriflux: Whether to include AmeriFlux data
-    :type ameriflux: bool
-    :param icos: Whether to include ICOS data
-    :type icos: bool
+    :param data_hubs: List of data hub plugin names to include (e.g., ["ameriflux", "icos"]).
+                      If None or empty, all available data hub plugins are included.
+    :type data_hubs: Optional[List[str]]
     :param output_dir: Directory to save the snapshot file (default: current directory)
     :type output_dir: str
     :return: CSV filename containing data availability information
     :rtype: str
     """
-    _log.debug(f"Starting listall with {args}, {kwargs}")
 
-    # Extract output_dir from kwargs if present
-    output_dir = kwargs.pop("output_dir", ".")
+    # If data_hubs is None or empty list, pass None to FluxnetShuttle to use all available plugins
+    if data_hubs is not None and len(data_hubs) == 0:
+        data_hubs = None
 
-    data_hubs = [k for k, v in kwargs.items() if v]
-    _log.debug(f"Data hubs to include: {data_hubs}")
+    _log.debug(f"Data hubs to include: {data_hubs if data_hubs else 'all available'}")
     shuttle = FluxnetShuttle(data_hubs=data_hubs)
 
     # FLUXNET2015 TODO: add FLUXNET2015 data

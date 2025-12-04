@@ -465,7 +465,7 @@ class TestListall:
 
         mock_datetime.now.return_value = MagicMock()
         mock_datetime.now.return_value.strftime.return_value = "20251013T075248"
-        result = await listall(ameriflux=False, icos=False)
+        result = await listall(data_hubs=[])
 
         assert isinstance(result, str)
         assert result.endswith(".csv")
@@ -498,6 +498,7 @@ class TestListall:
                     location_long=-120.0,
                     igbp="DBF",
                     group_team_member=[],
+                    network=[],
                     model_dump=lambda exclude=None: {
                         "site_id": "US-TEST",
                         "site_name": "Test Site",
@@ -514,6 +515,7 @@ class TestListall:
                     product_citation="Test citation",
                     product_id="test-id",
                     oneflux_code_version="v1",
+                    product_source_network="AMF",
                     model_dump=lambda: {
                         "first_year": 2000,
                         "last_year": 2020,
@@ -521,6 +523,7 @@ class TestListall:
                         "product_citation": "Test citation",
                         "product_id": "test-id",
                         "oneflux_code_version": "v1",
+                        "product_source_network": "AMF",
                     },
                 ),
             ),
@@ -533,6 +536,7 @@ class TestListall:
                     location_long=24.29,
                     igbp="ENF",
                     group_team_member=[],
+                    network=[],
                     model_dump=lambda exclude=None: {
                         "site_id": "FI-HYY",
                         "site_name": "Hyytiälä",
@@ -549,6 +553,7 @@ class TestListall:
                     product_citation="ICOS citation",
                     product_id="icos-id",
                     oneflux_code_version="v2",
+                    product_source_network="ICOSETC",
                     model_dump=lambda: {
                         "first_year": 2005,
                         "last_year": 2018,
@@ -556,6 +561,7 @@ class TestListall:
                         "product_citation": "ICOS citation",
                         "product_id": "icos-id",
                         "oneflux_code_version": "v2",
+                        "product_source_network": "ICOSETC",
                     },
                 ),
             ),
@@ -564,7 +570,7 @@ class TestListall:
         mock_datetime.now.return_value = MagicMock()
         mock_datetime.now.return_value.strftime.return_value = "20251013T075248"
 
-        result = await listall(ameriflux=True, icos=True)
+        result = await listall(data_hubs=["ameriflux", "icos"])
 
         assert isinstance(result, str)
         assert result.endswith(".csv")

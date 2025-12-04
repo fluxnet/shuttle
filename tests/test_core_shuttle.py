@@ -129,9 +129,8 @@ class TestFluxnetShuttleIntegration:
     @pytest.mark.asyncio
     async def test_error_collection(self):
         """Test that errors are properly collected from failing plugins."""
-        # Mock the registry to include our test plugins
-        mock_create = MagicMock()
 
+        # Mock the registry to include our test plugins
         def create_instance_side_effect(name, **config):
             if name == "failing":
                 return MockFailingPlugin()
@@ -140,30 +139,30 @@ class TestFluxnetShuttleIntegration:
             else:
                 raise ValueError(f"Unknown plugin: {name}")
 
-        mock_create.side_effect = create_instance_side_effect
-
         # Create config with both plugins
         config = ShuttleConfig()
         config.data_hubs["failing"] = DataHubConfig(enabled=True)
         config.data_hubs["success"] = DataHubConfig(enabled=True)
 
-        shuttle = FluxnetShuttle(data_hubs=["failing", "success"], config=config)
-        shuttle.registry.list_plugins = MagicMock(return_value=["failing", "success"])
-        shuttle.registry.create_instance = mock_create
+        with patch.object(PluginRegistry, "create_instance") as mock_create:
+            mock_create.side_effect = create_instance_side_effect
 
-        sites = []
-        async for site in shuttle.get_all_sites():
-            sites.append(site)
+            shuttle = FluxnetShuttle(data_hubs=["failing", "success"], config=config)
+            shuttle.registry.list_plugins = MagicMock(return_value=["failing", "success"])
 
-        # Should get four sites from the success plugin (MockSuccessPlugin yields 4)
-        assert len(sites) == 4
-        assert sites[0].site_info.site_id == "US-SUCCESS"
+            sites = []
+            async for site in shuttle.get_all_sites():
+                sites.append(site)
 
-        # Should have one error from the failing plugin
-        errors = shuttle.get_errors()
-        assert errors.total_errors == 1
-        assert "failing" in errors.errors[0].data_hub
-        assert "Mock plugin failure" in errors.errors[0].error
+            # Should get four sites from the success plugin (MockSuccessPlugin yields 4)
+            assert len(sites) == 4
+            assert sites[0].site_info.site_id == "US-SUCCESS"
+
+            # Should have one error from the failing plugin
+            errors = shuttle.get_errors()
+            assert errors.total_errors == 1
+            assert "failing" in errors.errors[0].data_hub
+            assert "Mock plugin failure" in errors.errors[0].error
 
     def test_sync_interface(self):
         """Test synchronous interface works correctly."""
