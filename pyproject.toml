@@ -73,7 +73,6 @@ fluxnet-shuttle = "fluxnet_shuttle.main:main"
 [project.entry-points."fluxnet_shuttle.plugins"]
 ameriflux = "fluxnet_shuttle.plugins.ameriflux:AmeriFluxPlugin"
 icos = "fluxnet_shuttle.plugins.icos:ICOSPlugin"
-fluxnet2015 = "fluxnet_shuttle.plugins.fluxnet2015:Fluxnet2015Plugin"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

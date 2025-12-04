@@ -3,26 +3,31 @@ FLUXNET Shuttle Library Documentation
 
 Welcome to FLUXNET Shuttle Library's documentation!
 
-FLUXNET Shuttle Library is a Python library for FLUXNET shuttle operations providing
-functionality for discovering, downloading, and cataloging FLUXNET data from multiple
-data hubs including AmeriFlux, ICOS, and FLUXNET2015.
+FLUXNET Shuttle Library is a Python library for discovering and downloading global
+FLUXNET data from data hubs including AmeriFlux, ICOS, and TERN (coming soon!).
+
+The data hubs provide FLUXNET data organized and coordinated by many regional networks, including
+AmeriFlux, AsiaFlux, ChinaFlux, JapanFlux, KoFlux, ICOS, European Flux database, OzFlux, TERN, and SAEON.
 
 Features
 --------
 
 - **Data Download**: Download FLUXNET data from AmeriFlux and ICOS data hubs
-- **Data Catalog**: List available datasets from multiple FLUXNET data hubs  
+- **Metadata Snapshot**: List metadata for FLUXNET data available via the data hubs
 - **Command Line Interface**: Easy-to-use CLI tool ``fluxnet-shuttle`` for common operations
-- **Integrated Data Hubs**: AmeriFlux (via AmeriFlux API), ICOS (via ICOS Carbon Portal), FLUXNET2015 (placeholder)
 - **Comprehensive Logging**: Configurable logging with multiple outputs
 - **Error Handling**: Custom exception handling for FLUXNET operations
-- **Type Safety**: Full type hints for better development experience
-- **Test Coverage**: 100% test coverage with pytest and mocking support
+
+Data Use Requirements
+---------------------
+
+The FLUXNET data are shared under a CC-BY-4.0 data use license (https://creativecommons.org/licenses/by/4.0/) which requires attribution for each data use.
+See the data use license document contained within the FLUXNET data product (archive zip file) for details.
 
 Installation
 ------------
 
-From PyPI (when published)::
+From PyPI (for released versions)::
 
     pip install fluxnet-shuttle
 
@@ -36,6 +41,8 @@ For Running Example Notebooks::
 
     pip install fluxnet-shuttle[examples]
 
+Supported python versions: 3.11, 3.12, 3.13 (3.9, 3.10 may work but are not officially supported; <3.9 not allowed.)
+
 Quick Start
 -----------
 
@@ -46,12 +53,18 @@ Quick Start
     from fluxnet_shuttle import download, listall
 
     # Discover available data
-    csv_filename = listall(ameriflux=True, icos=True)
+    csv_filename = listall()
     print(f"Available data saved to: {csv_filename}")
 
     # Download specific sites
-    sites = ['US-ARc', 'IT-Niv']
+    sites = ['PE-QFR', 'IT-Niv']
     downloaded_files = download(site_ids=sites, snapshot_file=csv_filename)
+
+    # Download specific sites with optional user information
+    # Intended Use options: 1. Synthesis, 2. Model, 3. Remote sensing, 4. Other research, 5. Education, 6. Other
+    sites = ['PE-QFR', 'IT-Niv']
+    user_info={'ameriflux': {'user_name': 'O2. Carbon', 'user_email': 'o2.carbon@flux.flux', 'intended_use': 1, 'description': 'Analysis of water flux'}}
+    downloaded_files = download(site_ids=sites, snapshot_file=csv_filename, user_info=user_info)
 
 For advanced usage with error handling and the developer API, see :doc:`developer_guide`.
 
@@ -67,7 +80,7 @@ For advanced usage with error handling and the developer API, see :doc:`develope
 
     # Create output directory
     mkdir /data/fluxnet
-    fluxnet-shuttle download -f fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv -s US-ARc IT-Niv -o /data/fluxnet
+    fluxnet-shuttle download -f fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv -s PE-QFR IT-Niv -o /data/fluxnet
 
 For complete CLI documentation, see :doc:`cli`.
 

@@ -18,15 +18,14 @@ This module provides the command-line interface for the FLUXNET Shuttle Library,
 allowing users to discover and download FLUXNET data from the command line.
 
 The CLI supports operations for listing available datasets, downloading data,
-checking supported data sources.
+checking supported data hubs.
 
 Commands
 --------
 
-* ``listall`` - List all available datasets from supported data hubs
-* ``download`` - Download datasets from specified data hubs
+* ``listall`` - List all available data from supported data hubs
+* ``download`` - Download data from specified data hubs
 * ``listdatahubs`` - Display information about supported data hubs
-* ``test`` - Test connectivity to data hubs
 
 Examples
 --------
@@ -35,9 +34,9 @@ List all available datasets::
 
     fluxnet-shuttle listall
 
-Download data from AmeriFlux::
+Download data::
 
-    fluxnet-shuttle download --source ameriflux --output ./data
+    fluxnet-shuttle download --snapshot-file fluxnet_shuttle_snapshot_20251201T100100.csv --output-dir ./data
 
 """
 
@@ -321,8 +320,8 @@ def main() -> None:
     # listall command
     parser_listall = subparsers.add_parser(
         "listall",
-        help="List all available FLUXNET datasets",
-        description="Fetch and save a snapshot of all available FLUXNET datasets from configured data hubs",
+        help="List all available FLUXNET data",
+        description="Fetch and save a snapshot of all available FLUXNET data products from configured data hubs",
     )
     parser_listall.add_argument(
         "data_hubs",
@@ -346,7 +345,7 @@ def main() -> None:
     # download command
     parser_download = subparsers.add_parser(
         "download",
-        help="Download FLUXNET datasets",
+        help="Download FLUXNET data",
         description="Download FLUXNET data files for specified sites using a snapshot file",
     )
     parser_download.add_argument(

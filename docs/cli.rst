@@ -19,7 +19,7 @@ Commands
 listall
 ~~~~~~~
 
-List all available FLUXNET datasets from AmeriFlux and ICOS data hubs. Creates a snapshot CSV file containing available site metadata and download links. The timestamp of the request is included in the filename.
+List all available FLUXNET data from all data hubs. Creates a snapshot CSV file containing available site metadata and download links. The timestamp of the request is included in the filename.
 
 .. code-block:: bash
 
@@ -33,11 +33,23 @@ List all available FLUXNET datasets from AmeriFlux and ICOS data hubs. Creates a
 
 Creates a file named ``fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv`` containing:
 
-- Data hub name
-- Site ID
+FLUXNET Data Information
+- Product name (archive filename)
 - First year of data
 - Last year of data
 - Download link
+- ONEFLUX processing code version
+- Data Citation
+- Data product ID (e.g., hashtag, PID, or DOI)
+- Product source network
+
+Site General Information
+- Site ID
+- Site name
+- Geocoordinates: Latitude and longitude
+- International Geosphere-Biosphere Programme (IGBP) category
+- Network affiliations
+- Team Member and contact info
 
 **Examples:**
 
@@ -66,7 +78,7 @@ Download FLUXNET data products (zip files) for specified sites using a snapshot 
 - ``--snapshot-file, -f PATH``: Path to snapshot CSV file (required)
 - ``--sites, -s SITE_ID [SITE_ID ...]``: Space-separated list of site IDs to download (optional - downloads ALL if not specified)
 - ``--output-dir, -o PATH``: Directory to save downloaded files (default: current directory). **Note:** Directory must already exist.
-- ``--quiet, -q``: Skip confirmation prompt when downloading all sites
+- ``--quiet, -q``: Skip prompts to enter optional user information and confirmation prompt when downloading all sites from a snapshot file.
 
 **Behavior:**
 
@@ -84,12 +96,12 @@ Download FLUXNET data products (zip files) for specified sites using a snapshot 
     fluxnet-shuttle download -f fluxnet_shuttle_snapshot_20251114T113216.csv -s US-Ha1 US-MMS
 
     # Download to specific directory (directory must exist)
-    fluxnet-shuttle download -f fluxnet_shuttle_snapshot_20251114T113216.csv -s US-ARc IT-Niv -o /data/fluxnet
+    fluxnet-shuttle download -f fluxnet_shuttle_snapshot_20251114T113216.csv -s PE-QFR IT-Niv -o /data/fluxnet
 
     # Download ALL sites (with confirmation prompt)
     fluxnet-shuttle download -f fluxnet_shuttle_snapshot_20251114T113216.csv
 
-    # Download ALL sites without confirmation (automation)
+    # Download ALL sites without interactive prompts (automation)
     fluxnet-shuttle download -f fluxnet_shuttle_snapshot_20251114T113216.csv --quiet
 
 listdatahubs
@@ -138,7 +150,7 @@ Complete workflow from discovery to download:
     # Step 2: Create directories for snapshots and downloads
     mkdir /data/snapshots /data/fluxnet
 
-    # Step 3: Discover available data and create snapshot
+    # Step 3: Create snapshot file to discover available data
     fluxnet-shuttle --verbose listall -o /data/snapshots
 
     # Step 4: Review the snapshot file (external step)
@@ -164,11 +176,11 @@ Complete workflow from discovery to download:
 Error Handling
 --------------
 
-The CLI provides clear error messages for common issues:
+The CLI provides error messages for common issues:
 
 - Missing required arguments
 - Invalid site IDs
-- Network connectivity problems
+- Connectivity problems
 - File not found errors
 - Invalid CSV format
 - Output directory does not exist
@@ -193,3 +205,9 @@ Important Notes
 - A warning message will be logged when overwriting occurs
 - No confirmation is required for individual file overwrites
 - To avoid losing data, ensure you use unique output directories or backup existing files
+
+**User Information**
+- Providing user information in the download function is optional.
+- Use of the user information will follow the data hub policies.
+- If entered, user information may be provided to the flux team PI.
+- It may also be used to send information about data updates / corrections.

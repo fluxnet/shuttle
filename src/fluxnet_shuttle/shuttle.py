@@ -19,36 +19,28 @@ The shuttle module serves as the main interface for interacting with different
 FLUXNET data sources through a unified API.
 
 
-Data Requirements
+Metadata Requirements
 -----------------
 
-Ideal MVP fields:
+Metadata fields:
     * SITE_ID
     * SITE_NAME
     * TEAM_MEMBER_NAME
-    * DATA_HUB
-    * PUBLISHER
+    * TEAM_MEMBER_EMAIL
+    * TEAM_MEMBER_ROLE
     * LOCATION_LAT
     * LOCATION_LONG
     * IGBP
-    * CLIMATE_KOEPPEN
-    * GROUPING (FULLSET, SUBSET)
-    * FIRST-YEAR
-    * LAST-YEAR
-    * DOWNLOAD-LINK
-
-Minimal MVP fields:
-    * SITE_ID
+    * NETWORK (network affiliations)
+    * FLUXNET_PRODUCT_NAME
+    * PRODUCT_ID
+    * PRODUCT_CITATION
+    * PRODUCT_SOURCE_NETWORK
+    * FIRST_YEAR
+    * LAST_YEAR
+    * DOWNLOAD_LINK
+    * ONEFLUX_CODE_VERSION
     * DATA_HUB
-    * PUBLISHER
-    * FIRST-YEAR
-    * LAST-YEAR
-    * DOWNLOAD-LINK
-
-License
--------
-
-For license information, see LICENSE file or headers in fluxnet_shuttle.__init__.py
 
 """
 
@@ -177,7 +169,7 @@ async def _download_dataset(
     Download a FLUXNET dataset for a specific site using plugin's download_stream method.
 
     This function delegates to the appropriate plugin's download_stream method,
-    which handles data hub-specific logic (e.g., AmeriFlux user tracking, ICOS filename validation).
+    which handles data hub-specific logic (e.g., AmeriFlux user info logging).
     The shuttle orchestrator receives only the content stream, then handles file I/O using the
     filename from the snapshot metadata.
 
@@ -191,7 +183,7 @@ async def _download_dataset(
     :type download_link: str
     :param output_dir: Directory to save downloaded files (default: current directory)
     :type output_dir: str
-    :param kwargs: Additional keyword arguments. Special handling for:
+    :param kwargs: Additional keyword arguments.
         - user_info: Dictionary with plugin-specific user tracking info (e.g., {"ameriflux": {...}})
         Other kwargs are passed through to the plugin's download_stream method.
     :return: The filepath where the file was saved
@@ -252,8 +244,8 @@ async def download(
     :type snapshot_file: str
     :param output_dir: Directory to save downloaded files (default: current directory)
     :type output_dir: str
-    :param kwargs: Additional keyword arguments passed to _download_dataset. Special handling for:
-        - user_info: Dictionary with plugin-specific user tracking info (e.g., {"ameriflux": {...}})
+    :param kwargs: Additional keyword arguments passed to _download_dataset.
+        - user_info: Dictionary with plugin-specific user info (e.g., {"ameriflux": {...}})
     :return: List of downloaded filenames
     :rtype: list
     :raises FLUXNETShuttleError: If snapshot_file is invalid or sites not found
@@ -343,8 +335,6 @@ async def listall(data_hubs: Optional[List[str]] = None, output_dir: str = ".") 
     _log.debug(f"Data hubs to include: {data_hubs if data_hubs else 'all available'}")
     shuttle = FluxnetShuttle(data_hubs=data_hubs)
 
-    # FLUXNET2015 TODO: add FLUXNET2015 data
-
     # Combine data from all data hubs
     fields = [
         # Site information fields
@@ -382,10 +372,10 @@ async def listall(data_hubs: Optional[List[str]] = None, output_dir: str = ".") 
 @async_to_sync
 async def _write_snapshot_file(shuttle: FluxnetShuttle, fields: List[str], csv_filename: str) -> Dict[str, int]:
     """
-    Write FLUXNET dataset snapshot to a CSV file.
+    Write FLUXNET metadata snapshot to a CSV file.
 
     Creates a snapshot file containing complete metadata for all available
-    FLUXNET datasets from configured data hubs, including site information,
+    FLUXNET data from configured data hubs, including site information,
     team members, and product details.
 
     :param shuttle: FluxnetShuttle instance

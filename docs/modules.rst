@@ -1,7 +1,7 @@
 API Reference
 =============
 
-This section contains the complete API reference for the FLUXNET Shuttle Library.
+This section contains the API reference for the FLUXNET Shuttle Library.
 
 
 fluxnet_shuttle package

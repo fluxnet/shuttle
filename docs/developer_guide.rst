@@ -78,8 +78,8 @@ The `ErrorSummary` model includes:
 - `total_results` (int): Total number of successful results retrieved
 - `errors` (List[PluginErrorDetail]): Detailed error information with data hub, operation, error message, and ISO timestamp
 
-Working with Individual Plugins
---------------------------------
+Working with Individual Data Hub Plugins
+----------------------------------------
 
 You can also work with individual data hub plugins directly:
 
@@ -98,10 +98,10 @@ You can also work with individual data hub plugins directly:
     for site in ameriflux.get_sites():
         print(f"AmeriFlux site: {site.site_id}")
 
-Plugin Discovery
-~~~~~~~~~~~~~~~~
+Data Hub Plugin Discovery
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
-List all available plugins and create instances:
+List all available data hub plugins and create instances:
 
 .. code-block:: python
 
