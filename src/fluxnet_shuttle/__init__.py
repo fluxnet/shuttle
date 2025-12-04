@@ -2,10 +2,10 @@
 :module: fluxnet_shuttle
 :synopsis: Main library package for FLUXNET Shuttle operations with plugin system
 :module author: Gilberto Pastorello <gzpastorello@lbl.gov>
-:module author: Valerie Hendrix <vchendrix@lbl.gov>
+:module author: Dario Papale <darpap@unitus.it>
 :platform: Unix, Windows
 :created: 2024-10-31
-:updated: 2025-01-09
+:updated: 2025-12-09
 
 .. currentmodule:: fluxnet_shuttle
 

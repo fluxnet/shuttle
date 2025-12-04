@@ -20,8 +20,8 @@ name = "fluxnet-shuttle"
 # 'dynamic = ["version"]' tells build tools that the version is determined at build time (by setuptools-git-versioning), not statically set here.
 dynamic = ["version"]
 description = "A Python library for FLUXNET shuttle operations."
-authors = [
-    { name = "AMF-FLX" }
+maintainers = [
+    { name = "FLUXNET Support", email = "support@fluxnet.org" }
 ]
 readme = "README.md"
 requires-python = ">=3.9"

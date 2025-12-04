@@ -5,8 +5,10 @@ Custom Exceptions for FLUXNET Shuttle Library
 :module:: fluxnet_shuttle.core.exceptions
 :synopsis: Custom exceptions for FLUXNET Shuttle Library
 :moduleauthor: Valerie Hendrix <vchendrix@lbl.gov>
+:moduleauthor: Sy-Toan Ngo <sytoanngo@lbl.gov>
 :platform: Unix, Windows
 :created: 2025-10-09
+:updated: 2025-12-09
 
 This module defines custom exceptions used throughout the FLUXNET Shuttle
 library for error handling and debugging.

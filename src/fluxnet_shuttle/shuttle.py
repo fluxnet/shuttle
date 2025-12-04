@@ -3,8 +3,11 @@ Core functionality for FLUXNET Shuttle operations
 
 :module: fluxnet_shuttle.shuttle
 :moduleauthor: Gilberto Z. Pastorello <gzpastorello@lbl.gov>
+:moduleauthor: Valerie Hendrix <vchendrix@lbl.gov>
+:moduleauthor: Sy-Toan Ngo <sytoanngo@lbl.gov>
 :platform: Unix, Windows
 :created: 2024-10-31
+:updated: 2025-12-09
 
 .. currentmodule:: fluxnet_shuttle.shuttle
 
@@ -323,11 +326,6 @@ async def download(
 async def listall(data_hubs: Optional[List[str]] = None, output_dir: str = ".") -> str:
     """
     List all available FLUXNET data from specified data hubs.
-
-    .. versionadded:: 0.1.0
-       Initial data discovery functionality for AmeriFlux and ICOS data hubs.
-    .. versionchanged:: 0.2.0
-       Refactored to use FluxnetShuttle class for unified data retrieval.
 
     :param data_hubs: List of data hub plugin names to include (e.g., ["ameriflux", "icos"]).
                       If None or empty, all available data hub plugins are included.

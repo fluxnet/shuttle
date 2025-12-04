@@ -5,8 +5,10 @@ Decorators module
 :module:: fluxnet_shuttle.core.decorators
 :synopsis: Decorators for FLUXNET Shuttle Library
 :moduleauthor: Valerie Hendrix <vchendrix@lbl.gov>
+:moduleauthor: Sy-Toan Ngo <sytoanngo@lbl.gov>
 :platform: Unix, Windows
 :created: 2025-10-09
+:updated: 2025-12-09
 
 .. currentmodule:: fluxnet_shuttle.core.decorators
 

@@ -5,6 +5,7 @@ Core framework components for FLUXNET Shuttle Library
 :moduleauthor: Valerie Hendrix <vchendrix@lbl.gov>
 :platform: Unix, Windows
 :created: 2025-10-09
+:updated: 2025-12-09
 
 .. currentmodule:: fluxnet_shuttle.core
 

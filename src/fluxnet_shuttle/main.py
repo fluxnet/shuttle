@@ -4,9 +4,12 @@ Command Line Interface Module
 
 :module: fluxnet_shuttle.main
 :synopsis: Command-line interface for FLUXNET Shuttle Library
-:moduleauthor: Generated for fluxnet-shuttle
+:moduleauthor: Valerie Hendrix <vchendrix@lbl.gov>
+:moduleauthor: Sy-Toan Ngo <sytoanngo@lbl.gov>
+:moduleauthor: Gilberto Pastorello <gzpastorello@lbl.gov>
 :platform: Unix, Windows
 :created: 2025-10-06
+:updated: 2025-12-09
 
 .. currentmodule:: fluxnet_shuttle.main
 

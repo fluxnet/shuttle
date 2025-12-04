@@ -147,6 +147,18 @@ make html
 
 See [LICENSE](LICENSE) for details.
 
+## Contributors
+
+This library was developed by:
+- You-Wei Cheah (ycheah@lbl.gov)
+- Danielle Christianson (dschristianson@lbl.gov)
+- Valerie Hendrix (vchendrix@lbl.gov)
+- Sy-Toan Ngo (sytoanngo@lbl.gov)
+- Dario Papale (darpap@unitus.it)
+- Gilberto Pastorello (gzpastorello@lbl.gov)
+
+For support and questions, please contact: support@fluxnet.org
+
 ## Copyright
 
 FLUXNET Shuttle Library Copyright (c) 2025, The Regents of the University of California, through Lawrence Berkeley National Laboratory (subject to receipt of any required approvals from the U.S. Dept. of Energy). All rights reserved.
