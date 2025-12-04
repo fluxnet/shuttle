@@ -28,7 +28,7 @@ The models are designed to work with the FLUXNET data format and provide
 validation for:
     - Data hub and publisher information
     - Site identifiers and temporal coverage
-    - Dataset versions and file metadata
+    - Data versions and file metadata
     - Download URLs with validation
     - Error tracking and reporting
 
@@ -40,12 +40,22 @@ Example:
     ...     data_hub="AmeriFlux",
     ...     location_lat=42.5378,
     ...     location_long=-72.1715,
-    ...     igbp="DBF"
+    ...     igbp="DBF",
+    ...     group_team_member=TeamMember(
+    ...         team_member_name="J. William Munger",
+    ...         team_member_email="<EMAIL>",
+    ...         team_member_role="PI"
+    ...     ),
+    ...     network=["AmeriFlux", "LTER", "Phenocam"]
     ... )
     >>> product_data = DataFluxnetProduct(
     ...     first_year=2005,
-    ...     last_year=2012,
-    ...     download_link="https://example.com/data.zip"
+    ...     last_year=2025,
+    ...     download_link="https://example.com/data.zip",
+    ...     product_id="10.17190/AMF/1871137",
+    ...     product_citation="J. William Munger (2025), AmeriFlux FLUXNET citation ...",
+    ...     product_source_network="AMF",
+    ...     oneflux_code_version="1.3"
     ... )
     >>> metadata = FluxnetDatasetMetadata(
     ...     site_info=site_info,
@@ -111,9 +121,9 @@ class BadmSiteGeneralInfo(BaseModel):
     Attributes:
         site_id (str): Site identifier by country using first two chars or clusters
         site_name (str): Site name
-        data_hub (str): Data hub name (e.g., AmeriFlux, ICOS)
-        location_lat (float): Site latitude in decimal degrees
-        location_long (float): Site longitude in decimal degrees
+        data_hub (str): Data hub name (e.g., AmeriFlux, ICOS, TERN)
+        location_lat (float): Site latitude in decimal degrees, datum WGS84 ellipsoid
+        location_long (float): Site longitude in decimal degrees, datum WGS84 ellipsoid
         igbp (str): IGBP land cover type classification
         network (List[str]): Network affiliation(s) of the site
         group_team_member (List[TeamMember]): List of team member information for this site
@@ -138,14 +148,18 @@ class BadmSiteGeneralInfo(BaseModel):
     # data_hub is not part of the BADM Standard but including in the BADM SGI model"
     data_hub: str = Field(
         ...,
-        description="Data hub name (e.g., AmeriFlux, ICOS, NEON)",
+        description="Data hub name (e.g., AmeriFlux, ICOS, TERN)",
         min_length=1,
         max_length=50,
     )
 
-    location_lat: float = Field(..., description="Site latitude in decimal degrees", ge=-90.0, le=90.0)
+    location_lat: float = Field(
+        ..., description="Site latitude in decimal degrees, datum WGS84 ellipsoid", ge=-90.0, le=90.0
+    )
 
-    location_long: float = Field(..., description="Site longitude in decimal degrees", ge=-180.0, le=180.0)
+    location_long: float = Field(
+        ..., description="Site longitude in decimal degrees, datum WGS84 ellipsoid", ge=-180.0, le=180.0
+    )
 
     igbp: str = Field(
         ...,
@@ -184,7 +198,7 @@ class DataFluxnetProduct(BaseModel):
         first_year (int): First year of data coverage (YYYY format)
         last_year (int): Last year of data coverage (YYYY format)
         download_link (HttpUrl): URL for downloading the data product
-        product_citation (str): Citation string for the data product
+        product_citation (str): Citation for the data product
         product_id (str): Product identifier (e.g., hashtag, DOI, PID)
         oneflux_code_version (str): ONEFlux processing code used, extracted from fluxnet_product_name
             (major.minor version designation only)
@@ -200,7 +214,7 @@ class DataFluxnetProduct(BaseModel):
 
     download_link: HttpUrl = Field(..., description="URL for downloading the data product")
 
-    product_citation: str = Field(..., description="Citation string for the data product")
+    product_citation: str = Field(..., description="Citation for the data product")
 
     product_id: str = Field(..., description="Product identifier (e.g., hashtag, DOI, PID)")
 
@@ -246,7 +260,7 @@ class FluxnetDatasetMetadata(BaseModel):
         extra="allow",  # Allow additional fields for extensibility
     )
 
-    site_info: BadmSiteGeneralInfo = Field(..., description="Site general information from BADM")
+    site_info: BadmSiteGeneralInfo = Field(..., description="BADM Site general information")
 
     product_data: DataFluxnetProduct = Field(..., description="FLUXNET product data information")
 
