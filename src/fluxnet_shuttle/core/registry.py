@@ -5,8 +5,10 @@ Plugin Registry and Error Collection
 :module:: fluxnet_shuttle.core.registry
 :synopsis: Plugin registry and error collection for FLUXNET Shuttle Library
 :moduleauthor: Valerie Hendrix <vchendrix@lbl.gov>
+:moduleauthor: Sy-Toan Ngo <sytoanngo@lbl.gov>
 :platform: Unix, Windows
 :created: 2025-10-09
+:updated: 2025-12-09
 
 .. currentmodule:: fluxnet_shuttle.core.registry
 

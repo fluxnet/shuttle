@@ -4,9 +4,11 @@ HTTP utilities for making API requests and handling responses
 
 :module:: fluxnet_shuttle.core.http_utils
 :synopsis: HTTP utilities for FLUXNET Shuttle Library
-:module author:: Valerie Hendrix <vchendrix@lbl.gov>
+:moduleauthor: Valerie Hendrix <vchendrix@lbl.gov>
+:moduleauthor: Sy-Toan Ngo <sytoanngo@lbl.gov>
 :platform: Unix, Windows
 :created: 2025-10-15
+:updated: 2025-12-09
 
 .. currentmodule:: fluxnet_shuttle.core.http_utils
 

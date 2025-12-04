@@ -3,6 +3,13 @@ AmeriFlux Data Hub Plugin
 =========================
 
 AmeriFlux data hub implementation for the FLUXNET Shuttle plugin system.
+
+:moduleauthor: Gilberto Pastorello <gzpastorello@lbl.gov>
+:moduleauthor: Valerie Hendrix <vchendrix@lbl.gov>
+:moduleauthor: Sy-Toan Ngo <sytoanngo@lbl.gov>
+:platform: Unix, Windows
+:created: 2025-01-09
+:updated: 2025-12-09
 """
 
 import asyncio

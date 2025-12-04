@@ -4,9 +4,11 @@ Base Plugin Interface
 
 :module: fluxnet_shuttle.core.base
 :synopsis: Base class and interfaces for data hub plugins in the FLUXNET Shuttle library.
-:author: Valerie Hendrix <vchendrix@lbl.gov>
+:moduleauthor: Valerie Hendrix <vchendrix@lbl.gov>
+:moduleauthor: Sy-Toan Ngo <sytoanngo@lbl.gov>
 :platform: Unix, Windows
 :created: 2025-10-09
+:updated: 2025-12-09
 
 .. currentmodule:: fluxnet_shuttle.core.base
 

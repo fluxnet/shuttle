@@ -4,9 +4,12 @@ Main Shuttle Orchestrator
 
 :module:: fluxnet_shuttle.core.shuttle
 :synopsis: Main orchestrator for FLUXNET Shuttle operations
+:moduleauthor: Gilberto Pastorello <gzpastorello@lbl.gov>
 :moduleauthor: Valerie Hendrix <vchendrix@lbl.gov>
+:moduleauthor: Sy-Toan Ngo <sytoanngo@lbl.gov>
 :platform: Unix, Windows
 :created: 2025-10-09
+:updated: 2025-12-09
 
 .. currentmodule:: fluxnet_shuttle.core.shuttle
 
