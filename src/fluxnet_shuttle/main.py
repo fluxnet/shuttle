@@ -136,12 +136,10 @@ def cmd_listall(args) -> Any:
     output_dir = args.output_dir if hasattr(args, "output_dir") and args.output_dir else "."
     _validate_output_directory(output_dir)
 
-    # Default to both AmeriFlux and ICOS
-    ameriflux = True
-    icos = True
+    # Get data hubs from args if provided, otherwise use None to include all available
+    data_hubs = args.data_hubs if hasattr(args, "data_hubs") and args.data_hubs else None
 
-    # Allow selective source querying if implemented in future
-    csv_filename = listall(ameriflux=ameriflux, icos=icos, output_dir=output_dir)
+    csv_filename = listall(data_hubs=data_hubs, output_dir=output_dir)
     log.info(f"FLUXNET Shuttle snapshot written to {csv_filename}")
     return csv_filename
 
@@ -252,6 +250,16 @@ def main() -> None:
         "listall",
         help="List all available FLUXNET datasets",
         description="Fetch and save a snapshot of all available FLUXNET datasets from configured data hubs",
+    )
+    parser_listall.add_argument(
+        "data_hubs",
+        help=(
+            "Data hub plugin names to include (space-separated, e.g., ameriflux icos). "
+            "If not provided, all available data hubs are included."
+        ),
+        type=str,
+        nargs="*",
+        default=None,
     )
     parser_listall.add_argument(
         "-o",
