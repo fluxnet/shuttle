@@ -47,13 +47,6 @@ License
 
 For license information, see LICENSE file or headers in fluxnet_shuttle.__init__.py
 
-
-Version
--------
-
-.. versionadded:: 0.1.0
-   Initial shuttle functionality.
-
 """
 
 import csv
@@ -244,9 +237,6 @@ def _download_dataset(site_id: str, data_hub: str, filename: str, download_link:
 def download(site_ids: Optional[List[str]] = None, snapshot_file: str = "", output_dir: str = ".") -> List[str]:
     """
     Download FLUXNET data for specified sites using configuration from a snapshot file.
-
-    .. versionadded:: 0.1.0
-       Initial download functionality for AmeriFlux and ICOS data hubs.
 
     :param site_ids: List of site IDs to download data for. If None or empty, downloads all sites from snapshot file.
     :type site_ids: Optional[List[str]]

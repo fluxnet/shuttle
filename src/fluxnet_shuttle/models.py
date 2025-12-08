@@ -5,7 +5,6 @@ Pydantic Schema Models for FLUXNET Shuttle Library
 :module:: fluxnet_shuttle.models
 :synopsis: Pydantic models for FLUXNET dataset metadata and validation
 :moduleauthor: Valerie Hendrix <vchendrix@lbl.gov>
-:versionadded: 1.0.0
 :platform: Unix, Windows
 :created: 2025-10-09
 
@@ -56,7 +55,6 @@ Note:
     automatic API documentation generation.
 
 .. moduleauthor:: FLUXNET Shuttle Library Team
-.. versionadded:: 1.0.0
 """
 
 import re
