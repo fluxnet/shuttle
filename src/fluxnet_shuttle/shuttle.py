@@ -59,10 +59,10 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import unquote, urlparse
 
 import aiofiles
-import requests
 
 from fluxnet_shuttle import FLUXNETShuttleError
 from fluxnet_shuttle.core.decorators import async_to_sync
+from fluxnet_shuttle.core.registry import registry
 from fluxnet_shuttle.core.shuttle import FluxnetShuttle
 
 _log = logging.getLogger(__name__)
@@ -161,57 +161,57 @@ def validate_fluxnet_filename_format(filename: str) -> bool:
     return bool(re.match(_FLUXNET_ZIP_PATTERN, filename_only, re.IGNORECASE))
 
 
-def _extract_filename_from_headers(headers: Dict[str, str]) -> Optional[str]:
+@async_to_sync
+async def _download_dataset(
+    site_id: str,
+    data_hub: str,
+    filename: str,
+    download_link: str,
+    output_dir: str = ".",
+    **kwargs: Any,
+) -> str:
     """
-    Extract filename from HTTP Content-Disposition header if present.
+    Download a FLUXNET dataset for a specific site using plugin's download_stream method.
 
-    :param headers: HTTP response headers
-    :type headers: dict
-    :return: Extracted filename or None if not found
-    :rtype: Optional[str]
-    """
-    content_disposition = headers.get("Content-Disposition", "")
-    if content_disposition:
-        # Parse Content-Disposition header (e.g., 'attachment; filename="file.zip"')
-        parts = content_disposition.split(";")
-        for part in parts:
-            if "filename=" in part:
-                filename = part.split("=")[1].strip().strip('"')
-                return unquote(filename)
-    return None
-
-
-def _download_dataset(site_id: str, data_hub: str, filename: str, download_link: str, output_dir: str = ".") -> str:
-    """
-    Download dataset file from any FLUXNET data hub.
-
-    This is a private generic download function that works for all data hubs.
-    Data hub plugins are responsible for providing ready-to-use download URLs.
+    This function delegates to the appropriate plugin's download_stream method,
+    which handles data hub-specific logic (e.g., AmeriFlux user tracking, ICOS filename validation).
+    The shuttle orchestrator receives only the content stream, then handles file I/O using the
+    filename from the snapshot metadata.
 
     :param site_id: Site identifier
     :type site_id: str
     :param data_hub: Data hub name (e.g., "AmeriFlux", "ICOS")
     :type data_hub: str
-    :param filename: Local filename to save data (may be overridden by Content-Disposition header)
+    :param filename: Filename from snapshot metadata
     :type filename: str
     :param download_link: Ready-to-use URL to download data from
     :type download_link: str
     :param output_dir: Directory to save downloaded files (default: current directory)
     :type output_dir: str
-    :return: The actual filename used to save the file
+    :param kwargs: Additional keyword arguments. Special handling for:
+        - user_info: Dictionary with plugin-specific user tracking info (e.g., {"ameriflux": {...}})
+        Other kwargs are passed through to the plugin's download_stream method.
+    :return: The filepath where the file was saved
     :rtype: str
     :raises FLUXNETShuttleError: If download fails
     """
     _log.info(f"{data_hub}: downloading site {site_id} data file: {filename}")
-    try:
-        response = requests.get(download_link, stream=True)
-        if response.status_code == 200:
-            # Try to get filename from Content-Disposition header
-            actual_filename = _extract_filename_from_headers(dict(response.headers))
-            if actual_filename:
-                _log.debug(f"Using filename from Content-Disposition header: {actual_filename}")
-                filename = actual_filename
 
+    try:
+        # Get plugin instance
+        plugin_class = registry.get_plugin(data_hub.lower())
+        if not plugin_class:
+            msg = f"Data hub plugin {data_hub} not found for site {site_id}"
+            _log.error(msg)
+            raise FLUXNETShuttleError(msg)
+
+        plugin_instance = plugin_class()
+
+        # Add filename to kwargs and pass everything to the plugin
+        kwargs["filename"] = filename
+
+        # Use plugin's download_file method to get the content stream
+        async with plugin_instance.download_file(site_id=site_id, download_link=download_link, **kwargs) as stream:
             # Join with output directory
             filepath = os.path.join(output_dir, filename)
 
@@ -219,22 +219,27 @@ def _download_dataset(site_id: str, data_hub: str, filename: str, download_link:
             if os.path.exists(filepath):
                 _log.warning(f"{data_hub}: file already exists and will be overwritten: {filepath}")
 
+            # Write the stream to file
             with open(filepath, "wb") as file:
-                for chunk in response.iter_content(chunk_size=8192):
+                async for chunk in stream.iter_chunked(8192):
                     file.write(chunk)
+
             _log.info(f"{data_hub}: file downloaded successfully to {filepath}")
             return filepath
-        else:
-            msg = f"Failed to download {data_hub} file. Status code: {response.status_code}"
-            _log.error(msg)
-            raise FLUXNETShuttleError(msg)
-    except requests.RequestException as e:
-        msg = f"Failed to download {data_hub} file: {e}"
+
+    except Exception as e:
+        msg = f"Failed to download {data_hub} file for site {site_id}: {e}"
         _log.error(msg)
-        raise FLUXNETShuttleError(msg)
+        raise FLUXNETShuttleError(msg) from e
 
 
-def download(site_ids: Optional[List[str]] = None, snapshot_file: str = "", output_dir: str = ".") -> List[str]:
+@async_to_sync
+async def download(
+    site_ids: Optional[List[str]] = None,
+    snapshot_file: str = "",
+    output_dir: str = ".",
+    **kwargs: Any,
+) -> List[str]:
     """
     Download FLUXNET data for specified sites using configuration from a snapshot file.
 
@@ -244,6 +249,8 @@ def download(site_ids: Optional[List[str]] = None, snapshot_file: str = "", outp
     :type snapshot_file: str
     :param output_dir: Directory to save downloaded files (default: current directory)
     :type output_dir: str
+    :param kwargs: Additional keyword arguments passed to _download_dataset. Special handling for:
+        - user_info: Dictionary with plugin-specific user tracking info (e.g., {"ameriflux": {...}})
     :return: List of downloaded filenames
     :rtype: list
     :raises FLUXNETShuttleError: If snapshot_file is invalid or sites not found
@@ -291,13 +298,21 @@ def download(site_ids: Optional[List[str]] = None, snapshot_file: str = "", outp
         site = sites[site_id]
         data_hub = site["data_hub"]
         download_link = site["download_link"]
-        # Extract clean filename from URL (without query parameters)
-        filename = _extract_filename_from_url(download_link)
+        filename = site.get("fluxnet_product_name")
+
+        if not filename:
+            _log.error(f"No filename found for site {site_id} from data hub {data_hub}. Skipping download.")
+            continue
+
         _log.info(f"Downloading data for site {site_id} from data hub {data_hub}")
 
-        # _download_dataset may override filename from Content-Disposition header
-        actual_filename = _download_dataset(
-            site_id=site_id, data_hub=data_hub, filename=filename, download_link=download_link, output_dir=output_dir
+        actual_filename = await _download_dataset(
+            site_id=site_id,
+            data_hub=data_hub,
+            filename=filename,
+            download_link=download_link,
+            output_dir=output_dir,
+            **kwargs,
         )
         downloaded_filenames.append(actual_filename)
     _log.info(f"Downloaded data for {len(site_ids)} sites: {site_ids}")
@@ -350,6 +365,7 @@ async def listall(data_hubs: Optional[List[str]] = None, output_dir: str = ".") 
         "first_year",
         "last_year",
         "download_link",
+        "fluxnet_product_name",
         "product_citation",
         "product_id",
         "oneflux_code_version",
@@ -366,7 +382,7 @@ async def listall(data_hubs: Optional[List[str]] = None, output_dir: str = ".") 
 
 
 @async_to_sync
-async def _write_snapshot_file(shuttle, fields, csv_filename):
+async def _write_snapshot_file(shuttle: FluxnetShuttle, fields: List[str], csv_filename: str) -> Dict[str, int]:
     """
     Write FLUXNET dataset snapshot to a CSV file.
 

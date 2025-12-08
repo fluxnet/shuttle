@@ -7,8 +7,12 @@ AmeriFlux data hub implementation for the FLUXNET Shuttle plugin system.
 
 import asyncio
 import logging
-from typing import Any, AsyncGenerator, Dict, Generator, List, cast
+from contextlib import asynccontextmanager
+from enum import Enum
+from http import HTTPStatus
+from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, cast
 
+import aiohttp
 from pydantic import HttpUrl
 
 from fluxnet_shuttle.core.exceptions import PluginError
@@ -22,6 +26,7 @@ from ..models import (
     TeamMember,
 )
 from ..shuttle import (
+    _extract_filename_from_url,
     extract_fluxnet_filename_metadata,
     validate_fluxnet_filename_format,
 )
@@ -33,8 +38,39 @@ AMERIFLUX_BASE_URL = "https://amfcdn.lbl.gov/"
 AMERIFLUX_BASE_PATH = "api/v2/"
 AMERIFLUX_SITE_INFO_PATH = "site_info_display/AmeriFlux"
 AMERIFLUX_DOWNLOAD_PATH = "amf_shuttle_data_files_and_manifest"
+AMERIFLUX_LOG_PATH = "log_shuttle_data_request"
 AMERIFLUX_CITATIONS_PATH = "citations/FLUXNET"
 AMERIFLUX_HEADERS = {"Content-Type": "application/json"}
+FLUXNET_SHUTTLE_REPO_URL = "https://github.com/amf-flx/fluxnet-shuttle-lib"
+
+
+class IntendedUse(Enum):
+    """
+    Enum for AmeriFlux intended use categories.
+
+    Maps integer codes to string values for tracking download purposes.
+    Use .value to get the integer code and .name.lower() to get the string representation.
+    """
+
+    SYNTHESIS = 1
+    MODEL = 2
+    REMOTE_SENSING = 3
+    OTHER_RESEARCH = 4
+    EDUCATION = 5
+    OTHER = 6
+
+    @classmethod
+    def from_code(cls, code: int) -> "IntendedUse":
+        """Get IntendedUse enum from integer code."""
+        try:
+            return cls(code)
+        except ValueError:
+            return cls.SYNTHESIS  # Default to synthesis if code not found
+
+    @classmethod
+    def get_value_str(cls, code: int) -> str:
+        """Get string value from integer code."""
+        return cls.from_code(code).name.lower()
 
 
 class AmeriFluxPlugin(DataHubPlugin):
@@ -49,7 +85,7 @@ class AmeriFluxPlugin(DataHubPlugin):
         return "AmeriFlux"
 
     @async_to_sync_generator
-    async def get_sites(self, **filters) -> AsyncGenerator[FluxnetDatasetMetadata, None]:
+    async def get_sites(self, **filters: Any) -> AsyncGenerator[FluxnetDatasetMetadata, None]:
         """
         Get AmeriFlux sites with FLUXNET data.
 
@@ -120,7 +156,7 @@ class AmeriFluxPlugin(DataHubPlugin):
             # Re-raise PluginError - site metadata is critical for plugin operation
             raise
 
-    async def _get_download_links(self, base_url: str, site_ids: list) -> Dict[str, Any]:
+    async def _get_download_links(self, base_url: str, site_ids: List[str]) -> Dict[str, Any]:
         """Get download links for specified AmeriFlux sites using v2 shuttle endpoint."""
         url_post_query = f"{base_url}{AMERIFLUX_DOWNLOAD_PATH}"
 
@@ -255,6 +291,7 @@ class AmeriFluxPlugin(DataHubPlugin):
         citation: str,
         oneflux_code_version: str,
         product_source_network: str,
+        fluxnet_product_name: str,
     ) -> DataFluxnetProduct:
         """
         Build DataFluxnetProduct model from publish years and download link.
@@ -264,8 +301,9 @@ class AmeriFluxPlugin(DataHubPlugin):
             download_link: URL to download the data
             product_id: Product identifier (e.g., hashtag, DOI, PID)
             citation: Citation string for the data product
-            oneflux_code_version: Code version extracted from filename
-            product_source_network: Source network identifier extracted from filename
+            oneflux_code_version: Code version extracted from fluxnet_product_name
+            product_source_network: Source network identifier extracted from fluxnet_product_name
+            fluxnet_product_name: Name of the FLUXNET data product file
 
         Returns:
             DataFluxnetProduct: Validated product data model
@@ -288,6 +326,7 @@ class AmeriFluxPlugin(DataHubPlugin):
             product_id=product_id,
             oneflux_code_version=oneflux_code_version,
             product_source_network=product_source_network,
+            fluxnet_product_name=fluxnet_product_name,
         )
 
     def _parse_response(
@@ -328,6 +367,9 @@ class AmeriFluxPlugin(DataHubPlugin):
                 doi_info = site_metadata.get(site_id, {}).get("doi", {})
                 product_id = doi_info.get("FLUXNET", "") if isinstance(doi_info, dict) else ""
 
+                # Extract filename from URL
+                filename = _extract_filename_from_url(download_link)
+
                 # Extract both product source network and code version from download URL in one pass
                 # URL path typically contains the filename at the end
                 product_source_network, oneflux_code_version = extract_fluxnet_filename_metadata(download_link)
@@ -352,6 +394,7 @@ class AmeriFluxPlugin(DataHubPlugin):
                     citation=citation,
                     oneflux_code_version=oneflux_code_version,
                     product_source_network=product_source_network,
+                    fluxnet_product_name=filename,
                 )
 
                 metadata = FluxnetDatasetMetadata(site_info=site_info, product_data=product_data)
@@ -362,6 +405,141 @@ class AmeriFluxPlugin(DataHubPlugin):
                 site_id = s.get("site_id", "unknown")
                 logger.warning(f"Error parsing site data for {site_id}: {e}. Skipping this site.")
                 continue
+
+    @asynccontextmanager
+    async def download_file(
+        self,
+        site_id: str,
+        download_link: str,
+        **kwargs: Any,
+    ) -> AsyncGenerator[aiohttp.StreamReader, None]:
+        """
+        Download a file from AmeriFlux with optional user tracking.
+
+        This method extends the base download_file implementation to add AmeriFlux-specific
+        user tracking logic:
+        - Extracts user_info['ameriflux'] from kwargs if available
+        - If user information is provided (user_name or user_email), logs the download request
+        - Delegates to parent class for the actual download operation
+
+        Args:
+            site_id: Site identifier
+            download_link: URL to download the data from
+            **kwargs: Additional parameters including:
+                - filename: The filename being downloaded
+                - user_info: Dictionary with plugin-specific user tracking data
+                  Example: {"ameriflux": {"user_name": "...", "user_email": "...", ...}}
+
+        Yields:
+            aiohttp.StreamReader: Content stream reader
+        """
+        # Extract AmeriFlux-specific user info from kwargs
+        user_info = kwargs.get("user_info", {})
+        ameriflux_user_info = user_info.get("ameriflux", {}) if isinstance(user_info, dict) else {}
+
+        # Get filename and user tracking parameters
+        filename = kwargs.get("filename", "")
+        user_name = ameriflux_user_info.get("user_name", "")
+        user_email = ameriflux_user_info.get("user_email", "")
+
+        if filename:
+            # Get optional fields (use None/empty defaults if not provided)
+            intended_use = ameriflux_user_info.get("intended_use")
+            description = ameriflux_user_info.get("description", "")
+
+            try:
+                await self._log_download_request(
+                    zip_filenames=[filename],
+                    user_name=user_name,
+                    user_email=user_email,
+                    intended_use=intended_use,
+                    description=description,
+                )
+                logger.info(f"Successfully logged download request for {site_id}: {filename}")
+            except Exception as e:
+                logger.warning(f"Failed to log download request for {site_id}: {e}")
+
+        # Call parent class implementation to perform the actual download
+        async with super().download_file(site_id, download_link, **kwargs) as stream:
+            yield stream
+
+    async def _log_download_request(
+        self,
+        zip_filenames: List[str],
+        user_name: str = "",
+        user_email: str = "",
+        intended_use: Optional[int] = None,
+        description: str = "",
+    ) -> bool:
+        """
+        Log download request to AmeriFlux tracking endpoint.
+
+        Only user_id and zip_filenames are required in the payload.
+        Other fields are only included if provided.
+
+        Args:
+            zip_filenames: List of ZIP filenames being downloaded (required)
+            user_name: User name (optional, not included in payload if empty)
+            user_email: User email address (optional, not included in payload if empty)
+            intended_use: Intended use code 1-6 (optional, not included in payload if None)
+            description: Additional description (optional, not included in payload if empty)
+
+        Returns:
+            True if logging was successful, False otherwise
+        """
+        if not zip_filenames:
+            logger.warning("No filenames provided for AmeriFlux download tracking")
+            return False
+
+        api_url = f"{AMERIFLUX_BASE_URL}{AMERIFLUX_BASE_PATH}{AMERIFLUX_LOG_PATH}"
+
+        # Build tracking data payload with required fields
+        tracking_data: Dict[str, Any] = {
+            "user_id": "fluxnetshuttle",
+            "zip_filenames": zip_filenames,
+        }
+
+        # Add optional fields only if provided
+        if user_name:
+            tracking_data["user_name"] = user_name
+        if user_email:
+            tracking_data["user_email"] = user_email
+        if intended_use is not None:
+            tracking_data["intended_use"] = IntendedUse.get_value_str(intended_use)
+        if description:
+            tracking_data["description"] = description
+
+        logger.info(f"Logging download request to AmeriFlux for {len(zip_filenames)} files")
+        logger.debug(f"Tracking data: {tracking_data}")
+
+        # Add referrer header to identify fluxnet-shuttle
+        headers = {
+            **AMERIFLUX_HEADERS,
+            "Referer": FLUXNET_SHUTTLE_REPO_URL,
+        }
+
+        try:
+            timeout = aiohttp.ClientTimeout(total=30)
+            async with self._session_request(
+                "POST", api_url, headers=headers, json=tracking_data, timeout=timeout
+            ) as response:
+                status = response.status
+                response_text = await response.text()
+
+                if status in (HTTPStatus.OK, HTTPStatus.CREATED, HTTPStatus.ACCEPTED):
+                    logger.info(f"Successfully logged download request to AmeriFlux (status: {status})")
+                    return True
+                else:
+                    logger.warning(
+                        f"Failed to log download request to AmeriFlux. Status code: {status}, "
+                        f"Response: {response_text}"
+                    )
+                    return False
+
+        except PluginError as e:
+            # Log as warning since tracking is optional and shouldn't fail downloads
+            logger.warning(f"Error logging download request to AmeriFlux: {e}")
+            return False
 
 
 # Auto-register the plugin

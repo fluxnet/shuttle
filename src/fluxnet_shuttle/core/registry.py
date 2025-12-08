@@ -18,7 +18,7 @@ and error collection capabilities.
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import AsyncGenerator, Dict, List, Type
+from typing import Any, AsyncGenerator, Dict, List, Type
 
 from ..models import ErrorSummary, FluxnetDatasetMetadata, PluginErrorDetail
 from .base import DataHubPlugin
@@ -44,7 +44,7 @@ class ErrorCollectingIterator:
     from multiple plugins while isolating and collecting any errors that occur.
     """
 
-    def __init__(self, plugins: Dict[str, DataHubPlugin], operation: str, **kwargs):
+    def __init__(self, plugins: Dict[str, DataHubPlugin], operation: str, **kwargs: Any) -> None:
         """
         Initialize the error collecting iterator.
 
@@ -61,7 +61,7 @@ class ErrorCollectingIterator:
         self._plugin_iterators: Dict[str, AsyncGenerator[FluxnetDatasetMetadata, None]] = {}
         self._completed_plugins: set[str] = set()
 
-    def __aiter__(self):
+    def __aiter__(self) -> "ErrorCollectingIterator":
         """Return self as the async iterator."""
         return self
 
@@ -136,7 +136,7 @@ class ErrorCollectingIterator:
         # No more results from any plugin
         raise StopAsyncIteration
 
-    def add_error(self, plugin_name: str, error: Exception, operation: str = ""):
+    def add_error(self, plugin_name: str, error: Exception, operation: str = "") -> None:
         """
         Add an error to the collection.
 
@@ -189,7 +189,7 @@ class PluginRegistry:
     including automatic discovery through entry points.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the plugin registry."""
         self._plugins: Dict[str, Type[DataHubPlugin]] = {}
         self._instances: Dict[str, DataHubPlugin] = {}
@@ -244,7 +244,7 @@ class PluginRegistry:
         """
         return list(self._plugins.keys())
 
-    def create_instance(self, name: str, **config) -> DataHubPlugin:
+    def create_instance(self, name: str, **config: Any) -> DataHubPlugin:
         """
         Create an instance of a plugin.
 

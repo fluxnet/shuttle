@@ -50,6 +50,7 @@ class MockDataHubPlugin(DataHubPlugin):
             product_id="test-id",
             oneflux_code_version="v1",
             product_source_network="TEST",
+            fluxnet_product_name="TEST_US-TEST_FLUXNET_2020-2021_v1_r0.zip",
         )
 
         yield FluxnetDatasetMetadata(site_info=site_info, product_data=product_data)
@@ -205,6 +206,26 @@ class TestDataHubPlugin:
         assert error.plugin_name == "mock"
         assert "Unexpected error during HTTP request" in error.message
         assert isinstance(error.original_error, ValueError)
+
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle.core.base.session_request")
+    async def test_default_download_file(self, mock_session_request):
+        """Test default download_stream implementation in base class."""
+        plugin = MockDataHubPlugin()
+        download_link = "https://example.com/file.zip"
+
+        # Mock the response with content
+        mock_response = AsyncMock()
+        mock_response.content = b"test file content"
+        mock_session_request.return_value.__aenter__.return_value = mock_response
+        mock_session_request.return_value.__aexit__.return_value = None
+
+        # Test the default download_stream implementation
+        async with plugin.download_file("US-TEST", download_link, filename="test.zip") as content:
+            assert content == b"test file content"
+
+        # Verify GET request was made to download link
+        mock_session_request.assert_called_once_with("GET", download_link)
 
 
 class TestShuttleConfig:

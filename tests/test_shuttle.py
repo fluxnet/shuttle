@@ -9,7 +9,6 @@ import pytest
 from fluxnet_shuttle import FLUXNETShuttleError
 from fluxnet_shuttle.shuttle import (
     _download_dataset,
-    _extract_filename_from_headers,
     _extract_filename_from_url,
     download,
     extract_fluxnet_filename_metadata,
@@ -53,46 +52,6 @@ class TestExtractFilenameFromUrl:
         url = "https://example.com/download/data.csv?param1=value1&param2=value2"
         result = _extract_filename_from_url(url)
         assert result == "data.csv"
-
-
-class TestExtractFilenameFromHeaders:
-    """Test cases for the _extract_filename_from_headers helper function."""
-
-    def test_content_disposition_with_filename(self):
-        """Test Content-Disposition header with filename."""
-        headers = {"Content-Disposition": 'attachment; filename="test.zip"'}
-        result = _extract_filename_from_headers(headers)
-        assert result == "test.zip"
-
-    def test_content_disposition_without_quotes(self):
-        """Test Content-Disposition header without quotes around filename."""
-        headers = {"Content-Disposition": "attachment; filename=test.zip"}
-        result = _extract_filename_from_headers(headers)
-        assert result == "test.zip"
-
-    def test_content_disposition_with_encoded_filename(self):
-        """Test Content-Disposition header with percent-encoded filename."""
-        headers = {"Content-Disposition": "attachment; filename=file%20name.zip"}
-        result = _extract_filename_from_headers(headers)
-        assert result == "file name.zip"
-
-    def test_no_content_disposition(self):
-        """Test when Content-Disposition header is missing."""
-        headers = {"Content-Type": "application/zip"}
-        result = _extract_filename_from_headers(headers)
-        assert result is None
-
-    def test_empty_headers(self):
-        """Test with empty headers dictionary."""
-        headers = {}
-        result = _extract_filename_from_headers(headers)
-        assert result is None
-
-    def test_content_disposition_without_filename(self):
-        """Test Content-Disposition header without filename parameter."""
-        headers = {"Content-Disposition": "attachment"}
-        result = _extract_filename_from_headers(headers)
-        assert result is None
 
 
 class TestExtractFluxnetFilenameMetadata:
@@ -175,94 +134,141 @@ class TestValidateFluxnetFilenameFormat:
 class TestDownloadDataset:
     """Test cases for the _download_dataset private function."""
 
-    def test_successful_download_ameriflux(self):
+    @pytest.mark.asyncio
+    async def test_successful_download_ameriflux(self):
         """Test successful file download for AmeriFlux."""
+        from unittest.mock import AsyncMock
+
+        from fluxnet_shuttle.plugins.ameriflux import AmeriFluxPlugin
+
+        async def mock_iter_chunked(size):
+            for chunk in [b"chunk1", b"chunk2"]:
+                yield chunk
+
         with (
-            patch("fluxnet_shuttle.shuttle.requests.get") as mock_get,
+            patch.object(AmeriFluxPlugin, "download_file") as mock_download_file,
             patch("builtins.open", mock_open()),
         ):
-            mock_response = MagicMock()
-            mock_response.status_code = 200
-            mock_response.headers = {}
-            mock_response.iter_content.return_value = [b"chunk1", b"chunk2"]
-            mock_get.return_value = mock_response
+            # Create async mock stream
+            mock_stream = AsyncMock()
+            mock_stream.iter_chunked = mock_iter_chunked
 
-            result = _download_dataset("US-TEST", "AmeriFlux", "test.zip", "http://example.com/test.zip")
+            # Mock async context manager to return just the stream
+            mock_download_file.return_value.__aenter__.return_value = mock_stream
+
+            result = await _download_dataset("US-TEST", "AmeriFlux", "test.zip", "http://example.com/test.zip")
 
             assert result == "./test.zip"
-            mock_get.assert_called_once_with("http://example.com/test.zip", stream=True)
 
-    def test_successful_download_icos(self):
+    @pytest.mark.asyncio
+    async def test_successful_download_icos(self):
         """Test successful file download for ICOS."""
+        from unittest.mock import AsyncMock
+
+        from fluxnet_shuttle.plugins.icos import ICOSPlugin
+
+        async def mock_iter_chunked(size):
+            for chunk in [b"chunk1", b"chunk2"]:
+                yield chunk
+
         with (
-            patch("fluxnet_shuttle.shuttle.requests.get") as mock_get,
+            patch.object(ICOSPlugin, "download_file") as mock_download_file,
             patch("builtins.open", mock_open()),
         ):
-            mock_response = MagicMock()
-            mock_response.status_code = 200
-            mock_response.headers = {}
-            mock_response.iter_content.return_value = [b"chunk1", b"chunk2"]
-            mock_get.return_value = mock_response
+            # Create async mock stream
+            mock_stream = AsyncMock()
+            mock_stream.iter_chunked = mock_iter_chunked
+
+            # Mock async context manager to return (stream, filename) tuple
+            mock_download_file.return_value.__aenter__.return_value = mock_stream
 
             # ICOS plugin provides ready-to-use URL with license acceptance
-            result = _download_dataset(
+            result = await _download_dataset(
                 "FI-HYY", "ICOS", "test.zip", "https://data.icos-cp.eu/licence_accept?ids=%5B%22test%22%5D"
             )
 
             assert result == "./test.zip"
-            mock_get.assert_called_once_with("https://data.icos-cp.eu/licence_accept?ids=%5B%22test%22%5D", stream=True)
 
-    def test_successful_download_with_content_disposition(self):
-        """Test that filename from Content-Disposition header overrides provided filename."""
+    @pytest.mark.asyncio
+    async def test_successful_download_with_content_disposition(self):
+        """Test that ICOS validates filename from Content-Disposition header but uses metadata filename."""
+        from unittest.mock import AsyncMock
+
+        from fluxnet_shuttle.plugins.icos import ICOSPlugin
+
+        async def mock_iter_chunked(size):
+            for chunk in [b"chunk1", b"chunk2"]:
+                yield chunk
+
         with (
-            patch("fluxnet_shuttle.shuttle.requests.get") as mock_get,
+            patch.object(ICOSPlugin, "download_file") as mock_download_file,
             patch("builtins.open", mock_open()),
         ):
-            mock_response = MagicMock()
-            mock_response.status_code = 200
-            mock_response.headers = {"Content-Disposition": 'attachment; filename="actual_file.zip"'}
-            mock_response.iter_content.return_value = [b"chunk1", b"chunk2"]
-            mock_get.return_value = mock_response
+            # Create async mock stream
+            mock_stream = AsyncMock()
+            mock_stream.iter_chunked = mock_iter_chunked
 
-            result = _download_dataset("FI-HYY", "ICOS", "placeholder.zip", "http://example.com/download")
+            # ICOS plugin validates filename from header but returns just the stream
+            mock_download_file.return_value.__aenter__.return_value = mock_stream
 
-            # Should use filename from Content-Disposition header
-            assert result == "./actual_file.zip"
-            mock_get.assert_called_once_with("http://example.com/download", stream=True)
+            result = await _download_dataset("FI-HYY", "ICOS", "metadata_file.zip", "http://example.com/download")
 
-    @patch("fluxnet_shuttle.shuttle.requests.get")
-    def test_download_failure_404(self, mock_get):
+            # Should use filename from metadata (the one passed as argument)
+            assert result == "./metadata_file.zip"
+
+    @pytest.mark.asyncio
+    async def test_download_failure_404(self):
         """Test handling of 404 download failure."""
-        mock_response = MagicMock()
-        mock_response.status_code = 404
-        mock_get.return_value = mock_response
+        from fluxnet_shuttle.core.exceptions import PluginError
+        from fluxnet_shuttle.plugins.ameriflux import AmeriFluxPlugin
 
-        with pytest.raises(FLUXNETShuttleError, match="Failed to download.*404"):
-            _download_dataset("US-TEST", "AmeriFlux", "test.zip", "http://example.com/test.zip")
+        with patch.object(AmeriFluxPlugin, "download_file") as mock_download_file:
+            # Simulate 404 error by raising PluginError
+            mock_download_file.return_value.__aenter__.side_effect = PluginError("ameriflux", "HTTP 404 Not Found")
 
-    @patch("fluxnet_shuttle.shuttle.requests.get")
-    def test_download_failure_500(self, mock_get):
+            with pytest.raises(FLUXNETShuttleError, match="Failed to download"):
+                await _download_dataset("US-TEST", "AmeriFlux", "test.zip", "http://example.com/test.zip")
+
+    @pytest.mark.asyncio
+    async def test_download_failure_500(self):
         """Test handling of 500 download failure."""
-        mock_response = MagicMock()
-        mock_response.status_code = 500
-        mock_get.return_value = mock_response
+        from fluxnet_shuttle.core.exceptions import PluginError
+        from fluxnet_shuttle.plugins.icos import ICOSPlugin
 
-        with pytest.raises(FLUXNETShuttleError, match="Failed to download.*500"):
-            _download_dataset("FI-HYY", "ICOS", "test.zip", "http://example.com/test.zip")
+        with patch.object(ICOSPlugin, "download_file") as mock_download_file:
+            # Simulate 500 error by raising PluginError
+            mock_download_file.return_value.__aenter__.side_effect = PluginError(
+                "icos", "HTTP 500 Internal Server Error"
+            )
 
-    def test_file_writing(self):
+            with pytest.raises(FLUXNETShuttleError, match="Failed to download"):
+                await _download_dataset("FI-HYY", "ICOS", "test.zip", "http://example.com/test.zip")
+
+    @pytest.mark.asyncio
+    async def test_file_writing(self):
         """Test that file is written correctly."""
+        from unittest.mock import AsyncMock
+
+        from fluxnet_shuttle.plugins.ameriflux import AmeriFluxPlugin
+
+        test_chunks = [b"data_chunk_1", b"data_chunk_2"]
+
+        async def mock_iter_chunked(size):
+            for chunk in test_chunks:
+                yield chunk
+
         with (
-            patch("fluxnet_shuttle.shuttle.requests.get") as mock_get,
+            patch.object(AmeriFluxPlugin, "download_file") as mock_download_file,
             patch("builtins.open", mock_open()) as mock_file,
         ):
-            mock_response = MagicMock()
-            mock_response.status_code = 200
-            test_chunks = [b"data_chunk_1", b"data_chunk_2"]
-            mock_response.iter_content.return_value = test_chunks
-            mock_get.return_value = mock_response
+            # Create async mock stream
+            mock_stream = AsyncMock()
+            mock_stream.iter_chunked = mock_iter_chunked
 
-            _download_dataset("US-TEST", "AmeriFlux", "output.zip", "http://example.com/file.zip")
+            # Mock async context manager to return (stream, filename) tuple
+            mock_download_file.return_value.__aenter__.return_value = mock_stream
+
+            await _download_dataset("US-TEST", "AmeriFlux", "output.zip", "http://example.com/file.zip")
 
             # Verify file was opened for writing
             mock_file.assert_called_once_with("./output.zip", "wb")
@@ -270,22 +276,31 @@ class TestDownloadDataset:
             handle = mock_file.return_value.__enter__.return_value
             assert handle.write.call_count == len(test_chunks)
 
-    @patch("fluxnet_shuttle.shuttle.requests.get")
-    def test_request_exception_handling(self, mock_get):
+    @pytest.mark.asyncio
+    async def test_request_exception_handling(self):
         """Test handling of request exceptions."""
-        import requests
+        from fluxnet_shuttle.plugins.ameriflux import AmeriFluxPlugin
 
-        mock_get.side_effect = requests.RequestException("Network error")
+        with patch.object(AmeriFluxPlugin, "download_file") as mock_download_file:
+            # Simulate network error
+            mock_download_file.return_value.__aenter__.side_effect = Exception("Network error")
 
-        with pytest.raises(FLUXNETShuttleError, match="Failed to download.*Network error"):
-            _download_dataset("US-TEST", "AmeriFlux", "test.zip", "http://example.com/test.zip")
+            with pytest.raises(FLUXNETShuttleError, match="Failed to download"):
+                await _download_dataset("US-TEST", "AmeriFlux", "test.zip", "http://example.com/test.zip")
 
-    def test_file_overwrite_warning(self):
+    @pytest.mark.asyncio
+    async def test_file_overwrite_warning(self):
         """Test that a warning is logged when overwriting an existing file."""
         import tempfile
+        from unittest.mock import AsyncMock
+
+        from fluxnet_shuttle.plugins.ameriflux import AmeriFluxPlugin
+
+        async def mock_iter_chunked(size):
+            yield b"new content"
 
         with (
-            patch("fluxnet_shuttle.shuttle.requests.get") as mock_get,
+            patch.object(AmeriFluxPlugin, "download_file") as mock_download_file,
             tempfile.TemporaryDirectory() as tmpdir,
         ):
             # Create an existing file
@@ -294,15 +309,15 @@ class TestDownloadDataset:
                 f.write("old content")
 
             # Mock successful download
-            mock_response = MagicMock()
-            mock_response.status_code = 200
-            mock_response.headers = {}
-            mock_response.iter_content.return_value = [b"new content"]
-            mock_get.return_value = mock_response
+            mock_stream = AsyncMock()
+            mock_stream.iter_chunked = mock_iter_chunked
+
+            # Mock async context manager to return (stream, filename) tuple
+            mock_download_file.return_value.__aenter__.return_value = mock_stream
 
             # Download to the same location
             with patch("fluxnet_shuttle.shuttle._log") as mock_log:
-                result = _download_dataset(
+                result = await _download_dataset(
                     "US-TEST", "AmeriFlux", "existing.zip", "http://example.com/test.zip", tmpdir
                 )
 
@@ -313,54 +328,122 @@ class TestDownloadDataset:
 
             assert result == existing_file
 
+    @pytest.mark.asyncio
+    async def test_plugin_not_found_error(self):
+        """Test handling when plugin is not found for data hub."""
+        from fluxnet_shuttle.core.registry import registry
+
+        # Mock registry to return None for unknown plugin
+        with patch.object(registry, "get_plugin", return_value=None):
+            with pytest.raises(FLUXNETShuttleError, match="Data hub plugin UnknownHub not found for site US-TEST"):
+                await _download_dataset("US-TEST", "UnknownHub", "test.zip", "http://example.com/test.zip")
+
+    @pytest.mark.asyncio
+    async def test_download_with_user_info_kwargs(self):
+        """Test _download_dataset passes plugin-specific user_info to download_file."""
+        from unittest.mock import AsyncMock
+
+        from fluxnet_shuttle.plugins.ameriflux import AmeriFluxPlugin
+
+        async def mock_iter_chunked(size):
+            for chunk in [b"test_data"]:
+                yield chunk
+
+        with (
+            patch.object(AmeriFluxPlugin, "download_file") as mock_download_file,
+            patch("builtins.open", mock_open()),
+        ):
+            # Create async mock stream
+            mock_stream = AsyncMock()
+            mock_stream.iter_chunked = mock_iter_chunked
+            mock_download_file.return_value.__aenter__.return_value = mock_stream
+
+            # Pass user_info in kwargs
+            user_info = {
+                "ameriflux": {
+                    "user_name": "Test User",
+                    "user_email": "test@example.com",
+                    "intended_use": 1,
+                    "description": "Test",
+                }
+            }
+
+            result = await _download_dataset(
+                "US-TEST", "ameriflux", "test.zip", "http://example.com/test.zip", user_info=user_info
+            )
+
+            # Verify plugin's download_file was called with user_info in kwargs
+            mock_download_file.assert_called_once()
+            call_kwargs = mock_download_file.call_args[1]
+            # Should receive the full user_info dict (not extracted)
+            assert "user_info" in call_kwargs
+            assert call_kwargs["user_info"] == user_info
+            assert call_kwargs["filename"] == "test.zip"
+            assert result == "./test.zip"
+
 
 class TestDownload:
     """Test cases for the download function."""
 
-    def test_download_no_site_ids_downloads_all(self, tmp_path):
+    @pytest.mark.asyncio
+    async def test_download_no_site_ids_downloads_all(self, tmp_path):
         """Test that download downloads all sites when no site IDs provided."""
         # Create a mock snapshot file with multiple sites
         snapshot_file = tmp_path / "snapshot.csv"
         snapshot_file.write_text(
-            "data_hub,site_id,first_year,last_year,download_link\n"
-            "AmeriFlux,US-Ha1,2000,2020,https://example.com/US-Ha1.zip\n"
-            "AmeriFlux,US-MMS,2005,2021,https://example.com/US-MMS.zip\n"
+            "data_hub,site_id,first_year,last_year,download_link,fluxnet_product_name\n"
+            "AmeriFlux,US-Ha1,2000,2020,https://example.com/US-Ha1.zip,US-Ha1.zip\n"
+            "AmeriFlux,US-MMS,2005,2021,https://example.com/US-MMS.zip,US-MMS.zip\n"
         )
 
-        # Mock the _download_dataset function
+        # Mock the _download_dataset function to return coroutines
         with patch("fluxnet_shuttle.shuttle._download_dataset") as mock_download:
-            mock_download.side_effect = ["US-Ha1.zip", "US-MMS.zip"]
+            # Create async mock that returns coroutines
+            async def mock_download_side_effect(*args, **kwargs):
+                return ["US-Ha1.zip", "US-MMS.zip"][mock_download.call_count - 1]
+
+            mock_download.side_effect = mock_download_side_effect
 
             # Call download with no site IDs (None or empty list)
-            result = download(site_ids=None, snapshot_file=str(snapshot_file), output_dir=str(tmp_path))
+            result = await download(site_ids=None, snapshot_file=str(snapshot_file), output_dir=str(tmp_path))
 
             # Verify all sites were downloaded
             assert len(result) == 2
             assert result == ["US-Ha1.zip", "US-MMS.zip"]
             assert mock_download.call_count == 2
 
-    def test_download_no_snapshot_file_raises_error(self):
+    @pytest.mark.asyncio
+    async def test_download_no_snapshot_file_raises_error(self):
         """Test that download raises error when no snapshot file provided."""
         with pytest.raises(FLUXNETShuttleError, match="No snapshot file provided"):
-            download(["US-Ha1"], "")
+            await download(["US-Ha1"], "")
 
-    def test_download_nonexistent_snapshot_file_raises_error(self):
+    @pytest.mark.asyncio
+    async def test_download_nonexistent_snapshot_file_raises_error(self):
         """Test that download raises error when snapshot file doesn't exist."""
         with pytest.raises(FLUXNETShuttleError, match="does not exist"):
-            download(["US-Ha1"], "nonexistent.csv")
+            await download(["US-Ha1"], "nonexistent.csv")
 
+    @pytest.mark.asyncio
     @patch("fluxnet_shuttle.shuttle._download_dataset")
     @patch("os.path.exists")
     @patch(
         "builtins.open",
-        mock_open(read_data="site_id,data_hub,download_link\n" "US-TEST,AmeriFlux,http://example.com/test.zip\n"),
+        mock_open(
+            read_data="site_id,data_hub,download_link,fluxnet_product_name\n"
+            "US-TEST,AmeriFlux,http://example.com/test.zip,test.zip\n"
+        ),
     )
-    def test_download_ameriflux_site_success(self, mock_exists, mock_download):
+    async def test_download_ameriflux_site_success(self, mock_exists, mock_download):
         """Test successful download of AmeriFlux site."""
         mock_exists.return_value = True
-        mock_download.return_value = "test.zip"
 
-        result = download(["US-TEST"], "test.csv")
+        async def mock_return():
+            return "test.zip"
+
+        mock_download.return_value = mock_return()
+
+        result = await download(["US-TEST"], "test.csv")
 
         assert result == ["test.zip"]
         mock_download.assert_called_once_with(
@@ -371,18 +454,26 @@ class TestDownload:
             output_dir=".",
         )
 
+    @pytest.mark.asyncio
     @patch("fluxnet_shuttle.shuttle._download_dataset")
     @patch("os.path.exists")
     @patch(
         "builtins.open",
-        mock_open(read_data="site_id,data_hub,download_link\n" "FI-HYY,ICOS,http://example.com/test.zip\n"),
+        mock_open(
+            read_data="site_id,data_hub,download_link,fluxnet_product_name\n"
+            "FI-HYY,ICOS,http://example.com/test.zip,test.zip\n"
+        ),
     )
-    def test_download_icos_site_success(self, mock_exists, mock_download):
+    async def test_download_icos_site_success(self, mock_exists, mock_download):
         """Test successful download of ICOS site."""
         mock_exists.return_value = True
-        mock_download.return_value = "test.zip"
 
-        result = download(["FI-HYY"], "test.csv")
+        async def mock_return():
+            return "test.zip"
+
+        mock_download.return_value = mock_return()
+
+        result = await download(["FI-HYY"], "test.csv")
 
         assert result == ["test.zip"]
         mock_download.assert_called_once_with(
@@ -393,21 +484,26 @@ class TestDownload:
             output_dir=".",
         )
 
+    @pytest.mark.asyncio
     @patch("fluxnet_shuttle.shuttle._download_dataset")
     @patch("os.path.exists")
     @patch(
         "builtins.open",
         mock_open(
-            read_data="site_id,data_hub,download_link\n"
-            "US-TEST,AmeriFlux,http://example.com/file.zip?=fluxnetshuttle\n"
+            read_data="site_id,data_hub,download_link,fluxnet_product_name\n"
+            "US-TEST,AmeriFlux,http://example.com/file.zip?=fluxnetshuttle,file.zip\n"
         ),
     )
-    def test_download_with_query_params_in_url(self, mock_exists, mock_download):
+    async def test_download_with_query_params_in_url(self, mock_exists, mock_download):
         """Test that download correctly handles URLs with query parameters."""
         mock_exists.return_value = True
-        mock_download.return_value = "file.zip"
 
-        result = download(["US-TEST"], "test.csv")
+        async def mock_return():
+            return "file.zip"
+
+        mock_download.return_value = mock_return()
+
+        result = await download(["US-TEST"], "test.csv")
 
         assert result == ["file.zip"]
         # Verify that filename passed to _download_dataset has no query params
@@ -419,19 +515,21 @@ class TestDownload:
             output_dir=".",
         )
 
+    @pytest.mark.asyncio
     @patch("os.path.exists")
     @patch(
         "builtins.open",
         mock_open(read_data="site_id,data_hub,download_link\n" "US-TEST,AmeriFlux,http://example.com/test.zip\n"),
     )
-    def test_download_site_not_in_snapshot_file_raises_error(self, mock_exists):
+    async def test_download_site_not_in_snapshot_file_raises_error(self, mock_exists):
         """Test that download raises error when site not in snapshot file."""
         mock_exists.return_value = True
 
         with pytest.raises(FLUXNETShuttleError, match="not found in snapshot file"):
-            download(["NonExistent"], "test.csv")
+            await download(["NonExistent"], "test.csv")
 
-    def test_download_with_real_csv_file(self):
+    @pytest.mark.asyncio
+    async def test_download_with_real_csv_file(self):
         """Test download function with real CSV file but missing site."""
         # Create temporary CSV file
         with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as tmp_file:
@@ -442,10 +540,68 @@ class TestDownload:
         try:
             # Should raise error because site not found
             with pytest.raises(FLUXNETShuttleError, match="not found in snapshot file"):
-                download(["NonExistent"], temp_filename)
+                await download(["NonExistent"], temp_filename)
         finally:
             # Clean up
             os.unlink(temp_filename)
+
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle.shuttle._download_dataset")
+    @patch("os.path.exists")
+    @patch(
+        "builtins.open",
+        mock_open(
+            read_data="site_id,data_hub,download_link,fluxnet_product_name\n"
+            "US-TEST,ameriflux,http://example.com/test.zip,test.zip\n"
+        ),
+    )
+    async def test_download_with_user_info(self, mock_exists, mock_download):
+        """Test download with user_info parameter passes plugin-specific data."""
+        mock_exists.return_value = True
+
+        async def mock_return():
+            return "test.zip"
+
+        mock_download.return_value = mock_return()
+
+        # Create user_info with ameriflux-specific data
+        user_info = {
+            "ameriflux": {
+                "user_name": "Test User",
+                "user_email": "test@example.com",
+                "intended_use": 1,
+                "description": "Test download",
+            }
+        }
+
+        result = await download(["US-TEST"], "test.csv", user_info=user_info)
+
+        assert result == ["test.zip"]
+        # Verify _download_dataset was called with user_info
+        mock_download.assert_called_once()
+        call_kwargs = mock_download.call_args[1]
+        assert "user_info" in call_kwargs
+        assert call_kwargs["user_info"] == user_info
+
+    @pytest.mark.asyncio
+    @patch("os.path.exists")
+    @patch(
+        "builtins.open",
+        mock_open(read_data="site_id,data_hub,download_link\n" "US-TEST,ameriflux,http://example.com/test.zip\n"),
+    )
+    async def test_download_missing_filename_skips_site(self, mock_exists, caplog):
+        """Test download skips sites with missing fluxnet_product_name."""
+        mock_exists.return_value = True
+
+        # CSV without fluxnet_product_name column - site should be skipped
+        with caplog.at_level("ERROR", logger="fluxnet_shuttle.shuttle"):
+            result = await download(["US-TEST"], "test.csv")
+
+        # Should return empty list since site was skipped
+        assert result == []
+        # Should log error about missing filename
+        assert "No filename found for site US-TEST" in caplog.text
+        assert "Skipping download" in caplog.text
 
 
 class TestListall:

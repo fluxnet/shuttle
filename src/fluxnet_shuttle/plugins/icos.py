@@ -7,7 +7,7 @@ ICOS Carbon Portal data hub implementation for the FLUXNET Shuttle plugin system
 
 import asyncio
 import logging
-from typing import Any, AsyncGenerator, Dict, Generator, Optional
+from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Tuple
 
 from ..core.base import DataHubPlugin
 from ..core.decorators import async_to_sync_generator
@@ -134,7 +134,7 @@ class ICOSPlugin(DataHubPlugin):
                 await asyncio.sleep(0.001)  # Yield control to event loop
                 yield site_data
 
-    def _group_sparql_bindings(self, bindings: list) -> Dict[str, Dict[str, Any]]:
+    def _group_sparql_bindings(self, bindings: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
         """Group SPARQL bindings by data object URI and collect team members."""
         sites_data: Dict[str, Dict[str, Any]] = {}
 
@@ -190,7 +190,7 @@ class ICOSPlugin(DataHubPlugin):
             team_member_email=binding.get("email", {}).get("value", ""),
         )
 
-    def _parse_coordinates(self, station_id: str, lat_value: Any, lon_value: Any) -> tuple:
+    def _parse_coordinates(self, station_id: str, lat_value: Any, lon_value: Any) -> Tuple[float, float]:
         """Parse and validate latitude and longitude coordinates."""
         location_lat = 0.0
         location_long = 0.0
@@ -209,7 +209,7 @@ class ICOSPlugin(DataHubPlugin):
 
         return location_lat, location_long
 
-    def _parse_year_range(self, time_start: str, time_end: str) -> tuple:
+    def _parse_year_range(self, time_start: str, time_end: str) -> Tuple[int, int]:
         """Parse year range from time strings."""
         first_year = 2000  # Default
         last_year = 2020  # Default
@@ -295,6 +295,7 @@ class ICOSPlugin(DataHubPlugin):
                     product_id=download_id,
                     oneflux_code_version=oneflux_code_version,
                     product_source_network=product_source_network,
+                    fluxnet_product_name=filename,
                 )
 
                 yield FluxnetDatasetMetadata(site_info=site_info, product_data=product_data)

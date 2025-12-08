@@ -46,7 +46,7 @@ import sys
 from datetime import datetime
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from . import FLUXNETShuttleError
 from .shuttle import download, listall
@@ -121,7 +121,7 @@ def _validate_output_directory(output_dir: str) -> None:
         sys.exit(1)
 
 
-def cmd_listall(args) -> Any:
+def cmd_listall(args: argparse.Namespace) -> Any:
     """Execute the listall command."""
     log = logging.getLogger(__name__)
     log.debug("Running listall command")
@@ -138,7 +138,73 @@ def cmd_listall(args) -> Any:
     return csv_filename
 
 
-def cmd_download(args) -> List[str]:
+def _prompt_user_info(quiet: bool) -> Dict[str, Any]:
+    """
+    Prompt user for AmeriFlux tracking information.
+
+    :param quiet: If True, skip prompts and return empty user_info
+    :return: Dictionary with user_info for AmeriFlux plugin (only populated fields)
+    """
+    log = logging.getLogger(__name__)
+
+    # Start with empty user_info - only populate fields if user provides them
+    user_info: Dict[str, Any] = {"ameriflux": {}}
+
+    if quiet:
+        log.info("Quiet mode enabled - skipping user info prompts")
+        return user_info
+
+    # Show introductory message
+    print(
+        "\n"
+        "Please enter information about yourself and your plans to use the FLUXNET data at the following prompts.\n"
+        "Providing the information is optional and collected by AmeriFlux to contact you with data updates.\n"
+        "It also is provided to the AmeriFlux site teams to help them maintain research activities.\n"
+        "Press Enter without typing anything to skip each prompt.\n"
+    )
+
+    # Prompt for user name
+    user_name = input("Enter name: ").strip()
+    if user_name:
+        user_info["ameriflux"]["user_name"] = user_name
+
+    # Prompt for user email
+    user_email = input("Enter email: ").strip()
+    if user_email:
+        user_info["ameriflux"]["user_email"] = user_email
+
+    # Prompt for intended use
+    print(
+        "\n"
+        "Intended use:\n"
+        "  1. Synthesis\n"
+        "  2. Model\n"
+        "  3. Remote sensing\n"
+        "  4. Other research\n"
+        "  5. Education\n"
+        "  6. Other\n"
+    )
+    intended_use_input = input("Enter intended use (1-6): ").strip()
+    if intended_use_input:
+        try:
+            intended_use = int(intended_use_input)
+            if intended_use in range(1, 7):
+                user_info["ameriflux"]["intended_use"] = intended_use
+            else:
+                log.warning("Invalid intended use value. Skipping this field.")
+        except ValueError:
+            log.warning("Invalid intended use value. Skipping this field.")
+
+    # Prompt for description
+    description = input("Enter additional information about intended use: ").strip()
+    if description:
+        user_info["ameriflux"]["description"] = description
+
+    print()  # Add blank line after prompts
+    return user_info
+
+
+def cmd_download(args: argparse.Namespace) -> List[str]:
     """Execute the download command."""
     log = logging.getLogger(__name__)
 
@@ -154,6 +220,9 @@ def cmd_download(args) -> List[str]:
     # Validate output directory
     output_dir = args.output_dir if hasattr(args, "output_dir") and args.output_dir else "."
     _validate_output_directory(output_dir)
+
+    # Check quiet flag
+    quiet = hasattr(args, "quiet") and args.quiet
 
     # If sites are provided, use them; otherwise extract all from snapshot file
     if args.sites:
@@ -175,7 +244,6 @@ def cmd_download(args) -> List[str]:
             sys.exit(1)
 
         # Confirmation prompt for downloading all sites (unless --quiet is used)
-        quiet = hasattr(args, "quiet") and args.quiet
         if not quiet:
             log.warning(f"No site IDs specified. This will download ALL {len(sites)} sites from the snapshot file.")
             response = input("Proceed with download? [y/n]: ")
@@ -185,7 +253,15 @@ def cmd_download(args) -> List[str]:
 
     log.debug(f"Running download command with {len(sites)} site IDs: {sites} and snapshot file: {snapshot_file}")
 
-    downloaded_files = download(site_ids=sites, snapshot_file=snapshot_file, output_dir=output_dir)
+    # Prompt for user info (respects --quiet flag)
+    user_info = _prompt_user_info(quiet)
+
+    downloaded_files: List[str] = download(
+        site_ids=sites,
+        snapshot_file=snapshot_file,
+        output_dir=output_dir,
+        user_info=user_info,
+    )
     log.info(f"Downloaded {len(downloaded_files)} files")
     return downloaded_files
 
@@ -298,7 +374,7 @@ def main() -> None:
     parser_download.add_argument(
         "--quiet",
         "-q",
-        help="Skip confirmation prompt when downloading all sites",
+        help="Skip confirmation prompt when downloading all sites and user info prompts",
         action="store_true",
         dest="quiet",
     )

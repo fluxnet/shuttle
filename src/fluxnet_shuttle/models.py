@@ -184,9 +184,10 @@ class DataFluxnetProduct(BaseModel):
         download_link (HttpUrl): URL for downloading the data product
         product_citation (str): Citation string for the data product
         product_id (str): Product identifier (e.g., hashtag, DOI, PID)
-        oneflux_code_version (str): ONEFlux processing code used, extracted from filename
+        oneflux_code_version (str): ONEFlux processing code used, extracted from fluxnet_product_name
             (major.minor version designation only)
-        product_source_network (str): Source network identifier extracted from filename (e.g., AMF, ICOSETC)
+        product_source_network (str): Source network identifier extracted from fluxnet_product_name (e.g., AMF, ICOSETC)
+        fluxnet_product_name (str): Name of the FLUXNET data product file
     """
 
     model_config = ConfigDict(str_strip_whitespace=True, validate_assignment=True, extra="forbid")
@@ -202,11 +203,19 @@ class DataFluxnetProduct(BaseModel):
     product_id: str = Field(..., description="Product identifier (e.g., hashtag, DOI, PID)")
 
     oneflux_code_version: str = Field(
-        ..., description="ONEFlux processing code used, extracted from filename (major.minor version designation only)"
+        ...,
+        description=(
+            "ONEFlux processing code used, extracted from fluxnet_product_name "
+            "(major.minor version designation only)"
+        ),
     )
 
     product_source_network: str = Field(
-        ..., description="Source network identifier extracted from filename (e.g., AMF, ICOSETC)"
+        ..., description="Source network identifier extracted from fluxnet_product_name (e.g., AMF, ICOSETC)"
+    )
+
+    fluxnet_product_name: str = Field(
+        ..., description="Name of the FLUXNET data product file", min_length=1, max_length=255
     )
 
     @model_validator(mode="after")

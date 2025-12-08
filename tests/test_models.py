@@ -46,6 +46,7 @@ def sample_product_data():
         product_id="test-id-123",
         oneflux_code_version="v1",
         product_source_network="AMF",
+        fluxnet_product_name="test_file.zip",
     )
 
 
@@ -188,6 +189,7 @@ def test_data_fluxnet_product_year_validation():
             product_id="test-id",
             oneflux_code_version="v1",
             product_source_network="AMF",
+            fluxnet_product_name="test_file.zip",
         )
         assert product.first_year == first_year
         assert product.last_year == last_year
@@ -202,6 +204,7 @@ def test_data_fluxnet_product_year_validation():
             product_id="test-id",
             oneflux_code_version="v1",
             product_source_network="AMF",
+            fluxnet_product_name="test_file.zip",
         )
 
     with pytest.raises(ValidationError):
@@ -213,6 +216,7 @@ def test_data_fluxnet_product_year_validation():
             product_id="test-id",
             oneflux_code_version="v1",
             product_source_network="AMF",
+            fluxnet_product_name="test_file.zip",
         )
 
     # Invalid year range (last_year < first_year)
@@ -225,6 +229,7 @@ def test_data_fluxnet_product_year_validation():
             product_id="test-id",
             oneflux_code_version="v1",
             product_source_network="AMF",
+            fluxnet_product_name="test_file.zip",
         )
 
 
@@ -245,6 +250,7 @@ def test_data_fluxnet_product_url_validation():
             product_id="test-id",
             oneflux_code_version="v1",
             product_source_network="AMF",
+            fluxnet_product_name="test_file.zip",
         )
         assert str(product.download_link) == url
 
@@ -266,6 +272,7 @@ def test_data_fluxnet_product_url_validation():
                 product_id="test-id",
                 oneflux_code_version="v1",
                 product_source_network="AMF",
+                fluxnet_product_name="test_file.zip",
             )
 
 
@@ -297,6 +304,7 @@ def test_fluxnet_dataset_metadata_nested_validation():
                 product_id="test-id",
                 oneflux_code_version="v1",
                 product_source_network="AMF",
+                fluxnet_product_name="test_file.zip",
             ),
         )
 
@@ -319,6 +327,7 @@ def test_fluxnet_dataset_metadata_nested_validation():
                 product_id="test-id",
                 oneflux_code_version="v1",
                 product_source_network="AMF",
+                fluxnet_product_name="test_file.zip",
             ),
         )
 
