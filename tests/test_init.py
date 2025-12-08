@@ -12,9 +12,7 @@ from fluxnet_shuttle import (
     LOG_DATEFMT,
     LOG_FMT,
     LOG_LEVELS,
-    VERSION,
     FLUXNETShuttleError,
-    __version__,
     add_file_log,
     format_warning,
     log_config,
@@ -42,24 +40,6 @@ class TestFLUXNETShuttleError:
         """Test that FLUXNETShuttleError inherits from Exception."""
         error = FLUXNETShuttleError("test")
         assert isinstance(error, Exception)
-
-
-class TestVersionConstants:
-    """Test cases for version and metadata constants."""
-
-    def test_version_exists(self):
-        """Test that VERSION constant exists."""
-        assert VERSION is not None
-        assert isinstance(VERSION, str)
-
-    def test_version_format(self):
-        """Test that version follows expected format."""
-        assert VERSION == "0.1.0"
-
-    def test_dunder_version_exists(self):
-        """Test that __version__ exists."""
-        assert __version__ is not None
-        assert __version__ == VERSION
 
 
 class TestLogConfig:
@@ -252,12 +232,6 @@ class TestBasicFunctionality:
         """Test creating custom exception."""
         error = FLUXNETShuttleError("test message")
         assert str(error) == "test message"
-
-    def test_version_constants(self):
-        """Test version constants."""
-        assert VERSION
-        assert __version__
-        assert VERSION == __version__
 
     def test_function_existence(self):
         """Test that all expected functions exist."""

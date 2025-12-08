@@ -69,11 +69,6 @@ distribute, and sublicense such enhancements or derivative works thereof,
 in binary and source code form.
 
 
-*Version History*
-
-.. versionadded:: 0.1.0
-   Initial release with AmeriFlux and ICOS support.
-
 .. rubric:: Submodules
 .. autosummary::
     :toctree: generated/
@@ -93,8 +88,6 @@ import traceback
 import warnings
 from typing import Optional, Tuple
 
-VERSION = "0.1.0"
-
 __author__ = "Gilberto Pastorello"
 __copyright__ = (
     "Copyright 2023-2024, The Regents of the University of California, " "through Lawrence Berkeley National Laboratory"
@@ -108,7 +101,6 @@ __email__ = "gzpastorello@lbl.gov"
 __institution__ = "Lawrence Berkeley National Laboratory (www.lbl.gov)"
 __license__ = "BSD"
 __status__ = "Development"
-__version__ = VERSION
 
 # get logger for this module
 _log = logging.getLogger(__name__)

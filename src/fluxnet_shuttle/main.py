@@ -36,12 +36,6 @@ Download data from AmeriFlux::
 
     fluxnet-shuttle download --source ameriflux --output ./data
 
-Version
--------
-
-.. versionadded:: 0.1.0
-   Initial CLI implementation.
-
 """
 
 import argparse
