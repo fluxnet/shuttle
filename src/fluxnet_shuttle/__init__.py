@@ -86,7 +86,7 @@ import logging
 import sys
 import traceback
 import warnings
-from typing import Optional, Tuple
+from typing import Any, Optional, Tuple
 
 __author__ = "Gilberto Pastorello"
 __copyright__ = (
@@ -111,7 +111,7 @@ _log.addHandler(logging.NullHandler())
 
 # customize showwarning to get py.warnings to be logged instead of printed and
 # to avoid new line characters in log
-def format_warning(message, category, filename, lineno, file=None, line=None):
+def format_warning(message: Any, category: Any, filename: Any, lineno: Any, file: Any = None, line: Any = None) -> None:
     logger_pywarnings = logging.getLogger("py.warnings")
     if not logger_pywarnings.handlers:
         logger_pywarnings.addHandler(logging.NullHandler())
@@ -143,14 +143,14 @@ class FLUXNETShuttleError(Exception):
 
 
 def log_config(
-    level=logging.DEBUG,
-    filename=None,
-    filename_level=None,
-    std=True,
-    std_level=None,
-    log_fmt=LOG_FMT,
-    log_datefmt=LOG_DATEFMT,
-):
+    level: int = logging.DEBUG,
+    filename: Optional[str] = None,
+    filename_level: Optional[int] = None,
+    std: bool = True,
+    std_level: Optional[int] = None,
+    log_fmt: str = LOG_FMT,
+    log_datefmt: str = LOG_DATEFMT,
+) -> None:
     """
     Setup root logger and handlers for log file and STDOUT
 
@@ -226,7 +226,7 @@ def log_config(
 
 
 def add_file_log(
-    filename, level=logging.DEBUG, log_fmt=LOG_FMT, log_datefmt=LOG_DATEFMT
+    filename: str, level: int = logging.DEBUG, log_fmt: str = LOG_FMT, log_datefmt: str = LOG_DATEFMT
 ) -> Tuple[logging.Logger, Optional[logging.FileHandler]]:
     """
     Setup root logger and handlers for log file and STDOUT
@@ -273,7 +273,7 @@ def add_file_log(
     return logger_root, handler_file
 
 
-def log_trace(exception, level=logging.ERROR, log=_log, output_fmt="std") -> str:
+def log_trace(exception: Exception, level: int = logging.ERROR, log: Any = _log, output_fmt: str = "std") -> str:
     """
     Logs exception including stack traceback into log,
     formatting trace as single line

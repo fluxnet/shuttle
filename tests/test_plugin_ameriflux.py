@@ -350,9 +350,13 @@ class TestAmeriFluxPlugin:
         assert results[0].site_info.site_id == "US-Tst"
 
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_site_metadata")
-    def test_get_sites_no_data_availability(self, mock_get_metadata):
+    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_links")
+    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_citations")
+    def test_get_sites_no_data_availability(self, mock_get_citations, mock_get_links, mock_get_metadata):
         """Test get_sites returns empty when site has no grp_publish_fluxnet."""
         mock_get_metadata.return_value = {"US-Tst": {}}
+        mock_get_links.return_value = {"data_urls": []}
+        mock_get_citations.return_value = {}
 
         plugin = ameriflux.AmeriFluxPlugin()
         sites = list(plugin.get_sites())
@@ -360,12 +364,16 @@ class TestAmeriFluxPlugin:
         assert len(sites) == 0
 
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_site_metadata")
-    def test_get_sites_all_sites_have_empty_publish_years(self, mock_get_metadata):
+    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_links")
+    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_citations")
+    def test_get_sites_all_sites_have_empty_publish_years(self, mock_get_citations, mock_get_links, mock_get_metadata):
         """Test get_sites returns empty when all sites have empty grp_publish_fluxnet."""
         mock_get_metadata.return_value = {
             "US-Tst": {"grp_publish_fluxnet": []},
             "US-EXM": {"grp_publish_fluxnet": []},
         }
+        mock_get_links.return_value = {"data_urls": []}
+        mock_get_citations.return_value = {}
 
         plugin = ameriflux.AmeriFluxPlugin()
         sites = list(plugin.get_sites())
@@ -410,6 +418,7 @@ class TestAmeriFluxPlugin:
                 citation="test citation",
                 oneflux_code_version="v1",
                 product_source_network="AMF",
+                fluxnet_product_name="test.zip",
             )
 
         assert "publish_years cannot be empty" in str(exc_info.value)
@@ -754,3 +763,221 @@ class TestAmeriFluxPlugin:
 
         # Check debug message was logged
         assert "Skipping site US-NoY - no publish years available" in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_log_download_request_empty_filenames(self):
+        """Test _log_download_request method with empty filenames."""
+        plugin = ameriflux.AmeriFluxPlugin()
+        result = await plugin._log_download_request(zip_filenames=[])
+        assert result is False
+
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle.core.http_utils.get_session")
+    async def test_log_download_request_success(self, mock_get_session):
+        """Test successful _log_download_request call."""
+        plugin = ameriflux.AmeriFluxPlugin()
+
+        # Mock successful response
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_response.text = AsyncMock(return_value="Success")
+        mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_response.__aexit__ = AsyncMock(return_value=False)
+
+        # Mock session
+        mock_session = MagicMock()
+        mock_session.request = MagicMock(return_value=mock_response)
+
+        # Mock get_session context manager
+        mock_get_session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_get_session.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        result = await plugin._log_download_request(
+            zip_filenames=["file1.zip", "file2.zip"],
+            user_name="Test User",
+            user_email="test@example.com",
+            intended_use=1,
+            description="Test download",
+        )
+
+        assert result is True
+        mock_session.request.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle.core.http_utils.get_session")
+    async def test_log_download_request_http_error(self, mock_get_session):
+        """Test _log_download_request with HTTP error response."""
+        plugin = ameriflux.AmeriFluxPlugin()
+
+        # Mock failed response
+        mock_response = AsyncMock()
+        mock_response.status = 400
+        mock_response.text = AsyncMock(return_value="Bad request")
+        mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_response.__aexit__ = AsyncMock(return_value=False)
+
+        # Mock session
+        mock_session = MagicMock()
+        mock_session.request = MagicMock(return_value=mock_response)
+
+        # Mock get_session context manager
+        mock_get_session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_get_session.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        result = await plugin._log_download_request(
+            zip_filenames=["file1.zip"], user_name="Test User", user_email="test@example.com"
+        )
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle.core.http_utils.get_session")
+    async def test_log_download_request_exception(self, mock_get_session):
+        """Test _log_download_request with exception."""
+        plugin = ameriflux.AmeriFluxPlugin()
+
+        # Mock exception
+        mock_get_session.side_effect = Exception("Network error")
+
+        result = await plugin._log_download_request(
+            zip_filenames=["file1.zip"], user_name="Test User", user_email="test@example.com"
+        )
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle.core.base.session_request")
+    @patch.object(ameriflux.AmeriFluxPlugin, "_log_download_request")
+    async def test_download_stream_with_user_tracking(self, mock_log_download, mock_session_request):
+        """Test download_stream with user tracking parameters."""
+        plugin = ameriflux.AmeriFluxPlugin()
+
+        # Mock successful logging
+        mock_log_download.return_value = True
+
+        # Mock the download response
+        mock_response = AsyncMock()
+        mock_response.content = b"test content"
+        mock_session_request.return_value.__aenter__.return_value = mock_response
+        mock_session_request.return_value.__aexit__.return_value = None
+
+        # Call download_file with user_info structure
+        async with plugin.download_file(
+            site_id="US-Ha1",
+            download_link="https://example.com/file.zip",
+            filename="test.zip",
+            user_info={
+                "ameriflux": {
+                    "user_name": "Test User",
+                    "user_email": "test@example.com",
+                    "intended_use": 1,
+                    "description": "Test download",
+                }
+            },
+        ) as content:
+            assert content == b"test content"
+
+        # Verify logging was called with correct parameters
+        mock_log_download.assert_called_once_with(
+            zip_filenames=["test.zip"],
+            user_name="Test User",
+            user_email="test@example.com",
+            intended_use=1,
+            description="Test download",
+        )
+
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle.core.base.session_request")
+    @patch.object(ameriflux.AmeriFluxPlugin, "_log_download_request")
+    async def test_download_stream_logging_failure(self, mock_log_download, mock_session_request, caplog):
+        """Test download_stream continues even when logging fails."""
+        plugin = ameriflux.AmeriFluxPlugin()
+
+        # Mock failed logging (raises exception)
+        mock_log_download.side_effect = Exception("Logging failed")
+
+        # Mock the download response
+        mock_response = AsyncMock()
+        mock_response.content = b"test content"
+        mock_session_request.return_value.__aenter__.return_value = mock_response
+        mock_session_request.return_value.__aexit__.return_value = None
+
+        # Download should still work even if logging fails
+        with caplog.at_level("WARNING", logger="fluxnet_shuttle.plugins.ameriflux"):
+            async with plugin.download_file(
+                site_id="US-Ha1",
+                download_link="https://example.com/file.zip",
+                filename="test.zip",
+                user_info={
+                    "ameriflux": {
+                        "user_name": "Test User",
+                        "user_email": "test@example.com",
+                    }
+                },
+            ) as content:
+                assert content == b"test content"
+
+        # Should log warning about failed tracking
+        assert "Failed to log download request for US-Ha1" in caplog.text
+
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle.core.base.session_request")
+    async def test_download_stream_without_user_tracking(self, mock_session_request):
+        """Test download_stream without user tracking parameters."""
+        plugin = ameriflux.AmeriFluxPlugin()
+
+        # Mock the download response
+        mock_response = AsyncMock()
+        mock_response.content = b"test content"
+        mock_session_request.return_value.__aenter__.return_value = mock_response
+        mock_session_request.return_value.__aexit__.return_value = None
+
+        # Call without user tracking - should not attempt logging
+        async with plugin.download_file(
+            site_id="US-Ha1", download_link="https://example.com/file.zip", filename="test.zip"
+        ) as content:
+            assert content == b"test content"
+
+
+class TestIntendedUse:
+    """Test cases for IntendedUse enum."""
+
+    def test_from_code_valid_codes(self):
+        """Test from_code with all valid codes."""
+        from fluxnet_shuttle.plugins.ameriflux import IntendedUse
+
+        assert IntendedUse.from_code(1) == IntendedUse.SYNTHESIS
+        assert IntendedUse.from_code(2) == IntendedUse.MODEL
+        assert IntendedUse.from_code(3) == IntendedUse.REMOTE_SENSING
+        assert IntendedUse.from_code(4) == IntendedUse.OTHER_RESEARCH
+        assert IntendedUse.from_code(5) == IntendedUse.EDUCATION
+        assert IntendedUse.from_code(6) == IntendedUse.OTHER
+
+    def test_from_code_invalid_code_returns_default(self):
+        """Test from_code returns SYNTHESIS as default for invalid codes."""
+        from fluxnet_shuttle.plugins.ameriflux import IntendedUse
+
+        # Test with various invalid codes
+        assert IntendedUse.from_code(999) == IntendedUse.SYNTHESIS
+        assert IntendedUse.from_code(0) == IntendedUse.SYNTHESIS
+        assert IntendedUse.from_code(-1) == IntendedUse.SYNTHESIS
+        assert IntendedUse.from_code(100) == IntendedUse.SYNTHESIS
+
+    def test_get_value_str(self):
+        """Test get_value_str returns correct string values."""
+        from fluxnet_shuttle.plugins.ameriflux import IntendedUse
+
+        assert IntendedUse.get_value_str(1) == "synthesis"
+        assert IntendedUse.get_value_str(2) == "model"
+        assert IntendedUse.get_value_str(3) == "remote_sensing"
+        assert IntendedUse.get_value_str(4) == "other_research"
+        assert IntendedUse.get_value_str(5) == "education"
+        assert IntendedUse.get_value_str(6) == "other"
+
+    def test_get_value_str_invalid_code(self):
+        """Test get_value_str returns default value for invalid codes."""
+        from fluxnet_shuttle.plugins.ameriflux import IntendedUse
+
+        # Invalid codes should default to SYNTHESIS
+        assert IntendedUse.get_value_str(999) == "synthesis"
+        assert IntendedUse.get_value_str(0) == "synthesis"

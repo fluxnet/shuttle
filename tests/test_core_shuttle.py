@@ -72,6 +72,7 @@ class MockSuccessPlugin:
                 product_id="test-id",
                 oneflux_code_version="v1",
                 product_source_network="SUCCESS",
+                fluxnet_product_name="SUCCESS_US-SUCCESS_FLUXNET_2019-2020_v1_r0.zip",
             )
 
             yield FluxnetDatasetMetadata(site_info=site_info, product_data=product_data)

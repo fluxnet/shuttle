@@ -15,12 +15,12 @@ This module provides decorators for converting between sync and async operations
 
 import asyncio
 import functools
-from typing import TypeVar
+from typing import Any, Callable, Generator, TypeVar
 
 T = TypeVar("T")
 
 
-def async_to_sync(func):
+def async_to_sync(func: Callable[..., Any]) -> Callable[..., Any]:
     """
     Decorator: If there is no event loop, run synchronously
     """
@@ -32,7 +32,7 @@ def async_to_sync(func):
         )
 
     @functools.wraps(func)
-    def function_wrapper(*args, **kwargs):
+    def function_wrapper(*args: Any, **kwargs: Any) -> Any:
 
         loop = asyncio.get_event_loop()
         if loop.is_running():
@@ -52,7 +52,7 @@ def async_to_sync(func):
     return function_wrapper
 
 
-def async_to_sync_generator(func):
+def async_to_sync_generator(func: Callable[..., Any]) -> Callable[..., Any]:
     """
     Decorator that enables both async and sync usage of async generator methods.
 
@@ -65,12 +65,12 @@ def async_to_sync_generator(func):
     """
 
     @functools.wraps(func)
-    def wrapper(self, *args, **kwargs):
+    def wrapper(self: Any, *args: Any, **kwargs: Any) -> "_HybridAsyncSyncIterator":
         """Wrapper that returns a hybrid iterator object."""
         return _HybridAsyncSyncIterator(func, self, *args, **kwargs)
 
     # Store reference to original function for direct access
-    wrapper._original_async_func = func
+    setattr(wrapper, "_original_async_func", func)
 
     return wrapper
 
@@ -80,37 +80,40 @@ class _HybridAsyncSyncIterator:
     A hybrid iterator that can work both as async and sync iterator.
     """
 
-    def __init__(self, async_func, *args, **kwargs):
+    def __init__(self, async_func: Callable[..., Any], *args: Any, **kwargs: Any) -> None:
         self._async_func = async_func
         self._args = args
         self._kwargs = kwargs
-        self._async_gen = None
-        self._sync_gen = None
+        self._async_gen: Any = None
+        self._sync_gen: Any = None
 
-    def __aiter__(self):
+    def __aiter__(self) -> "_HybridAsyncSyncIterator":
         """Return self for async iteration."""
         return self
 
-    async def __anext__(self):
+    async def __anext__(self) -> Any:
         """Async next method."""
         if self._async_gen is None:
             # Call the original async function directly to get the actual async generator
             self._async_gen = self._async_func(*self._args, **self._kwargs)
         return await self._async_gen.__anext__()
 
-    def __iter__(self):
+    def __iter__(self) -> "_HybridAsyncSyncIterator":
         """Return iterator for sync iteration."""
         if self._sync_gen is None:
             self._sync_gen = _sync_generator_wrapper(self._async_func, *self._args, **self._kwargs)
-        return self._sync_gen
+        return self
 
-    def __next__(self):
+    def __next__(self) -> Any:
         """Sync next method."""
-        # Delegate to the sync generator's next method, No use cases for coverage yet.
-        return next(self.__iter__())  # pragma: no cover
+        # Ensure the sync generator is initialized
+        if self._sync_gen is None:  # pragma: no cover
+            self._sync_gen = _sync_generator_wrapper(self._async_func, *self._args, **self._kwargs)
+        # Delegate to the sync generator's next method
+        return next(self._sync_gen)  # pragma: no cover
 
 
-def _sync_generator_wrapper(async_func, *args, **kwargs):
+def _sync_generator_wrapper(async_func: Callable[..., Any], *args: Any, **kwargs: Any) -> Generator[Any, None, None]:
     """Convert async generator to sync generator."""
     # Create a new event loop for this sync call
     loop = asyncio.get_event_loop()

@@ -14,7 +14,7 @@ HTTP utilities for making API requests and handling responses
 
 import logging
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
+from typing import Any, AsyncGenerator
 
 import aiohttp
 
@@ -54,7 +54,7 @@ async def get_session() -> AsyncGenerator[aiohttp.ClientSession, None]:
 async def session_request(
     method: str,
     url: str,
-    **kwargs,
+    **kwargs: Any,
 ) -> AsyncGenerator[aiohttp.ClientResponse, None]:
     """
     Make an HTTP request using the provided aiohttp ClientSession.

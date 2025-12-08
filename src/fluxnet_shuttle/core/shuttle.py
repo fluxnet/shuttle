@@ -22,6 +22,7 @@ from fluxnet_shuttle.core.decorators import async_to_sync_generator
 from fluxnet_shuttle.core.registry import ErrorCollectingIterator, registry
 
 from ..models import ErrorSummary, FluxnetDatasetMetadata
+from .base import DataHubPlugin
 from .config import ShuttleConfig
 
 logger = logging.getLogger(__name__)
@@ -57,7 +58,7 @@ class FluxnetShuttle:
         logger.info(f"Initialized FluxnetShuttle with data hubs: {self.data_hubs}")
 
     @async_to_sync_generator
-    async def get_all_sites(self, **filters) -> AsyncGenerator[FluxnetDatasetMetadata, None]:
+    async def get_all_sites(self, **filters: Any) -> AsyncGenerator[FluxnetDatasetMetadata, None]:
         """
         Get sites from all enabled data hubs.
 
@@ -126,7 +127,7 @@ class FluxnetShuttle:
 
         return plugins
 
-    def _get_plugin_instance(self, data_hub_name: str):
+    def _get_plugin_instance(self, data_hub_name: str) -> DataHubPlugin:
         """
         Get a plugin instance for the specified data hub.
 

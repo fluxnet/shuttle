@@ -138,7 +138,7 @@ class DataHubPlugin(ABC):
 
     @async_to_sync_generator
     @abstractmethod
-    async def get_sites(self, **filters) -> AsyncGenerator[FluxnetDatasetMetadata, None]:
+    async def get_sites(self, **filters: Any) -> AsyncGenerator[FluxnetDatasetMetadata, None]:
         """
         Get available sites from the data hub.
 
@@ -166,7 +166,44 @@ class DataHubPlugin(ABC):
         pass
 
     @asynccontextmanager
-    async def _session_request(self, method: str, url: str, **kwargs) -> AsyncGenerator[aiohttp.ClientResponse, None]:
+    async def download_file(
+        self,
+        site_id: str,
+        download_link: str,
+        **kwargs: Any,
+    ) -> AsyncGenerator[aiohttp.StreamReader, None]:
+        """
+        Download a file from the data hub and return the content stream reader.
+
+        This method provides a default implementation that performs a simple GET request.
+        Plugins can override this method to implement custom download logic, such as
+        user tracking (AmeriFlux) or header validation (ICOS).
+
+        Args:
+            site_id: Site identifier
+            download_link: URL to download the data from
+            **kwargs: Additional plugin-specific parameters (e.g., filename, user_name, user_email for tracking)
+
+        Yields:
+            aiohttp.StreamReader: Content stream reader to read file data from
+
+        Raises:
+            PluginError: If download fails
+
+        Example:
+            >>> plugin = SomeDataHubPlugin()
+            >>> async with plugin.download_file("US-Ha1", "https://...", filename="file.zip") as stream:
+            ...     async for chunk in stream.iter_chunked(8192):
+            ...         process(chunk)
+        """
+        # Default implementation: simple GET request
+        async with self._session_request("GET", download_link) as response:
+            yield response.content
+
+    @asynccontextmanager
+    async def _session_request(
+        self, method: str, url: str, **kwargs: Any
+    ) -> AsyncGenerator[aiohttp.ClientResponse, None]:
         """
         Make an HTTP request using an aiohttp ClientSession.
 

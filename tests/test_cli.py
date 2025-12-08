@@ -251,6 +251,7 @@ class TestCLIFunctions:
                 sites=["US-Ha1", "US-MMS"],
                 snapshot_file=csv_file,
                 output_dir=".",
+                quiet=True,  # Skip user info prompts for tests
                 logfile="test.log",
                 no_logfile=False,
                 verbose=False,
@@ -258,12 +259,18 @@ class TestCLIFunctions:
 
             cmd_download(args)
 
-            # Verify download was called with correct sites
+            # Verify download was called with correct sites and user_info
             mock_download.assert_called_once()
             call_args = mock_download.call_args
             sites = call_args[1]["site_ids"]  # keyword argument
             assert "US-Ha1" in sites
             assert "US-MMS" in sites
+            # Verify user_info is passed (in quiet mode, should be empty)
+            user_info = call_args[1]["user_info"]
+            assert user_info is not None
+            assert "ameriflux" in user_info
+            # In quiet mode with no user input, ameriflux dict is empty
+            assert user_info["ameriflux"] == {}
 
         finally:
             os.unlink(csv_file)
@@ -612,3 +619,108 @@ class TestCLIFunctions:
         # Restore original module
         if original_module:
             sys.modules["fluxnet_shuttle.main"] = original_module
+
+    @patch("builtins.input")
+    def test_prompt_user_info_with_all_inputs(self, mock_input):
+        """Test _prompt_user_info when user provides all information."""
+        from fluxnet_shuttle.main import _prompt_user_info
+
+        # Mock user inputs in sequence
+        mock_input.side_effect = ["John Doe", "john@example.com", "2", "Testing the download system"]
+
+        result = _prompt_user_info(quiet=False)
+
+        assert result["ameriflux"]["user_name"] == "John Doe"
+        assert result["ameriflux"]["user_email"] == "john@example.com"
+        assert result["ameriflux"]["intended_use"] == 2  # Model
+        assert result["ameriflux"]["description"] == "Testing the download system"
+
+    @patch("builtins.input")
+    def test_prompt_user_info_with_empty_inputs(self, mock_input):
+        """Test _prompt_user_info when user skips all prompts."""
+        from fluxnet_shuttle.main import _prompt_user_info
+
+        # Mock user pressing Enter for all inputs
+        mock_input.side_effect = ["", "", "", ""]
+
+        result = _prompt_user_info(quiet=False)
+
+        # Should return empty dict when no info provided
+        assert result == {"ameriflux": {}}
+        assert "user_name" not in result["ameriflux"]
+        assert "user_email" not in result["ameriflux"]
+        assert "intended_use" not in result["ameriflux"]
+        assert "description" not in result["ameriflux"]
+
+    @patch("builtins.input")
+    def test_prompt_user_info_with_invalid_intended_use(self, mock_input):
+        """Test _prompt_user_info with invalid intended_use input."""
+        from fluxnet_shuttle.main import _prompt_user_info
+
+        # Mock invalid input followed by valid inputs
+        mock_input.side_effect = ["Test User", "test@example.com", "invalid", "Test description"]
+
+        result = _prompt_user_info(quiet=False)
+
+        # Invalid intended_use is not added to result
+        assert result["ameriflux"]["user_name"] == "Test User"
+        assert "intended_use" not in result["ameriflux"]
+        assert result["ameriflux"]["description"] == "Test description"
+
+    @patch("builtins.input")
+    def test_prompt_user_info_with_out_of_range_intended_use(self, mock_input):
+        """Test _prompt_user_info with out-of-range intended_use."""
+        from fluxnet_shuttle.main import _prompt_user_info
+
+        # Mock out-of-range input
+        mock_input.side_effect = ["User", "user@example.com", "99", "Description"]
+
+        result = _prompt_user_info(quiet=False)
+
+        # Out-of-range intended_use is not added to result
+        assert result["ameriflux"]["user_name"] == "User"
+        assert "intended_use" not in result["ameriflux"]
+
+    def test_prompt_user_info_quiet_mode(self):
+        """Test _prompt_user_info in quiet mode (no prompts)."""
+        from fluxnet_shuttle.main import _prompt_user_info
+
+        result = _prompt_user_info(quiet=True)
+
+        # Should return empty dict without prompting
+        assert result == {"ameriflux": {}}
+        assert "user_name" not in result["ameriflux"]
+        assert "user_email" not in result["ameriflux"]
+        assert "intended_use" not in result["ameriflux"]
+        assert "description" not in result["ameriflux"]
+
+    @patch("builtins.input")
+    def test_prompt_user_info_partial_inputs(self, mock_input):
+        """Test _prompt_user_info with some fields filled, some empty."""
+        from fluxnet_shuttle.main import _prompt_user_info
+
+        # User provides name and email but skips intended_use and description
+        mock_input.side_effect = ["Jane Smith", "jane@example.com", "", ""]
+
+        result = _prompt_user_info(quiet=False)
+
+        assert result["ameriflux"]["user_name"] == "Jane Smith"
+        assert result["ameriflux"]["user_email"] == "jane@example.com"
+        # Empty fields are not included
+        assert "intended_use" not in result["ameriflux"]
+        assert "description" not in result["ameriflux"]
+
+    @patch("builtins.input")
+    def test_prompt_user_info_with_whitespace(self, mock_input):
+        """Test _prompt_user_info strips whitespace from inputs."""
+        from fluxnet_shuttle.main import _prompt_user_info
+
+        # Mock inputs with extra whitespace
+        mock_input.side_effect = ["  John Doe  ", "  john@example.com  ", "1", "  Test  "]
+
+        result = _prompt_user_info(quiet=False)
+
+        # Should strip whitespace
+        assert result["ameriflux"]["user_name"] == "John Doe"
+        assert result["ameriflux"]["user_email"] == "john@example.com"
+        assert result["ameriflux"]["description"] == "Test"
