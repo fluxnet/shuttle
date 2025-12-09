@@ -15,5 +15,6 @@ FLUXNET data sources.
 # Import plugins to trigger auto-registration
 from .ameriflux import AmeriFluxPlugin  # noqa: F401
 from .icos import ICOSPlugin  # noqa: F401
+from .tern import TERNPlugin  # noqa: F401
 
-__all__ = ["AmeriFluxPlugin", "ICOSPlugin"]
+__all__ = ["AmeriFluxPlugin", "ICOSPlugin", "TERNPlugin"]

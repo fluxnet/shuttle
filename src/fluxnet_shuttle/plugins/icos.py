@@ -272,7 +272,8 @@ class ICOSPlugin(DataHubPlugin):
                 download_id = dobj_uri.split("/")[-1]
                 download_link = f"https://data.icos-cp.eu/licence_accept?ids=%5B%22{download_id}%22%5D"
                 # Extract both product source network and code version from filename in one pass
-                product_source_network, oneflux_code_version = extract_fluxnet_filename_metadata(filename)
+                # Note: We ignore the year range and run here since ICOS provides years via the SPARQL API
+                product_source_network, oneflux_code_version, _, _, _ = extract_fluxnet_filename_metadata(filename)
                 citation = site_data["citation"]
 
                 # Skip site if citation is not available

@@ -235,9 +235,10 @@ class TestShuttleConfig:
         """Test creating default configuration."""
         config = ShuttleConfig._create_default_config()
 
-        assert config.parallel_requests == 2
+        assert config.parallel_requests == 3  # Hardcoded default
         assert "ameriflux" in config.data_hubs
         assert "icos" in config.data_hubs
+        assert "tern" in config.data_hubs
 
     def test_data_hub_config_creation(self):
         """Test creating DataHubConfig."""
@@ -250,9 +251,10 @@ class TestShuttleConfig:
         config_path = tmp_path / "nonexistent.yaml"
         config = ShuttleConfig.load_from_file(config_path)
 
-        assert config.parallel_requests == 2
+        assert config.parallel_requests == 3
         assert "ameriflux" in config.data_hubs
         assert "icos" in config.data_hubs
+        assert "tern" in config.data_hubs
 
     def test_load_from_file_invalid_yaml(self, tmp_path):
         """Test loading config from an invalid YAML file falls back to defaults."""
@@ -261,9 +263,10 @@ class TestShuttleConfig:
 
         config = ShuttleConfig.load_from_file(config_path)
 
-        assert config.parallel_requests == 2
+        assert config.parallel_requests == 3
         assert "ameriflux" in config.data_hubs
         assert "icos" in config.data_hubs
+        assert "tern" in config.data_hubs
 
     def test_load_from_file_valid_yaml(self, tmp_path):
         """Test loading config from a valid YAML file."""
@@ -276,17 +279,17 @@ class TestShuttleConfig:
                 enabled: true
               icos:
                 enabled: true
-              fluxnet2015:
-                enabled: false
+              tern:
+                enabled: true
             """
         )
 
         config = ShuttleConfig.load_from_file(config_path)
 
-        assert config.parallel_requests == 3
+        assert config.parallel_requests == 3  # Loaded from the YAML file
         assert "ameriflux" in config.data_hubs
         assert "icos" in config.data_hubs
-        assert "fluxnet2015" in config.data_hubs
+        assert "tern" in config.data_hubs
 
 
 class TestExceptions:

@@ -58,44 +58,73 @@ class TestExtractFluxnetFilenameMetadata:
     """Test cases for the extract_fluxnet_filename_metadata function (combined extraction)."""
 
     def test_valid_amf_filename(self):
-        """Test extracting both metadata from AmeriFlux filename."""
+        """Test extracting metadata from AmeriFlux filename."""
         filename = "AMF_US-Ha1_FLUXNET_2005-2012_v3_r7.zip"
-        source_network, version = extract_fluxnet_filename_metadata(filename)
+        source_network, version, first_year, last_year, run = extract_fluxnet_filename_metadata(filename)
         assert source_network == "AMF"
         assert version == "v3"
+        assert first_year == 2005
+        assert last_year == 2012
+        assert run == "r7"
 
     def test_valid_icosetc_filename(self):
-        """Test extracting both metadata from ICOS filename."""
+        """Test extracting metadata from ICOS filename."""
         filename = "ICOSETC_BE-Bra_FLUXNET_2020-2024_v1.4_r1.zip"
-        source_network, version = extract_fluxnet_filename_metadata(filename)
+        source_network, version, first_year, last_year, run = extract_fluxnet_filename_metadata(filename)
         assert source_network == "ICOSETC"
         assert version == "v1.4"
+        assert first_year == 2020
+        assert last_year == 2024
+        assert run == "r1"
 
     def test_valid_filename_with_url(self):
-        """Test extracting both metadata from full URL."""
+        """Test extracting metadata from full URL."""
         url = "https://example.com/AMF_AR-Bal_FLUXNET_2012-2013_v3_r7.zip"
-        source_network, version = extract_fluxnet_filename_metadata(url)
+        source_network, version, first_year, last_year, run = extract_fluxnet_filename_metadata(url)
         assert source_network == "AMF"
         assert version == "v3"
+        assert first_year == 2012
+        assert last_year == 2013
+        assert run == "r7"
 
     def test_invalid_filename_format(self):
         """Test with filename that doesn't match pattern."""
         filename = "invalid_filename.zip"
-        source_network, version = extract_fluxnet_filename_metadata(filename)
+        source_network, version, first_year, last_year, run = extract_fluxnet_filename_metadata(filename)
         assert source_network == ""
         assert version == ""
+        assert first_year == 0
+        assert last_year == 0
+        assert run == ""
 
     def test_empty_filename(self):
         """Test with empty filename."""
-        source_network, version = extract_fluxnet_filename_metadata("")
+        source_network, version, first_year, last_year, run = extract_fluxnet_filename_metadata("")
         assert source_network == ""
         assert version == ""
+        assert first_year == 0
+        assert last_year == 0
+        assert run == ""
 
     def test_none_filename(self):
         """Test with None filename."""
-        source_network, version = extract_fluxnet_filename_metadata(None)
+        source_network, version, first_year, last_year, run = extract_fluxnet_filename_metadata(None)
         assert source_network == ""
         assert version == ""
+        assert first_year == 0
+        assert last_year == 0
+        assert run == ""
+
+    def test_filename_with_rbeta_run_number(self):
+        """Test that filename with 'rbeta' as run number fails validation."""
+        filename = "TERN_AU-Lox_FLUXNET_2008-2020_v1.3_rbeta.zip"
+        source_network, version, first_year, last_year, run = extract_fluxnet_filename_metadata(filename)
+        # Should return empty strings because 'rbeta' doesn't match the pattern (r\d+)
+        assert source_network == ""
+        assert version == ""
+        assert first_year == 0
+        assert last_year == 0
+        assert run == ""
 
 
 class TestValidateFluxnetFilenameFormat:
@@ -128,6 +157,11 @@ class TestValidateFluxnetFilenameFormat:
     def test_partial_format(self):
         """Test filename with partial format."""
         filename = "US-Ha1_FLUXNET_2005-2012.zip"
+        assert validate_fluxnet_filename_format(filename) is False
+
+    def test_rbeta_run_number_invalid(self):
+        """Test that filename with 'rbeta' as run number is invalid."""
+        filename = "TERN_AU-Lox_FLUXNET_2008-2020_v1.3_rbeta.zip"
         assert validate_fluxnet_filename_format(filename) is False
 
 
