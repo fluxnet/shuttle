@@ -39,7 +39,7 @@ class ShuttleConfig:
     """Main shuttle configuration."""
 
     data_hubs: Dict[str, DataHubConfig] = field(default_factory=dict)
-    parallel_requests: int = 2
+    parallel_requests: int = 3
 
     @classmethod
     def load_default(cls) -> "ShuttleConfig":
@@ -127,11 +127,11 @@ class ShuttleConfig:
     def _get_hardcoded_defaults(cls) -> Dict[str, Any]:
         """Get hardcoded default configuration."""
         return {
-            "parallel_requests": 2,
+            "parallel_requests": 3,
             "data_hubs": {
                 "ameriflux": {"enabled": True},
                 "icos": {"enabled": True},
-                "fluxnet2015": {"enabled": False},
+                "tern": {"enabled": True},
             },
         }
 

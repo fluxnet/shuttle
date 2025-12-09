@@ -2,7 +2,7 @@
 # ====================================
 
 # Global settings
-parallel_requests: 2
+parallel_requests: 3
 
 # Data hub-specific configurations
 data_hubs:
@@ -10,4 +10,7 @@ data_hubs:
     enabled: true
 
   icos:
+    enabled: true
+
+  tern:
     enabled: true

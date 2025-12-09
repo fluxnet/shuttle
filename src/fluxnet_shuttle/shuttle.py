@@ -87,9 +87,9 @@ def _extract_filename_from_url(url: str) -> str:
     return filename
 
 
-def extract_fluxnet_filename_metadata(filename: str) -> tuple[str, str]:
+def extract_fluxnet_filename_metadata(filename: str) -> tuple[str, str, int, int, str]:
     """
-    Extract both product source network and code version from FLUXNET filename.
+    Extract product source network, code version, year range, and run from FLUXNET filename.
 
     FLUXNET filenames follow the archive format (ZIP):
        <network_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.zip
@@ -98,28 +98,32 @@ def extract_fluxnet_filename_metadata(filename: str) -> tuple[str, str]:
         filename: The filename or URL to extract metadata from
 
     Returns:
-        Tuple of (product_source_network, oneflux_code_version). Returns ("", "") if filename is invalid.
+        Tuple of (product_source_network, oneflux_code_version, first_year, last_year, run).
+        Returns ("", "", 0, 0, "") if filename is invalid.
 
     Examples:
         >>> extract_fluxnet_filename_metadata("AMF_US-Ha1_FLUXNET_1991-2020_v1.2_r2.zip")
-        ('AMF', 'v1.2')
+        ('AMF', 'v1.2', 1991, 2020, 'r2')
         >>> extract_fluxnet_filename_metadata("invalid_filename.zip")
-        ('', '')
+        ('', '', 0, 0, '')
     """
     if not filename:
-        return ("", "")
+        return ("", "", 0, 0, "")
 
     filename_only = _extract_filename_from_url(filename)
 
     # ZIP format: <network_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.zip
     zip_match = re.match(_FLUXNET_ZIP_PATTERN, filename_only, re.IGNORECASE)
     if zip_match:
-        # Extract network_id from group 1 and version from group 5
+        # Extract all metadata from capture groups
         product_source_network = zip_match.group(1)
+        first_year = int(zip_match.group(3))
+        last_year = int(zip_match.group(4))
         oneflux_code_version = zip_match.group(5)
-        return (product_source_network, oneflux_code_version)
+        run = zip_match.group(6)
+        return (product_source_network, oneflux_code_version, first_year, last_year, run)
 
-    return ("", "")
+    return ("", "", 0, 0, "")
 
 
 def validate_fluxnet_filename_format(filename: str) -> bool:

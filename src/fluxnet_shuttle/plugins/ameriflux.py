@@ -379,7 +379,8 @@ class AmeriFluxPlugin(DataHubPlugin):
 
                 # Extract both product source network and code version from download URL in one pass
                 # URL path typically contains the filename at the end
-                product_source_network, oneflux_code_version = extract_fluxnet_filename_metadata(download_link)
+                # Note: We ignore the year range and run here since AmeriFlux provides years via the API
+                product_source_network, oneflux_code_version, _, _, _ = extract_fluxnet_filename_metadata(download_link)
 
                 # Get citation for this site
                 citation = citations.get(site_id, "")
