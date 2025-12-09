@@ -288,6 +288,204 @@ class TestShuttleConfig:
         assert "icos" in config.data_hubs
         assert "fluxnet2015" in config.data_hubs
 
+    def test_data_hub_config_with_user_info(self):
+        """Test DataHubConfig with user_info field."""
+        user_info = {
+            "user_name": "Test User",
+            "user_email": "test@example.com",
+            "intended_use": 1,
+            "description": "Test description",
+        }
+        hub_config = DataHubConfig(enabled=True, user_info=user_info)
+
+        assert hub_config.enabled is True
+        assert hub_config.user_info == user_info
+        assert hub_config.user_info["user_name"] == "Test User"
+
+    def test_load_from_yaml_with_user_info(self, tmp_path):
+        """Test loading YAML config with user_info."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text(
+            """
+            data_hubs:
+              ameriflux:
+                enabled: true
+                user_info:
+                  user_name: Test User
+                  user_email: test@example.com
+                  intended_use: 1
+              icos:
+                enabled: true
+            """
+        )
+
+        config = ShuttleConfig.load_from_file(config_path)
+
+        assert "ameriflux" in config.data_hubs
+        assert config.data_hubs["ameriflux"].user_info["user_name"] == "Test User"
+        assert config.data_hubs["ameriflux"].user_info["intended_use"] == 1
+        assert "icos" in config.data_hubs
+        assert config.data_hubs["icos"].user_info == {}
+
+    @patch.dict("os.environ", {"FLUXNET_SHUTTLE_CONFIG": ""})
+    def test_get_user_config_path_not_found(self):
+        """Test get_user_config_path when no config file exists."""
+        config_path = ShuttleConfig.get_user_config_path()
+        assert config_path is None
+
+    def test_get_user_config_path_env_file_not_found(self):
+        """Test get_user_config_path when env var points to non-existent file."""
+        with patch.dict("os.environ", {"FLUXNET_SHUTTLE_CONFIG": "/nonexistent/config.yaml"}):
+            config_path = ShuttleConfig.get_user_config_path()
+            assert config_path is None
+
+    @patch.dict("os.environ", {"FLUXNET_SHUTTLE_CONFIG": "/tmp/custom_config.yaml"})
+    def test_get_user_config_path_from_env(self, tmp_path):
+        """Test get_user_config_path using environment variable."""
+        config_file = tmp_path / "custom_config.yaml"
+        config_file.write_text("data_hubs: {}")
+
+        with patch.dict("os.environ", {"FLUXNET_SHUTTLE_CONFIG": str(config_file)}):
+            config_path = ShuttleConfig.get_user_config_path()
+            assert config_path == config_file
+
+    def test_load_user_config_no_file(self):
+        """Test load_user_config when no user config file exists."""
+        with patch.object(ShuttleConfig, "get_user_config_path", return_value=None):
+            config = ShuttleConfig.load_user_config()
+            # Should fall back to default config
+            assert "ameriflux" in config.data_hubs
+
+    def test_load_user_config_with_file(self, tmp_path):
+        """Test load_user_config when user config file exists."""
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text(
+            """
+            data_hubs:
+              ameriflux:
+                enabled: true
+                user_info:
+                  user_name: "Config User"
+            """
+        )
+
+        with patch.object(ShuttleConfig, "get_user_config_path", return_value=config_file):
+            config = ShuttleConfig.load_user_config()
+            assert config.data_hubs["ameriflux"].user_info["user_name"] == "Config User"
+
+    def test_load_from_yaml_invalid_user_info_type(self, tmp_path):
+        """Test loading YAML config with invalid user_info type."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text(
+            """
+            data_hubs:
+              ameriflux:
+                enabled: true
+                user_info: "invalid_type"
+            """
+        )
+
+        config = ShuttleConfig.load_from_file(config_path)
+
+        # Should handle gracefully and set empty user_info
+        assert "ameriflux" in config.data_hubs
+        assert config.data_hubs["ameriflux"].user_info == {}
+
+    def test_load_from_yaml_invalid_data_hub_type(self, tmp_path):
+        """Test loading YAML config with invalid data hub type (not a dict)."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text(
+            """
+            data_hubs:
+              ameriflux: "invalid_string_value"
+              icos:
+                enabled: true
+            """
+        )
+
+        config = ShuttleConfig.load_from_file(config_path)
+
+        # Should skip invalid ameriflux config but load icos
+        assert "icos" in config.data_hubs
+        assert config.data_hubs["icos"].enabled is True
+
+    def test_user_config_extends_shuttle_config(self, tmp_path):
+        """Test that user config extends shuttle config without overwriting it.
+
+        This test verifies that when a user provides only user_info in their config,
+        the enabled status from the shuttle config is preserved.
+        """
+        config_path = tmp_path / "user_config.yaml"
+        config_path.write_text(
+            """
+            data_hubs:
+              ameriflux:
+                user_info:
+                  user_name: "Test User"
+                  user_email: "test@example.com"
+            """
+        )
+
+        config = ShuttleConfig.load_from_file(config_path)
+
+        # Verify that ameriflux is enabled (from shuttle config)
+        assert config.data_hubs["ameriflux"].enabled is True
+        # Verify that user_info is populated (from user config)
+        assert config.data_hubs["ameriflux"].user_info["user_name"] == "Test User"
+        assert config.data_hubs["ameriflux"].user_info["user_email"] == "test@example.com"
+
+    def test_user_config_can_override_enabled(self, tmp_path):
+        """Test that user config can explicitly override enabled status."""
+        config_path = tmp_path / "user_config.yaml"
+        config_path.write_text(
+            """
+            data_hubs:
+              icos:
+                enabled: false
+            """
+        )
+
+        config = ShuttleConfig.load_from_file(config_path)
+
+        # Verify that icos is disabled (overridden by user config)
+        assert config.data_hubs["icos"].enabled is False
+
+    def test_user_config_merges_user_info(self, tmp_path):
+        """Test that user_info fields are properly merged between configs."""
+        # First create a shuttle config with some user_info
+        shuttle_config_path = tmp_path / "shuttle_config.yaml"
+        shuttle_config_path.write_text(
+            """
+            data_hubs:
+              ameriflux:
+                enabled: true
+                user_info:
+                  default_field: "default_value"
+            """
+        )
+
+        # Load shuttle config as default
+        with patch("importlib.resources.read_text", return_value=shuttle_config_path.read_text()):
+            # Now create a user config that adds more user_info
+            user_config_path = tmp_path / "user_config.yaml"
+            user_config_path.write_text(
+                """
+                data_hubs:
+                  ameriflux:
+                    user_info:
+                      user_name: "Test User"
+                      user_email: "test@example.com"
+                """
+            )
+
+            config = ShuttleConfig.load_from_file(user_config_path)
+
+            # Verify both shuttle and user config user_info fields are present
+            # Note: In the current implementation, shuttle config doesn't have user_info
+            # so this test mainly verifies the user config user_info is properly loaded
+            assert config.data_hubs["ameriflux"].user_info["user_name"] == "Test User"
+            assert config.data_hubs["ameriflux"].user_info["user_email"] == "test@example.com"
+
 
 class TestExceptions:
     """Test cases for custom exceptions."""

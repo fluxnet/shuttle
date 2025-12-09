@@ -724,3 +724,152 @@ class TestCLIFunctions:
         assert result["ameriflux"]["user_name"] == "John Doe"
         assert result["ameriflux"]["user_email"] == "john@example.com"
         assert result["ameriflux"]["description"] == "Test"
+
+    @patch("builtins.input")
+    def test_prompt_user_info_with_config_defaults(self, mock_input):
+        """Test _prompt_user_info with config defaults - user presses Enter to keep them."""
+        from fluxnet_shuttle.core.config import DataHubConfig, ShuttleConfig
+        from fluxnet_shuttle.main import _prompt_user_info
+
+        config = ShuttleConfig()
+        config.data_hubs["ameriflux"] = DataHubConfig(
+            enabled=True,
+            user_info={
+                "user_name": "Config User",
+                "user_email": "config@example.com",
+                "intended_use": 1,
+                "description": "Config description",
+            },
+        )
+
+        # User presses Enter for all prompts to keep config values
+        mock_input.side_effect = ["", "", "", ""]
+
+        result = _prompt_user_info(quiet=False, config=config)
+
+        # Should keep config values
+        assert result["ameriflux"]["user_name"] == "Config User"
+        assert result["ameriflux"]["user_email"] == "config@example.com"
+        assert result["ameriflux"]["intended_use"] == 1
+        assert result["ameriflux"]["description"] == "Config description"
+
+    @patch("builtins.input")
+    def test_prompt_user_info_override_config_defaults(self, mock_input):
+        """Test _prompt_user_info overriding config defaults with new values."""
+        from fluxnet_shuttle.core.config import DataHubConfig, ShuttleConfig
+        from fluxnet_shuttle.main import _prompt_user_info
+
+        config = ShuttleConfig()
+        config.data_hubs["ameriflux"] = DataHubConfig(
+            enabled=True,
+            user_info={
+                "user_name": "Config User",
+                "user_email": "config@example.com",
+            },
+        )
+
+        # User provides new values to override config
+        mock_input.side_effect = ["New User", "new@example.com", "2", "New description"]
+
+        result = _prompt_user_info(quiet=False, config=config)
+
+        # Should use new values
+        assert result["ameriflux"]["user_name"] == "New User"
+        assert result["ameriflux"]["user_email"] == "new@example.com"
+        assert result["ameriflux"]["intended_use"] == 2
+        assert result["ameriflux"]["description"] == "New description"
+
+    def test_prompt_user_info_with_config_in_quiet_mode(self):
+        """Test _prompt_user_info with config in quiet mode."""
+        from fluxnet_shuttle.core.config import DataHubConfig, ShuttleConfig
+        from fluxnet_shuttle.main import _prompt_user_info
+
+        config = ShuttleConfig()
+        config.data_hubs["ameriflux"] = DataHubConfig(
+            enabled=True,
+            user_info={
+                "user_name": "Config User",
+                "user_email": "config@example.com",
+                "intended_use": 1,
+            },
+        )
+
+        result = _prompt_user_info(quiet=True, config=config)
+
+        # Should use config values without prompting
+        assert result["ameriflux"]["user_name"] == "Config User"
+        assert result["ameriflux"]["user_email"] == "config@example.com"
+        assert result["ameriflux"]["intended_use"] == 1
+
+    @patch("builtins.input")
+    def test_prompt_user_info_partial_config_partial_prompt(self, mock_input):
+        """Test _prompt_user_info with some values in config, some from prompts."""
+        from fluxnet_shuttle.core.config import DataHubConfig, ShuttleConfig
+        from fluxnet_shuttle.main import _prompt_user_info
+
+        config = ShuttleConfig()
+        config.data_hubs["ameriflux"] = DataHubConfig(
+            enabled=True,
+            user_info={
+                "user_name": "Config User",
+            },
+        )
+
+        # User keeps name but adds email and other fields
+        mock_input.side_effect = ["", "new@example.com", "3", "New description"]
+
+        result = _prompt_user_info(quiet=False, config=config)
+
+        # Should have config name and prompted values
+        assert result["ameriflux"]["user_name"] == "Config User"
+        assert result["ameriflux"]["user_email"] == "new@example.com"
+        assert result["ameriflux"]["intended_use"] == 3
+        assert result["ameriflux"]["description"] == "New description"
+
+    @patch("fluxnet_shuttle.main.download")
+    @patch("os.path.exists", return_value=True)
+    def test_cmd_download_with_config_file_arg(self, mock_exists, mock_download, tmp_path):
+        """Test cmd_download with --config argument."""
+        import argparse
+
+        from fluxnet_shuttle.main import cmd_download
+
+        # Create a test config file
+        config_file = tmp_path / "test_config.yaml"
+        config_file.write_text(
+            """
+            data_hubs:
+              ameriflux:
+                enabled: true
+                user_info:
+                  user_name: "Test User"
+                  user_email: "test@example.com"
+            """
+        )
+
+        # Create a test snapshot file with proper columns
+        snapshot_file = tmp_path / "snapshot.csv"
+        snapshot_file.write_text(
+            "site_id,data_hub,download_link,fluxnet_product_name\n"
+            "US-TEST,ameriflux,http://example.com/test.zip,test.zip\n"
+        )
+
+        # Create args with config_file
+        args = argparse.Namespace(
+            snapshot_file=str(snapshot_file),
+            sites=["US-TEST"],
+            output_dir=str(tmp_path),
+            quiet=True,
+            config_file=str(config_file),
+        )
+
+        mock_download.return_value = ["test.zip"]
+
+        result = cmd_download(args)
+
+        assert result == ["test.zip"]
+        # Verify download was called with user_info from config file
+        call_kwargs = mock_download.call_args[1]
+        assert "user_info" in call_kwargs
+        assert call_kwargs["user_info"]["ameriflux"]["user_name"] == "Test User"
+        assert call_kwargs["user_info"]["ameriflux"]["user_email"] == "test@example.com"

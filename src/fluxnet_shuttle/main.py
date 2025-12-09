@@ -46,7 +46,10 @@ import sys
 from datetime import datetime
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+if TYPE_CHECKING:  # pragma: no cover
+    from .core.config import ShuttleConfig
 
 from . import FLUXNETShuttleError
 from .shuttle import download, listall
@@ -138,42 +141,77 @@ def cmd_listall(args: argparse.Namespace) -> Any:
     return csv_filename
 
 
-def _prompt_user_info(quiet: bool) -> Dict[str, Any]:
+def _prompt_user_info(quiet: bool, config: Optional["ShuttleConfig"] = None) -> Dict[str, Any]:  # noqa: C901
     """
-    Prompt user for AmeriFlux tracking information.
+    Prompt user for plugin-specific tracking information.
 
-    :param quiet: If True, skip prompts and return empty user_info
-    :return: Dictionary with user_info for AmeriFlux plugin (only populated fields)
+    If config is provided, use those values as defaults and only prompt
+    for missing fields (unless quiet mode is enabled).
+
+    :param quiet: If True, skip prompts and return config values or empty dict
+    :param config: Optional shuttle config with user_info for plugins
+    :return: Dictionary with user_info for each plugin (e.g., {"ameriflux": {...}})
     """
     log = logging.getLogger(__name__)
 
-    # Start with empty user_info - only populate fields if user provides them
-    user_info: Dict[str, Any] = {"ameriflux": {}}
+    # Build user_info dict from config
+    user_info: Dict[str, Any] = {}
+    if config:
+        for hub_name, hub_config in config.data_hubs.items():
+            if hub_config.user_info:
+                user_info[hub_name] = hub_config.user_info.copy()
+
+    if "ameriflux" not in user_info:
+        user_info["ameriflux"] = {}
 
     if quiet:
-        log.info("Quiet mode enabled - skipping user info prompts")
+        if any(user_info.values()):
+            log.info("Quiet mode enabled - using user info from config file")
+        else:
+            log.info("Quiet mode enabled - skipping user info prompts")
         return user_info
 
-    # Show introductory message
-    print(
-        "\n"
-        "Please enter information about yourself and your plans to use the FLUXNET data at the following prompts.\n"
-        "Providing the information is optional and collected by AmeriFlux to contact you with data updates.\n"
-        "It also is provided to the AmeriFlux site teams to help them maintain research activities.\n"
-        "Press Enter without typing anything to skip each prompt.\n"
-    )
+    # Check if we already have values from config
+    has_config_values = bool(user_info["ameriflux"])
 
-    # Prompt for user name
-    user_name = input("Enter name: ").strip()
+    if has_config_values:
+        print(
+            "\n"
+            "User information found in config file. You can press Enter to use config values,\n"
+            "or provide new values to override the config.\n"
+        )
+    else:
+        # Show introductory message
+        print(
+            "\n"
+            "Please enter information about yourself and your plans to use the FLUXNET data at the following prompts.\n"
+            "Providing the information is optional and collected by AmeriFlux to contact you with data updates.\n"
+            "It also is provided to the AmeriFlux site teams to help them maintain research activities.\n"
+            "Press Enter without typing anything to skip each prompt.\n"
+        )
+
+    # Prompt for user name (show default from config if available)
+    default_name = user_info["ameriflux"].get("user_name", "")
+    prompt_text = f"Enter name [{default_name}]: " if default_name else "Enter name: "
+    user_name = input(prompt_text).strip()
     if user_name:
         user_info["ameriflux"]["user_name"] = user_name
+    elif not default_name:
+        # Remove the key if no value from prompt and no default
+        user_info["ameriflux"].pop("user_name", None)
 
-    # Prompt for user email
-    user_email = input("Enter email: ").strip()
+    # Prompt for user email (show default from config if available)
+    default_email = user_info["ameriflux"].get("user_email", "")
+    prompt_text = f"Enter email [{default_email}]: " if default_email else "Enter email: "
+    user_email = input(prompt_text).strip()
     if user_email:
         user_info["ameriflux"]["user_email"] = user_email
+    elif not default_email:
+        # Remove the key if no value from prompt and no default
+        user_info["ameriflux"].pop("user_email", None)
 
-    # Prompt for intended use
+    # Prompt for intended use (show default from config if available)
+    default_intended_use = user_info["ameriflux"].get("intended_use", None)
     print(
         "\n"
         "Intended use:\n"
@@ -184,7 +222,10 @@ def _prompt_user_info(quiet: bool) -> Dict[str, Any]:
         "  5. Education\n"
         "  6. Other\n"
     )
-    intended_use_input = input("Enter intended use (1-6): ").strip()
+    prompt_text = (
+        f"Enter intended use (1-6) [{default_intended_use}]: " if default_intended_use else "Enter intended use (1-6): "
+    )
+    intended_use_input = input(prompt_text).strip()
     if intended_use_input:
         try:
             intended_use = int(intended_use_input)
@@ -194,11 +235,23 @@ def _prompt_user_info(quiet: bool) -> Dict[str, Any]:
                 log.warning("Invalid intended use value. Skipping this field.")
         except ValueError:
             log.warning("Invalid intended use value. Skipping this field.")
+    elif not default_intended_use:
+        # Remove the key if no value from prompt and no default
+        user_info["ameriflux"].pop("intended_use", None)
 
-    # Prompt for description
-    description = input("Enter additional information about intended use: ").strip()
+    # Prompt for description (show default from config if available)
+    default_description = user_info["ameriflux"].get("description", "")
+    prompt_text = (
+        f"Enter additional information about intended use [{default_description}]: "
+        if default_description
+        else "Enter additional information about intended use: "
+    )
+    description = input(prompt_text).strip()
     if description:
         user_info["ameriflux"]["description"] = description
+    elif not default_description:
+        # Remove the key if no value from prompt and no default
+        user_info["ameriflux"].pop("description", None)
 
     print()  # Add blank line after prompts
     return user_info
@@ -253,8 +306,20 @@ def cmd_download(args: argparse.Namespace) -> List[str]:
 
     log.debug(f"Running download command with {len(sites)} site IDs: {sites} and snapshot file: {snapshot_file}")
 
-    # Prompt for user info (respects --quiet flag)
-    user_info = _prompt_user_info(quiet)
+    # Load user config to check for user_info
+    from pathlib import Path
+
+    from fluxnet_shuttle.core.config import ShuttleConfig
+
+    # Load config from CLI arg if provided, otherwise use default user config
+    if hasattr(args, "config_file") and args.config_file:
+        config_path = Path(args.config_file)
+        config = ShuttleConfig.load_from_file(config_path)
+    else:
+        config = ShuttleConfig.load_user_config()
+
+    # Prompt for user info (respects --quiet flag and uses config as defaults)
+    user_info = _prompt_user_info(quiet, config=config)
 
     downloaded_files: List[str] = download(
         site_ids=sites,
@@ -309,6 +374,15 @@ def main() -> None:
     parser.add_argument("-v", "--verbose", help="Enable verbose logging", action="store_true", dest="verbose")
 
     parser.add_argument("--no-logfile", help="Disable logging to file", action="store_true", dest="no_logfile")
+
+    parser.add_argument(
+        "-c",
+        "--config",
+        help="Path to config file (can also use $FLUXNET_SHUTTLE_CONFIG environment variable)",
+        type=str,
+        dest="config_file",
+        default=None,
+    )
 
     parser.add_argument("--version", action="version", version=f"fluxnet-shuttle {__version__}")
 
