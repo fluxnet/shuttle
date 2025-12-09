@@ -100,8 +100,9 @@ class FluxnetShuttle:
         Returns:
             ErrorSummary: Pydantic model containing error summary information
         """
-        if self._last_error_collector:
-            return self._last_error_collector.get_error_summary()
+        if self._last_error_collector is not None:
+            summary: ErrorSummary = self._last_error_collector.get_error_summary()
+            return summary
         return ErrorSummary(total_errors=0, total_results=0, errors=[])
 
     def list_available_data_hubs(self) -> List[str]:
@@ -111,7 +112,8 @@ class FluxnetShuttle:
         Returns:
             List of available data hub names
         """
-        return self.registry.list_plugins()
+        plugins: List[str] = self.registry.list_plugins()
+        return plugins
 
     def _get_enabled_plugins(self) -> Dict[str, Any]:
         """
@@ -147,4 +149,5 @@ class FluxnetShuttle:
         if not data_hub_config.enabled:
             raise ValueError(f"Data hub '{data_hub_name}' is disabled.")
 
-        return self.registry.create_instance(data_hub_name, **data_hub_config.__dict__)
+        plugin: DataHubPlugin = self.registry.create_instance(data_hub_name, **data_hub_config.__dict__)
+        return plugin
