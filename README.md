@@ -46,7 +46,6 @@ fluxnet-shuttle listall --verbose
 ```
 - Queries all connected data hubs
 - Creates a timestamped CSV file with metadata and download information
-- Takes 1-2 minutes to complete due to API processing time
 
 #### `download`
 Download data for specific sites:

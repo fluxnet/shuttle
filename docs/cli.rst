@@ -123,8 +123,9 @@ Displays all registered data hub plugins with their display names and identifier
 
     fluxnet-shuttle listdatahubs
     # Output:
-    #   - AmeriFlux (ameriflux)
-    #   - ICOS (icos)
+    #   Available FLUXNET data hub plugins:
+    #       - AmeriFlux (ameriflux)
+    #       - ICOS (icos)
 
 Global Options
 --------------
@@ -134,7 +135,7 @@ All commands support these global options:
 - ``--help, -h``: Show help message and exit
 - ``--version``: Show version and exit
 - ``--verbose, -v``: Enable verbose logging
-- ``--logfile TEXT``: Specify log file path
+- ``--logfile, -l TEXT``: Specify log file path
 - ``--no-logfile``: Disable file logging
 
 Examples Workflow
