@@ -646,26 +646,28 @@ class TestListall:
         assert callable(listall)
 
     @pytest.mark.asyncio
-    @patch("fluxnet_shuttle.shuttle.aiofiles.open")
-    @patch("fluxnet_shuttle.shuttle.csv.DictWriter.writerow", new_callable=AsyncMock)
-    @patch("fluxnet_shuttle.shuttle.csv.DictWriter.writeheader", new_callable=AsyncMock)
     @patch("fluxnet_shuttle.shuttle.datetime")
-    async def test_listall_basic_functionality(self, mock_datetime, mock_write_header, mock_write_row, mock_open):
+    @patch("fluxnet_shuttle.shuttle._write_snapshot_file")
+    async def test_listall_basic_functionality(self, mock_write_snapshot, mock_datetime):
         """Test basic listall functionality without external calls."""
-
         mock_datetime.now.return_value = MagicMock()
         mock_datetime.now.return_value.strftime.return_value = "20251013T075248"
+
+        # Mock _write_snapshot_file to return empty counts
+        async def mock_write():
+            return {}
+
+        mock_write_snapshot.return_value = mock_write()
+
         result = await listall(data_hubs=[])
 
         assert isinstance(result, str)
         assert result.endswith(".csv")
+        assert result == "./fluxnet_shuttle_snapshot_20251013T075248.csv"
 
-        assert mock_open.called
-        assert mock_open.call_count == 1
-        assert mock_write_header.called
-        assert mock_write_header.call_count == 1
-        assert mock_write_header.call_args == call()
-        assert not mock_write_row.called  # No rows should be written when no data hubs are enabled
+        # Verify _write_snapshot_file was called
+        assert mock_write_snapshot.called
+        assert mock_write_snapshot.call_count == 1
 
     @pytest.mark.asyncio
     @patch("fluxnet_shuttle.shuttle.aiofiles.open")
