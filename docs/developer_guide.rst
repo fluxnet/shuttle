@@ -89,7 +89,7 @@ You can also work with individual data hub plugins directly:
 
     # List all available plugins
     plugin_names = registry.list_plugins()
-    print(f"Available plugins: {plugin_names}")  # ['ameriflux', 'icos',...]
+    print(f"Available plugins: {plugin_names}")  # ['ameriflux', 'icos', 'tern']
 
     # Create a plugin instance
     ameriflux = registry.create_instance("ameriflux")
