@@ -126,6 +126,7 @@ Displays all registered data hub plugins with their display names and identifier
     #   Available FLUXNET data hub plugins:
     #       - AmeriFlux (ameriflux)
     #       - ICOS (icos)
+    #       - TERN (tern)
 
 Global Options
 --------------

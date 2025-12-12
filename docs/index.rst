@@ -4,7 +4,7 @@ FLUXNET Shuttle Library Documentation
 Welcome to FLUXNET Shuttle Library's documentation!
 
 FLUXNET Shuttle Library is a Python library for discovering and downloading global
-FLUXNET data from data hubs including AmeriFlux, ICOS, and TERN (coming soon!).
+FLUXNET data from data hubs including AmeriFlux, ICOS, and TERN.
 
 The data hubs provide FLUXNET data organized and coordinated by many regional networks, including
 AmeriFlux, AsiaFlux, ChinaFlux, JapanFlux, KoFlux, ICOS, European Flux database, OzFlux, TERN, and SAEON.
@@ -12,7 +12,7 @@ AmeriFlux, AsiaFlux, ChinaFlux, JapanFlux, KoFlux, ICOS, European Flux database,
 Features
 --------
 
-- **Data Download**: Download FLUXNET data from AmeriFlux and ICOS data hubs
+- **Data Download**: Download FLUXNET data from AmeriFlux, ICOS, and TERN data hubs
 - **Metadata Snapshot**: List metadata for FLUXNET data available via the data hubs
 - **Command Line Interface**: Easy-to-use CLI tool ``fluxnet-shuttle`` for common operations
 - **Comprehensive Logging**: Configurable logging with multiple outputs

@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/AMF-FLX/fluxnet-shuttle-lib/actions/workflows/python-ci.yml/badge.svg)
 
-A Python library for FLUXNET shuttle to discover and download global FLUXNET data from multiple data hubs, including AmeriFlux and ICOS.
+A Python library for FLUXNET shuttle to discover and download global FLUXNET data from multiple data hubs, including AmeriFlux, ICOS, and TERN.
 
 ## Features
 - **Data Download**: Download FLUXNET data from data hubs
