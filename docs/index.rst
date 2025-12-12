@@ -27,9 +27,13 @@ See the data use license document contained within the FLUXNET data product (arc
 Installation
 ------------
 
-From PyPI (for released versions)::
+From PyPI::
 
-    pip install fluxnet-shuttle
+    Coming soon!
+
+From GitHub using pip::
+
+    pip install git+https://github.com/fluxnet/shuttle.git
 
 For Development::
 

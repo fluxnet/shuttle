@@ -22,9 +22,11 @@ This library supports Python 3.11, 3.12, and 3.13. Python 3.9 and 3.10 should wo
 
 ## Installation
 
-### From PyPI (for released versions)
+### From PyPI (coming soon!)
+
+### From GitHub using pip
 ```bash
-pip install fluxnet-shuttle
+pip install git+https://github.com/fluxnet/shuttle.git
 ```
 
 ## Example Jupyter Notebooks
@@ -76,8 +78,8 @@ fluxnet-shuttle listall --verbose
 
 # Step 2: Download specific sites
 fluxnet-shuttle download \
-  -r data_availability_20251006T155754.csv \
-  -s US-ARc IT-Niv \
+  -r fluxnet_shuttle_snapshot__20251006T155754.csv \
+  -s PE-QFR IT-Niv \
   --verbose
 ```
 
@@ -89,11 +91,6 @@ git clone https://github.com/AMF-FLX/fluxnet-shuttle-lib.git
 cd fluxnet-shuttle-lib
 pip install -e .[dev,docs]
 ```
-
-### Installation for all Optional Dependencies
-To install all optional dependencies at once:
-```bash
-pip install fluxnet-shuttle[dev,docs]
 
 # Run examples tests
 pytest -m examples
