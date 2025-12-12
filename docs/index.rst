@@ -37,10 +37,6 @@ For Development::
     cd fluxnet-shuttle-lib
     pip install -e .[dev,docs]
 
-For Running Example Notebooks::
-
-    pip install fluxnet-shuttle[examples]
-
 Supported python versions: 3.11, 3.12, 3.13 (3.9, 3.10 may work but are not officially supported; <3.9 not allowed.)
 
 Quick Start

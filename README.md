@@ -27,11 +27,8 @@ This library supports Python 3.11, 3.12, and 3.13. Python 3.9 and 3.10 should wo
 pip install fluxnet-shuttle
 ```
 
-### For Running Example Notebooks
-To run the example Jupyter notebooks with data analysis and plotting:
-```bash
-pip install fluxnet-shuttle[examples]
-```
+## Example Jupyter Notebooks
+Example Jupyter notebooks with data analysis and plotting are **coming soon**.
 
 ## Command Line Interface (CLI)
 
@@ -93,23 +90,10 @@ cd fluxnet-shuttle-lib
 pip install -e .[dev,docs]
 ```
 
-### Installation for Testing Notebooks
-To run the notebook validation tests:
-```bash
-pip install fluxnet-shuttle[test-notebooks]
-```
-
 ### Installation for all Optional Dependencies
 To install all optional dependencies at once:
 ```bash
-pip install fluxnet-shuttle[dev,docs,examples,test-notebooks]
-```
-
-### Example/Notebook Tests
-Validate documentation examples and Jupyter notebooks:
-```bash
-# Install test dependencies first
-pip install .[test-notebooks]
+pip install fluxnet-shuttle[dev,docs]
 
 # Run examples tests
 pytest -m examples
