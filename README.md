@@ -41,7 +41,7 @@ The library includes a command-line tool `fluxnet-shuttle` that provides easy ac
 #### `listall`
 Discover all available FLUXNET data products and their metadata:
 ```bash
-fluxnet-shuttle listall --verbose
+fluxnet-shuttle --verbose listall
 ```
 - Queries all connected data hubs
 - Creates a timestamped CSV file with metadata and download information
@@ -67,20 +67,20 @@ fluxnet-shuttle download -f fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv --quiet
 - `-v/--verbose`: Enable detailed logging output
 - `-l/--logfile`: Specify log file path (default: `fluxnet-shuttle-run.log`)
 - `--no-logfile`: Disable file logging, output only to console
-- `--quiet/-q`: Skip prompts to enter optional user information and confirmation prompt when downloading all sites from a snapshot file. 
+- `--quiet/-q`: Skip prompts to enter optional user information and confirmation prompt when downloading all sites from a snapshot file.
 - `--version`: Show version information
 - `--help/-h`: Get help and see all options
 
 ### Example Workflow
 ```bash
 # Step 1: Discover available data
-fluxnet-shuttle listall --verbose
+fluxnet-shuttle --verbose listall
 
 # Step 2: Download specific sites
-fluxnet-shuttle download \
+fluxnet-shuttle --verbose download \
   -r fluxnet_shuttle_snapshot__20251006T155754.csv \
   -s PE-QFR IT-Niv \
-  --verbose
+
 ```
 
 ## Development
