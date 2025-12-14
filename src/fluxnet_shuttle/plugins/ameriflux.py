@@ -357,7 +357,7 @@ class AmeriFluxPlugin(DataHubPlugin):
 
                 # Validate filename format
                 if not validate_fluxnet_filename_format(download_link):
-                    logger.info(
+                    logger.debug(
                         f"Skipping site {site_id} - filename does not follow standard format "
                         f"(<network_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.<extension>): "
                         f"{download_link}"
