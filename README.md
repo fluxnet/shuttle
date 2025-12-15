@@ -88,7 +88,7 @@ fluxnet-shuttle --verbose download \
 ### Installation for development
 ```bash
 git clone https://github.com/fluxnet/shuttle.git
-cd fluxnet-shuttle-lib
+cd shuttle
 pip install -e .[dev,docs]
 ```
 
