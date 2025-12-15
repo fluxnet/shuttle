@@ -1,6 +1,6 @@
 # FLUXNET Shuttle Library
 
-![CI](https://github.com/AMF-FLX/fluxnet-shuttle-lib/actions/workflows/python-ci.yml/badge.svg)
+![CI](https://github.com/fluxnet/shuttle/actions/workflows/python-ci.yml/badge.svg)
 
 A Python library for FLUXNET shuttle to discover and download global FLUXNET data from multiple data hubs, including AmeriFlux, ICOS, and TERN.
 
@@ -87,7 +87,7 @@ fluxnet-shuttle --verbose download \
 
 ### Installation for development
 ```bash
-git clone https://github.com/AMF-FLX/fluxnet-shuttle-lib.git
+git clone https://github.com/fluxnet/shuttle.git
 cd fluxnet-shuttle-lib
 pip install -e .[dev,docs]
 ```

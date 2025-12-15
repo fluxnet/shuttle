@@ -37,7 +37,7 @@ From GitHub using pip::
 
 For Development::
 
-    git clone https://github.com/AMF-FLX/fluxnet-shuttle-lib.git
+    git clone https://github.com/fluxnet/shuttle.git
     cd fluxnet-shuttle-lib
     pip install -e .[dev,docs]
 
