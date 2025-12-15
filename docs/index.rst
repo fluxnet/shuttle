@@ -38,7 +38,7 @@ From GitHub using pip::
 For Development::
 
     git clone https://github.com/fluxnet/shuttle.git
-    cd fluxnet-shuttle-lib
+    cd shuttle
     pip install -e .[dev,docs]
 
 Supported python versions: 3.11, 3.12, 3.13 (3.9, 3.10 may work but are not officially supported; <3.9 not allowed.)

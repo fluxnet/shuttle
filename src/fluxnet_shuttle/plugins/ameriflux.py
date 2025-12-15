@@ -48,7 +48,7 @@ AMERIFLUX_DOWNLOAD_PATH = "amf_shuttle_data_files_and_manifest"
 AMERIFLUX_LOG_PATH = "log_shuttle_data_request"
 AMERIFLUX_CITATIONS_PATH = "citations/FLUXNET"
 AMERIFLUX_HEADERS = {"Content-Type": "application/json"}
-FLUXNET_SHUTTLE_REPO_URL = "https://github.com/amf-flx/fluxnet-shuttle-lib"
+FLUXNET_SHUTTLE_REPO_URL = "https://github.com/fluxnet/shuttle"
 
 
 class IntendedUse(Enum):
