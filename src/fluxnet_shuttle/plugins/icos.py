@@ -256,7 +256,7 @@ class ICOSPlugin(DataHubPlugin):
 
                 # Validate filename format
                 if not validate_fluxnet_filename_format(filename):
-                    logger.info(
+                    logger.debug(
                         f"Skipping site {station_id} - filename does not follow standard format "
                         f"(<network_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.<extension>): "
                         f"{filename}"

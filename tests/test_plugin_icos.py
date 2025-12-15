@@ -434,7 +434,7 @@ class TestICOSPlugin:
         mock_request.return_value.__aenter__.return_value = mock_response
 
         plugin = ICOSPlugin()
-        with caplog.at_level("INFO"):
+        with caplog.at_level("DEBUG"):
             sites = []
             async for site in plugin.get_sites():
                 sites.append(site)
