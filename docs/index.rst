@@ -57,12 +57,12 @@ Quick Start
     print(f"Available data saved to: {csv_filename}")
 
     # Download specific sites
-    sites = ['PE-QFR', 'IT-Niv']
+    sites = ['NZ-ADd', 'IT-Niv']
     downloaded_files = download(site_ids=sites, snapshot_file=csv_filename)
 
     # Download specific sites with optional user information
     # Intended Use options: 1. Synthesis, 2. Model, 3. Remote sensing, 4. Other research, 5. Education, 6. Other
-    sites = ['PE-QFR', 'IT-Niv']
+    sites = ['NZ-ADd', 'IT-Niv']
     user_info={'ameriflux': {'user_name': 'O2. Carbon', 'user_email': 'o2.carbon@flux.flux', 'intended_use': 1, 'description': 'Analysis of water flux'}}
     downloaded_files = download(site_ids=sites, snapshot_file=csv_filename, user_info=user_info)
 
@@ -76,11 +76,11 @@ For advanced usage with error handling and the developer API, see :doc:`develope
     fluxnet-shuttle listall
 
     # Download data for specific sites using snapshot file
-    fluxnet-shuttle download -f fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv -s US-Ha1 US-MMS
+    fluxnet-shuttle download -f fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv -s KE-Kpt KR-TwB AU-Lox
 
     # Create output directory
     mkdir /data/fluxnet
-    fluxnet-shuttle download -f fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv -s PE-QFR IT-Niv -o /data/fluxnet
+    fluxnet-shuttle download -f fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv -s NZ-ADd IT-Niv -o /data/fluxnet
 
 For complete CLI documentation, see :doc:`cli`.
 

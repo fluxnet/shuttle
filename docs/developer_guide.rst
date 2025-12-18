@@ -135,7 +135,7 @@ For normal Python scripts and synchronous contexts, use regular for loops:
 
     # Sync interface - works everywhere
     for site in shuttle.get_all_sites():
-        print(f"Site: {site.site_id}")
+        print(f"Site: {site.site_info.site_id}")
 
 Asynchronous Interface
 ~~~~~~~~~~~~~~~~~~~~~~

@@ -55,7 +55,8 @@ Example:
     ...     product_id="10.17190/AMF/1871137",
     ...     product_citation="J. William Munger (2025), AmeriFlux FLUXNET citation ...",
     ...     product_source_network="AMF",
-    ...     oneflux_code_version="1.3"
+    ...     oneflux_code_version="1.3",
+    ...     fluxnet_product_name="AMF_US-Ha1_FLUXNET_..."
     ... )
     >>> metadata = FluxnetDatasetMetadata(
     ...     site_info=site_info,
