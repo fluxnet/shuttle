@@ -50,7 +50,7 @@ fluxnet-shuttle --verbose listall
 Download data for specific sites:
 ```bash
 # Download specific sites
-fluxnet-shuttle download -f fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv -s IT-Niv PE-QFR US-NGB
+fluxnet-shuttle download -f fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv -s IT-Niv NZ-ADd
 
 # Download ALL sites from snapshot (prompts for confirmation)
 fluxnet-shuttle download -f fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv
@@ -78,8 +78,8 @@ fluxnet-shuttle --verbose listall
 
 # Step 2: Download specific sites
 fluxnet-shuttle --verbose download \
-  -r fluxnet_shuttle_snapshot__20251006T155754.csv \
-  -s PE-QFR IT-Niv \
+  -f fluxnet_shuttle_snapshot__20251006T155754.csv \
+  -s NZ-ADd IT-Niv \
 
 ```
 
