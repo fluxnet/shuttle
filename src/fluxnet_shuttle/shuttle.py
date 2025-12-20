@@ -390,7 +390,7 @@ async def _write_snapshot_file(shuttle: FluxnetShuttle, fields: List[str], csv_f
     counts: Dict[str, int] = {}
     # map expansion for data hub counts
     # Write to CSV file, using asyncio file operations
-    async with aiofiles.open(csv_filename, "w") as csvfile:
+    async with aiofiles.open(csv_filename, "w", encoding="utf-8") as csvfile:
         csv_writer = csv.DictWriter(csvfile, fieldnames=fields)
         await csv_writer.writeheader()
         async for site in shuttle.get_all_sites():
