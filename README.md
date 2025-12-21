@@ -1,6 +1,6 @@
 # FLUXNET Shuttle Library
 
-![CI](https://github.com/AMF-FLX/fluxnet-shuttle-lib/actions/workflows/python-ci.yml/badge.svg)
+![CI](https://github.com/fluxnet/shuttle/actions/workflows/python-ci.yml/badge.svg)
 
 A Python library for FLUXNET shuttle to discover and download global FLUXNET data from multiple data hubs, including AmeriFlux, ICOS, and TERN.
 
@@ -50,7 +50,7 @@ fluxnet-shuttle --verbose listall
 Download data for specific sites:
 ```bash
 # Download specific sites
-fluxnet-shuttle download -f fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv -s IT-Niv PE-QFR US-NGB
+fluxnet-shuttle download -f fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv -s IT-Niv NZ-ADd
 
 # Download ALL sites from snapshot (prompts for confirmation)
 fluxnet-shuttle download -f fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv
@@ -60,14 +60,14 @@ fluxnet-shuttle download -f fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv --quiet
 ```
 - Requires a CSV snapshot file from the `listall` command (`-f/--snapshot-file`)
 - Specify site IDs with `-s/--sites` to download specific sites only
-- Omit `-s/--sites` to download all sites in the snapshot (will prompt for confirmation unless `--quiet` is used)
+- Omit `-s/--sites` to download all sites in the snapshot (will prompt for confirmation unless `-q/--quiet` is used)
+- The `-q/--quiet` flag skips prompts to enter optional user information and confirmation prompt when downloading all sites from a snapshot file.
 - Downloads are saved to the output directory (default: current directory, use `-o` to specify)
 
 ### CLI Options
 - `-v/--verbose`: Enable detailed logging output
 - `-l/--logfile`: Specify log file path (default: `fluxnet-shuttle-run.log`)
 - `--no-logfile`: Disable file logging, output only to console
-- `--quiet/-q`: Skip prompts to enter optional user information and confirmation prompt when downloading all sites from a snapshot file.
 - `--version`: Show version information
 - `--help/-h`: Get help and see all options
 
@@ -78,8 +78,8 @@ fluxnet-shuttle --verbose listall
 
 # Step 2: Download specific sites
 fluxnet-shuttle --verbose download \
-  -r fluxnet_shuttle_snapshot__20251006T155754.csv \
-  -s PE-QFR IT-Niv \
+  -f fluxnet_shuttle_snapshot__20251006T155754.csv \
+  -s NZ-ADd IT-Niv \
 
 ```
 
@@ -87,8 +87,8 @@ fluxnet-shuttle --verbose download \
 
 ### Installation for development
 ```bash
-git clone https://github.com/AMF-FLX/fluxnet-shuttle-lib.git
-cd fluxnet-shuttle-lib
+git clone https://github.com/fluxnet/shuttle.git
+cd shuttle
 pip install -e .[dev,docs]
 ```
 

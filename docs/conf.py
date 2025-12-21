@@ -8,8 +8,8 @@ from fluxnet_shuttle.version import __release__
 sys.path.insert(0, os.path.abspath("../src"))
 
 project = "FLUXNET Shuttle Library"
-copyright = "2025, AMF-FLX"
-author = "AMF-FLX"
+copyright = "2025, fluxnet"
+author = "fluxnet"
 release = __release__
 
 # Extensions

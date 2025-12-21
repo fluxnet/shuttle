@@ -48,7 +48,7 @@ AMERIFLUX_DOWNLOAD_PATH = "amf_shuttle_data_files_and_manifest"
 AMERIFLUX_LOG_PATH = "log_shuttle_data_request"
 AMERIFLUX_CITATIONS_PATH = "citations/FLUXNET"
 AMERIFLUX_HEADERS = {"Content-Type": "application/json"}
-FLUXNET_SHUTTLE_REPO_URL = "https://github.com/amf-flx/fluxnet-shuttle-lib"
+FLUXNET_SHUTTLE_REPO_URL = "https://github.com/fluxnet/shuttle"
 
 
 class IntendedUse(Enum):
@@ -367,7 +367,7 @@ class AmeriFluxPlugin(DataHubPlugin):
                 # Get years from site_metadata (from data_availability endpoint)
                 publish_years = site_metadata.get(site_id, {}).get("grp_publish_fluxnet", [])
                 if not publish_years:
-                    logger.debug(f"Skipping site {site_id} - no publish years available")
+                    logger.info(f"Skipping site {site_id} - no publish years available")
                     continue
 
                 # Extract FLUXNET DOI from site metadata

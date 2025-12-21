@@ -295,7 +295,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="fluxnet-shuttle",
         description="FLUXNET Shuttle - Download and manage FLUXNET data from multiple data hubs",
-        epilog="For more information, visit: https://github.com/AMF-FLX/fluxnet-shuttle-lib",
+        epilog="For more information, visit: https://github.com/fluxnet/shuttle",
     )
 
     # Global arguments

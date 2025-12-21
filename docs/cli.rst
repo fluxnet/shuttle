@@ -93,10 +93,10 @@ Download FLUXNET data products (zip files) for specified sites using a snapshot 
 .. code-block:: bash
 
     # Download specific sites
-    fluxnet-shuttle download -f fluxnet_shuttle_snapshot_20251114T113216.csv -s US-Ha1 US-MMS
+    fluxnet-shuttle download -f fluxnet_shuttle_snapshot_20251114T113216.csv -s KE-Kpt KR-TwB AU-Lox
 
     # Download to specific directory (directory must exist)
-    fluxnet-shuttle download -f fluxnet_shuttle_snapshot_20251114T113216.csv -s PE-QFR IT-Niv -o /data/fluxnet
+    fluxnet-shuttle download -f fluxnet_shuttle_snapshot_20251114T113216.csv -s NZ-ADd IT-Niv -o /data/fluxnet
 
     # Download ALL sites (with confirmation prompt)
     fluxnet-shuttle download -f fluxnet_shuttle_snapshot_20251114T113216.csv
@@ -161,7 +161,7 @@ Complete workflow from discovery to download:
     # Step 5: Download specific sites
     fluxnet-shuttle --verbose download \
       -f /data/snapshots/fluxnet_shuttle_snapshot_YYYYMMDDTHHMMSS.csv \
-      -s US-ARc IT-Niv DE-Tha \
+      -s NZ-ADd IT-Niv DE-Tha \
       -o /data/fluxnet
 
     # Alternative: Download all sites (with confirmation)
