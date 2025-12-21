@@ -264,7 +264,7 @@ async def download(
         msg = f"Snapshot file {snapshot_file} does not exist."
         _log.error(msg)
         raise FLUXNETShuttleError(msg)
-    with open(snapshot_file, "r") as f:
+    with open(snapshot_file, "r", encoding="utf-8", newline="\n") as f:
         run_data: List[Any] = f.readlines()
     run_data = [line.strip().split(",") for line in run_data]
     fields = run_data[0]
