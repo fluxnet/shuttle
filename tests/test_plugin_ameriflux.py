@@ -857,12 +857,18 @@ class TestAmeriFluxPlugin:
 
         # Mock the download response
         mock_response = AsyncMock()
-        mock_response.content = b"test content"
+
+        class DummyContent:
+            async def iter_any(self):
+                yield b"test content"
+
+        mock_response.content = DummyContent()
         mock_session_request.return_value.__aenter__.return_value = mock_response
         mock_session_request.return_value.__aexit__.return_value = None
 
         # Call download_file with user_info structure
-        async with plugin.download_file(
+        chunks = []
+        async for chunk in plugin.download_file(
             site_id="US-Ha1",
             download_link="https://example.com/file.zip",
             filename="test.zip",
@@ -874,8 +880,9 @@ class TestAmeriFluxPlugin:
                     "description": "Test download",
                 }
             },
-        ) as content:
-            assert content == b"test content"
+        ):
+            chunks.append(chunk)
+        assert chunks == [b"test content"]
 
         # Verify logging was called with correct parameters
         mock_log_download.assert_called_once_with(
@@ -898,13 +905,19 @@ class TestAmeriFluxPlugin:
 
         # Mock the download response
         mock_response = AsyncMock()
-        mock_response.content = b"test content"
+
+        class DummyContent:
+            async def iter_any(self):
+                yield b"test content"
+
+        mock_response.content = DummyContent()
         mock_session_request.return_value.__aenter__.return_value = mock_response
         mock_session_request.return_value.__aexit__.return_value = None
 
         # Download should still work even if logging fails
         with caplog.at_level("WARNING", logger="fluxnet_shuttle.plugins.ameriflux"):
-            async with plugin.download_file(
+            chunks = []
+            async for chunk in plugin.download_file(
                 site_id="US-Ha1",
                 download_link="https://example.com/file.zip",
                 filename="test.zip",
@@ -914,8 +927,9 @@ class TestAmeriFluxPlugin:
                         "user_email": "test@example.com",
                     }
                 },
-            ) as content:
-                assert content == b"test content"
+            ):
+                chunks.append(chunk)
+            assert chunks == [b"test content"]
 
         # Should log warning about failed tracking
         assert "Failed to log download request for US-Ha1" in caplog.text
@@ -928,15 +942,22 @@ class TestAmeriFluxPlugin:
 
         # Mock the download response
         mock_response = AsyncMock()
-        mock_response.content = b"test content"
+
+        class DummyContent:
+            async def iter_any(self):
+                yield b"test content"
+
+        mock_response.content = DummyContent()
         mock_session_request.return_value.__aenter__.return_value = mock_response
         mock_session_request.return_value.__aexit__.return_value = None
 
         # Call without user tracking - should not attempt logging
-        async with plugin.download_file(
+        chunks = []
+        async for chunk in plugin.download_file(
             site_id="US-Ha1", download_link="https://example.com/file.zip", filename="test.zip"
-        ) as content:
-            assert content == b"test content"
+        ):
+            chunks.append(chunk)
+        assert chunks == [b"test content"]
 
 
 class TestIntendedUse:

@@ -14,7 +14,6 @@ AmeriFlux data hub implementation for the FLUXNET Shuttle plugin system.
 
 import asyncio
 import logging
-from contextlib import asynccontextmanager
 from enum import Enum
 from http import HTTPStatus
 from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, cast
@@ -414,13 +413,12 @@ class AmeriFluxPlugin(DataHubPlugin):
                 logger.warning(f"Error parsing site data for {site_id}: {e}. Skipping this site.")
                 continue
 
-    @asynccontextmanager
     async def download_file(
         self,
         site_id: str,
         download_link: str,
         **kwargs: Any,
-    ) -> AsyncGenerator[aiohttp.StreamReader, None]:
+    ) -> AsyncGenerator[bytes, None]:
         """
         Download a file from AmeriFlux with optional user tracking.
 
@@ -439,7 +437,7 @@ class AmeriFluxPlugin(DataHubPlugin):
                   Example: {"ameriflux": {"user_name": "...", "user_email": "...", ...}}
 
         Yields:
-            aiohttp.StreamReader: Content stream reader
+            bytes: Byte chunks from the downloaded content
         """
         # Extract AmeriFlux-specific user info from kwargs
         user_info = kwargs.get("user_info", {})
@@ -468,8 +466,8 @@ class AmeriFluxPlugin(DataHubPlugin):
                 logger.warning(f"Failed to log download request for {site_id}: {e}")
 
         # Call parent class implementation to perform the actual download
-        async with super().download_file(site_id, download_link, **kwargs) as stream:
-            yield stream
+        async for chunk in super().download_file(site_id, download_link, **kwargs):
+            yield chunk
 
     async def _log_download_request(
         self,

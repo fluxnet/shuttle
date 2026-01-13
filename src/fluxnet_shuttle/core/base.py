@@ -167,15 +167,14 @@ class DataHubPlugin(ABC):
         """
         pass
 
-    @asynccontextmanager
     async def download_file(
         self,
         site_id: str,
         download_link: str,
         **kwargs: Any,
-    ) -> AsyncGenerator[aiohttp.StreamReader, None]:
+    ) -> AsyncGenerator[bytes, None]:
         """
-        Download a file from the data hub and return the content stream reader.
+        Download a file from the data hub and yield byte chunks.
 
         This method provides a default implementation that performs a simple GET request.
         Plugins can override this method to implement custom download logic, such as
@@ -187,20 +186,14 @@ class DataHubPlugin(ABC):
             **kwargs: Additional plugin-specific parameters (e.g., filename, user_name, user_email for tracking)
 
         Yields:
-            aiohttp.StreamReader: Content stream reader to read file data from
+            bytes: Byte chunks from the downloaded content
 
         Raises:
             PluginError: If download fails
-
-        Example:
-            >>> plugin = SomeDataHubPlugin()
-            >>> async with plugin.download_file("US-Ha1", "https://...", filename="file.zip") as stream:
-            ...     async for chunk in stream.iter_chunked(8192):
-            ...         process(chunk)
         """
-        # Default implementation: simple GET request
         async with self._session_request("GET", download_link) as response:
-            yield response.content
+            async for chunk in response.content.iter_any():
+                yield chunk
 
     @asynccontextmanager
     async def _session_request(

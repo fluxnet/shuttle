@@ -71,10 +71,23 @@ class FluxnetShuttle:
         Yields:
             FluxnetDatasetMetadata: Site metadata objects from all data hubs
 
-        Example:
+        Examples:
+            Synchronous usage (simple):
+
+            >>> from fluxnet_shuttle.core.shuttle import FluxnetShuttle
             >>> shuttle = FluxnetShuttle()
-            >>> async for site in shuttle.get_all_sites():
+            >>> for site in shuttle.get_all_sites():
             ...     print(f"{site.site_info.site_id} from {site.site_info.data_hub}")
+
+            Asynchronous usage (when in async context):
+
+            >>> from fluxnet_shuttle.core.shuttle import FluxnetShuttle
+            >>> import asyncio
+            >>> async def list_sites():
+            ...     shuttle = FluxnetShuttle()
+            ...     async for site in shuttle.get_all_sites():
+            ...         print(f"{site.site_info.site_id} from {site.site_info.data_hub}")
+            >>> asyncio.run(list_sites())
         """
         plugins = self._get_enabled_plugins()
 
@@ -95,6 +108,87 @@ class FluxnetShuttle:
             # Log summary after iteration completes
             summary = error_collector.get_error_summary()
             logger.info(f"Completed get_all_sites: {summary.total_results} results, " f"{summary.total_errors} errors")
+
+    @async_to_sync_generator
+    async def download_dataset(
+        self,
+        site_id: str,
+        data_hub: str,
+        download_link: str,
+        **kwargs: Any,
+    ) -> AsyncGenerator[bytes, None]:
+        """
+        Download dataset as a stream of byte chunks from specified data hub.
+
+        This method delegates to the appropriate plugin's download_file method
+        through the orchestrator pattern, providing consistent error handling
+        and plugin management.
+
+        Args:
+            site_id: Site identifier
+            data_hub: Data hub name (e.g., "ameriflux", "icos")
+            download_link: URL to download from
+            **kwargs: Additional parameters passed to plugin's download_file method
+
+        Yields:
+            bytes: Byte chunks for the dataset
+
+        Examples:
+            Synchronous usage (simple):
+
+            >>> from fluxnet_shuttle.core.shuttle import FluxnetShuttle
+            >>> shuttle = FluxnetShuttle()
+            >>> with open("download.zip", "wb") as file:
+            ...     for chunk in shuttle.download_dataset(
+            ...         "ZA-Uby",
+            ...         "icos",
+            ...         "https://...",
+            ...     ):
+            ...         file.write(chunk)
+
+            Asynchronous usage (when in async context):
+
+            >>> from fluxnet_shuttle.core.shuttle import FluxnetShuttle
+            >>> import asyncio
+            >>> async def download():
+            ...     shuttle = FluxnetShuttle()
+            ...     with open("download.zip", "wb") as file:
+            ...         async for chunk in shuttle.download_dataset(
+            ...             "ZA-Uby",
+            ...             "icos",
+            ...             "https://...",
+            ...         ):
+            ...             file.write(chunk)
+            >>> asyncio.run(download())
+        """
+        download_link = str(download_link)
+        try:
+            plugin = self._get_plugin_instance(data_hub.lower())
+        except ValueError as e:
+            logger.error(f"Failed to get plugin for data hub '{data_hub}': {e}")
+            # Re-raise to maintain the expected error behavior
+            raise
+
+        error_collector = ErrorCollectingIterator(
+            {plugin.name: plugin}, "download_file", site_id=site_id, download_link=download_link, **kwargs
+        )
+        self._last_error_collector = error_collector
+        try:
+            # Check if plugin has download_file method
+            if not hasattr(plugin, "download_file"):
+                raise AttributeError(f"Plugin '{plugin.name}' does not have 'download_file' method")
+
+            # Call the plugin's download_file method and yield byte chunks
+            async for chunk in plugin.download_file(site_id=site_id, download_link=download_link, **kwargs):
+                yield chunk
+        except Exception as e:
+            logger.error(f"Failed to download dataset for site {site_id} from {data_hub}: {e}")
+            error_collector.add_error(plugin.name, e, "download_file")
+            # Re-raise to let caller handle the error
+            raise
+        finally:
+            summary = error_collector.get_error_summary()
+            logger.info(f"Completed download_dataset: {summary.total_results} results, {summary.total_errors} errors")
 
     def get_errors(self) -> ErrorSummary:
         """
