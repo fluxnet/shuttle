@@ -216,13 +216,20 @@ class TestDataHubPlugin:
 
         # Mock the response with content
         mock_response = AsyncMock()
-        mock_response.content = b"test file content"
+
+        class DummyContent:
+            async def iter_any(self):
+                yield b"test file content"
+
+        mock_response.content = DummyContent()
         mock_session_request.return_value.__aenter__.return_value = mock_response
         mock_session_request.return_value.__aexit__.return_value = None
 
         # Test the default download_stream implementation
-        async with plugin.download_file("US-TEST", download_link, filename="test.zip") as content:
-            assert content == b"test file content"
+        chunks = []
+        async for chunk in plugin.download_file("US-TEST", download_link, filename="test.zip"):
+            chunks.append(chunk)
+        assert chunks == [b"test file content"]
 
         # Verify GET request was made to download link
         mock_session_request.assert_called_once_with("GET", download_link)
@@ -271,8 +278,7 @@ class TestShuttleConfig:
     def test_load_from_file_valid_yaml(self, tmp_path):
         """Test loading config from a valid YAML file."""
         config_path = tmp_path / "valid.yaml"
-        config_path.write_text(
-            """
+        config_path.write_text("""
             parallel_requests: 3
             data_hubs:
               ameriflux:
@@ -281,8 +287,7 @@ class TestShuttleConfig:
                 enabled: true
               tern:
                 enabled: true
-            """
-        )
+            """)
 
         config = ShuttleConfig.load_from_file(config_path)
 

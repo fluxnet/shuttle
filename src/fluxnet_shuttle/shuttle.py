@@ -44,6 +44,7 @@ Metadata fields:
 
 """
 
+import asyncio
 import csv
 import logging
 import os
@@ -57,7 +58,6 @@ import aiofiles
 
 from fluxnet_shuttle import FLUXNETShuttleError
 from fluxnet_shuttle.core.decorators import async_to_sync
-from fluxnet_shuttle.core.registry import registry
 from fluxnet_shuttle.core.shuttle import FluxnetShuttle
 
 _log = logging.getLogger(__name__)
@@ -170,11 +170,11 @@ async def _download_dataset(
     **kwargs: Any,
 ) -> str:
     """
-    Download a FLUXNET dataset for a specific site using plugin's download_stream method.
+    Download a FLUXNET dataset for a specific site using the shuttle orchestrator.
 
-    This function delegates to the appropriate plugin's download_stream method,
-    which handles data hub-specific logic (e.g., AmeriFlux user info logging).
-    The shuttle orchestrator receives only the content stream, then handles file I/O using the
+    This function delegates to the shuttle orchestrator's download_dataset method,
+    which handles plugin selection and error collection. The function receives
+    byte chunks from the orchestrator and handles file I/O using the
     filename from the snapshot metadata.
 
     :param site_id: Site identifier
@@ -189,7 +189,7 @@ async def _download_dataset(
     :type output_dir: str
     :param kwargs: Additional keyword arguments.
         - user_info: Dictionary with plugin-specific user tracking info (e.g., {"ameriflux": {...}})
-        Other kwargs are passed through to the plugin's download_stream method.
+        Other kwargs are passed through to the plugin's download_file method.
     :return: The filepath where the file was saved
     :rtype: str
     :raises FLUXNETShuttleError: If download fails
@@ -197,39 +197,34 @@ async def _download_dataset(
     _log.info(f"{data_hub}: downloading site {site_id} data file: {filename}")
 
     try:
-        # Get plugin instance
-        plugin_class = registry.get_plugin(data_hub.lower())
-        if not plugin_class:
-            msg = f"Data hub plugin {data_hub} not found for site {site_id}"
-            _log.error(msg)
-            raise FLUXNETShuttleError(msg)
+        # Create shuttle instance to handle plugin orchestration
+        shuttle = FluxnetShuttle()
 
-        plugin_instance = plugin_class()
-
-        # Add filename to kwargs and pass everything to the plugin
+        # Add filename to kwargs and pass everything to the orchestrator
         kwargs["filename"] = filename
 
-        # Use plugin's download_file method to get the content stream
-        async with plugin_instance.download_file(site_id=site_id, download_link=download_link, **kwargs) as stream:
-            # Join with output directory
-            filepath = os.path.join(output_dir, filename)
+        # Get byte chunks from orchestrator, which handles plugin selection and error collection
+        filepath = os.path.join(output_dir, filename)
 
-            # Warn if file already exists and will be overwritten
-            if os.path.exists(filepath):
-                _log.warning(f"{data_hub}: file already exists and will be overwritten: {filepath}")
+        # Warn if file already exists and will be overwritten
+        if os.path.exists(filepath):
+            _log.warning(f"{data_hub}: file already exists and will be overwritten: {filepath}")
 
-            # Write the stream to file
-            with open(filepath, "wb") as file:
-                async for chunk in stream.iter_chunked(8192):
-                    file.write(chunk)
+        # Write the stream to file
+        with open(filepath, "wb") as file:
+            async for chunk in shuttle.download_dataset(
+                site_id=site_id, data_hub=data_hub.lower(), download_link=download_link, **kwargs
+            ):
+                file.write(chunk)
 
-            _log.info(f"{data_hub}: file downloaded successfully to {filepath}")
-            return filepath
+        _log.info(f"{data_hub}: file downloaded successfully to {filepath}")
+        return filepath
 
     except Exception as e:
         msg = f"Failed to download {data_hub} file for site {site_id}: {e}"
         _log.error(msg)
         raise FLUXNETShuttleError(msg) from e
+    return ""  # Should not reach here #pragma: no cover
 
 
 @async_to_sync
@@ -241,6 +236,8 @@ async def download(
 ) -> List[str]:
     """
     Download FLUXNET data for specified sites using configuration from a snapshot file.
+
+    Downloads are performed concurrently.
 
     :param site_ids: List of site IDs to download data for. If None or empty, downloads all sites from snapshot file.
     :type site_ids: Optional[List[str]]
@@ -291,8 +288,8 @@ async def download(
             raise FLUXNETShuttleError(msg)
     _log.debug("All site IDs found in snapshot file")
 
-    # Download data for each site
-    downloaded_filenames = []
+    # Build download jobs (skip sites without filenames)
+    download_jobs = []
     for site_id in site_ids:
         site = sites[site_id]
         data_hub = site["data_hub"]
@@ -304,16 +301,31 @@ async def download(
             continue
 
         _log.info(f"Downloading data for site {site_id} from data hub {data_hub}")
+        download_jobs.append(
+            {
+                "site_id": site_id,
+                "data_hub": data_hub,
+                "filename": filename,
+                "download_link": download_link,
+            }
+        )
 
-        actual_filename = await _download_dataset(
-            site_id=site_id,
-            data_hub=data_hub,
-            filename=filename,
-            download_link=download_link,
+    if not download_jobs:
+        _log.info("No valid downloads found after processing snapshot file.")
+        return []
+
+    tasks = [
+        _download_dataset(
+            site_id=job["site_id"],
+            data_hub=job["data_hub"],
+            filename=job["filename"],
+            download_link=job["download_link"],
             output_dir=output_dir,
             **kwargs,
         )
-        downloaded_filenames.append(actual_filename)
+        for job in download_jobs
+    ]
+    downloaded_filenames = await asyncio.gather(*tasks)
     _log.info(f"Downloaded data for {len(site_ids)} sites: {site_ids}")
     return downloaded_filenames
 
