@@ -10,6 +10,7 @@ A Python library for FLUXNET shuttle to discover and download global FLUXNET dat
 - **Command Line Interface**: Easy-to-use CLI tool `fluxnet-shuttle` for common operations
 - **Comprehensive Logging**: Configurable logging with multiple outputs
 - **Error Handling**: Custom exception handling for FLUXNET operations
+- **Documentation and Examples**: Documentation for CLI and API (direct python usage) and example Jupyter Notebook
 
 ## Data Use Requirements
 
@@ -28,9 +29,6 @@ This library supports Python 3.11, 3.12, and 3.13. Python 3.9 and 3.10 should wo
 ```bash
 pip install git+https://github.com/fluxnet/shuttle.git
 ```
-
-## Example Jupyter Notebooks
-Example Jupyter notebooks with data analysis and plotting are **coming soon**.
 
 ## Command Line Interface (CLI)
 
@@ -83,13 +81,31 @@ fluxnet-shuttle --verbose download \
 
 ```
 
+## Example Jupyter Notebook
+
+An example Jupyter notebook is available at [`examples/fluxnet_shuttle_example.ipynb`](examples/fluxnet_shuttle_example.ipynb). It demonstrates how to discover, download, and visualize FLUXNET data from multiple data hubs.
+
+To run the notebook, first clone the repository and install with example dependencies:
+```bash
+git clone https://github.com/fluxnet/shuttle.git
+cd shuttle
+pip install -e '.[examples]'
+```
+
+Then launch the notebook:
+```bash
+jupyter notebook examples/fluxnet_shuttle_example.ipynb
+```
+
+The `examples` extras (defined in `pyproject.toml`) install `pandas`, `matplotlib`, `jupyter`, and `notebook`.
+
 ## Development
 
 ### Installation for development
 ```bash
 git clone https://github.com/fluxnet/shuttle.git
 cd shuttle
-pip install -e .[dev,docs]
+pip install -e '.[dev,docs]'
 ```
 
 # Run examples tests
