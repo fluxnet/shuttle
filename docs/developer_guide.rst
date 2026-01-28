@@ -39,6 +39,44 @@ Basic Usage
     # Access results
     print(f"Retrieved {len(sites)} sites")
 
+Downloading Datasets
+~~~~~~~~~~~~~~~~~~~~
+
+The ``download_dataset()`` method streams dataset files from a specific data hub. It uses the same orchestrator pattern as ``get_all_sites()`` for consistent error handling.
+
+.. code-block:: python
+
+    from fluxnet_shuttle.core.shuttle import FluxnetShuttle
+
+    # Create shuttle instance
+    shuttle = FluxnetShuttle()
+
+    # Download a dataset (sync interface - streams byte chunks)
+    # Optional: Include user information for AmeriFlux tracking
+    user_info = {
+        "ameriflux": {
+            "user_name": "Jane Doe",
+            "user_email": "jane.doe@example.edu",
+            "intended_use": 1,  # 1=synthesis, 2=model, 3=remote_sensing, 4=other_research, 5=education, 6=other
+            "description": "Carbon cycle research"
+        }
+    }
+
+    with open("download.zip", "wb") as file:
+        for chunk in shuttle.download_dataset(
+            site_id="US-Ha1",
+            data_hub="ameriflux",
+            download_link="https://amfcdn.lbl.gov/...",
+            user_info=user_info,
+        ):
+            file.write(chunk)
+
+    # Check for errors after download
+    # (see Error Handling section below for more details)
+    error_summary = shuttle.get_errors()
+    if error_summary.total_errors > 0:
+        print(f"Download completed with {error_summary.total_errors} errors")
+
 Error Handling
 --------------
 
@@ -61,7 +99,6 @@ Programmatic Error Handling
 
     # Get error summary (returns Pydantic ErrorSummary model)
     error_summary = shuttle.get_errors()
-
     print(f"Total results: {error_summary.total_results}")
     print(f"Total errors: {error_summary.total_errors}")
 
@@ -71,6 +108,34 @@ Programmatic Error Handling
         print(f"Operation: {error.operation}")
         print(f"Error: {error.error}")
         print(f"Timestamp: {error.timestamp}")
+
+    # Error handling also works with downloads
+    user_info = {
+        "ameriflux": {
+            "user_name": "Jane Doe",
+            "user_email": "jane.doe@example.edu",
+            "intended_use": 1, # 1=synthesis, 2=model, 3=remote_sensing, 4=other_research, 5=education, 6=other
+            "description": "Carbon cycle research"
+        }
+    }
+
+    try:
+        with open("download.zip", "wb") as file:
+            for chunk in shuttle.download_dataset(
+                site_id="US-Ha1",
+                data_hub="ameriflux",
+                download_link="https://amfcdn.lbl.gov/...",
+                user_info=user_info,
+            ):
+                file.write(chunk)
+    except Exception as e:
+        print(f"Download failed: {e}")
+
+    # Check error summary after download
+    error_summary = shuttle.get_errors()
+    if error_summary.total_errors > 0:
+        for error in error_summary.errors:
+            print(f"Error in {error.operation}: {error.error}")
 
 The `ErrorSummary` model includes:
 
@@ -137,6 +202,25 @@ For normal Python scripts and synchronous contexts, use regular for loops:
     for site in shuttle.get_all_sites():
         print(f"Site: {site.site_info.site_id}")
 
+    # Downloads also support sync interface
+    user_info = {
+        "ameriflux": {
+            "user_name": "Jane Doe",
+            "user_email": "jane.doe@example.edu",
+            "intended_use": 4,  # 1=synthesis, 2=model, 3=remote_sensing, 4=other_research, 5=education, 6=other
+            "description": "Ecosystem modeling study"
+        }
+    }
+
+    with open("download.zip", "wb") as file:
+        for chunk in shuttle.download_dataset(
+            site_id="US-Ha1",
+            data_hub="ameriflux",
+            download_link="https://amfcdn.lbl.gov/...",
+            user_info=user_info,
+        ):
+            file.write(chunk)
+
 Asynchronous Interface
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -159,8 +243,31 @@ Use the async interface when you're in an async context:
 
         return sites
 
+    async def download_file():
+        shuttle = FluxnetShuttle()
+
+        # Downloads also support async interface
+        user_info = {
+            "ameriflux": {
+                "user_name": "Jane Doe",
+                "user_email": "jane.doe@example.edu",
+                "intended_use": 2,  # 1=synthesis, 2=model, 3=remote_sensing, 4=other_research, 5=education, 6=other
+                "description": "Climate model validation"
+            }
+        }
+
+        with open("download.zip", "wb") as file:
+            async for chunk in shuttle.download_dataset(
+                site_id="US-Ha1",
+                data_hub="ameriflux",
+                download_link="https://amfcdn.lbl.gov/...",
+                user_info=user_info,
+            ):
+                file.write(chunk)
+
     # Run in async context
     sites = asyncio.run(fetch_sites())
+    asyncio.run(download_file())
 
 In Jupyter notebooks or async frameworks, you can use async directly:
 
@@ -169,6 +276,26 @@ In Jupyter notebooks or async frameworks, you can use async directly:
     # In Jupyter notebook or FastAPI
     shuttle = FluxnetShuttle()
 
+    # Fetch sites
     async for site in shuttle.get_all_sites():
-        print(f"Site: {site.site_id}")
+        print(f"Site: {site.site_info.site_id}")
+
+    # Download datasets
+    user_info = {
+        "ameriflux": {
+            "user_name": "Jane Doe",
+            "user_email": "jane.doe@example.edu",
+            "intended_use": 5,  # 1=synthesis, 2=model, 3=remote_sensing, 4=other_research, 5=education, 6=other
+            "description": "Educational workshop on flux data"
+        }
+    }
+
+    with open("download.zip", "wb") as file:
+        async for chunk in shuttle.download_dataset(
+            site_id="US-Ha1",
+            data_hub="ameriflux",
+            download_link="https://amfcdn.lbl.gov/...",
+            user_info=user_info,
+        ):
+            file.write(chunk)
 
