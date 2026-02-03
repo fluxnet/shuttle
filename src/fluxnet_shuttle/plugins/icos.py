@@ -245,25 +245,6 @@ class ICOSPlugin(DataHubPlugin):
 
         return location_lat, location_long
 
-    def _parse_year_range(self, time_start: str, time_end: str) -> Tuple[int, int]:
-        """Parse year range from time strings."""
-        first_year = 2000  # Default
-        last_year = 2020  # Default
-
-        if time_start:
-            try:
-                first_year = int(time_start[:4])
-            except (ValueError, IndexError):
-                pass
-
-        if time_end:
-            try:
-                last_year = int(time_end[:4])
-            except (ValueError, IndexError):
-                pass
-
-        return first_year, last_year
-
     def _parse_sparql_response(self, data: Dict[str, Any]) -> Generator[FluxnetDatasetMetadata, None, None]:
         """
         Parse ICOS SPARQL response to extract site information.
@@ -295,14 +276,14 @@ class ICOSPlugin(DataHubPlugin):
                 location_lat, location_long = self._parse_coordinates(
                     station_id, site_data["location_lat"], site_data["location_long"]
                 )
-                first_year, last_year = self._parse_year_range(site_data["time_start"], site_data["time_end"])
 
                 igbp = self._map_ecosystem_to_igbp(site_data["ecosystem_type"])
                 download_id = dobj_uri.split("/")[-1]
                 download_link = f"https://data.icos-cp.eu/licence_accept?ids=%5B%22{download_id}%22%5D"
-                # Extract both product source network and code version from filename in one pass
-                # Note: We ignore the year range and run here since ICOS provides years via the SPARQL API
-                product_source_network, oneflux_code_version, _, _, _ = extract_fluxnet_filename_metadata(filename)
+                # Extract product source network, code version, and year range from filename
+                product_source_network, oneflux_code_version, first_year, last_year, _ = (
+                    extract_fluxnet_filename_metadata(filename)
+                )
                 citation = site_data["citation"]
 
                 # Skip site if citation is not available
