@@ -335,14 +335,39 @@ class TestICOSPlugin:
         assert len(team_members) == 2
 
         assert team_members[0].team_member_name == "Gerald Jurasinski"
-        assert team_members[0].team_member_role == "Principal Investigator"
+        assert team_members[0].team_member_role == "PI"
         assert team_members[0].team_member_email == "gerald.jurasinski@uni-rostock.de"
 
         assert team_members[1].team_member_name == "Ute Karstens"
-        assert team_members[1].team_member_role == "Researcher"
+        assert team_members[1].team_member_role == "FluxContact"
         assert team_members[1].team_member_email == "ute.karstens@nateko.lu.se"
 
         assert mock_request.call_count == 1
+
+    def test_icos_role_to_badm_mapping(self):
+        """Test ICOS role to BADM controlled vocabulary mapping."""
+        plugin = ICOSPlugin()
+
+        # Test all defined mappings
+        assert plugin._map_icos_role_to_badm("Principal Investigator") == "PI"
+        assert plugin._map_icos_role_to_badm("Administrator") == "PI"
+        assert plugin._map_icos_role_to_badm("Researcher") == "FluxContact"
+        assert plugin._map_icos_role_to_badm("Data Manager") == "DataManager"
+        assert plugin._map_icos_role_to_badm("Engineer") == "Technician"
+
+        # Test case insensitivity
+        assert plugin._map_icos_role_to_badm("principal investigator") == "PI"
+        assert plugin._map_icos_role_to_badm("RESEARCHER") == "FluxContact"
+        assert plugin._map_icos_role_to_badm("data manager") == "DataManager"
+
+        # Test whitespace handling
+        assert plugin._map_icos_role_to_badm("  Principal Investigator  ") == "PI"
+        assert plugin._map_icos_role_to_badm("  researcher  ") == "FluxContact"
+
+        # Test default mapping for unknown/other roles
+        assert plugin._map_icos_role_to_badm("Unknown Role") == "Affiliate"
+        assert plugin._map_icos_role_to_badm("") == "Affiliate"
+        assert plugin._map_icos_role_to_badm("   ") == "Affiliate"
 
     @pytest.mark.asyncio
     @patch("fluxnet_shuttle.plugins.icos.DataHubPlugin._session_request")

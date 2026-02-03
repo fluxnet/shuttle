@@ -33,6 +33,15 @@ logger = logging.getLogger(__name__)
 
 # Constants from original ICOS module
 ICOS_API_URL = "https://meta.icos-cp.eu/sparql"
+
+# Mapping from ICOS SPARQL team member roles to BADM controlled vocabulary
+ICOS_ROLE_TO_BADM = {
+    "principal investigator": "PI",
+    "administrator": "PI",
+    "researcher": "FluxContact",
+    "data manager": "DataManager",
+    "engineer": "Technician",
+}
 ICOS_SPARQL_QUERY = """
 prefix cpmeta: <http://meta.icos-cp.eu/ontologies/cpmeta/>
 prefix prov: <http://www.w3.org/ns/prov#>
@@ -179,6 +188,22 @@ class ICOSPlugin(DataHubPlugin):
 
         return sites_data
 
+    def _map_icos_role_to_badm(self, icos_role: str) -> str:
+        """
+        Map ICOS SPARQL team member roles to BADM controlled vocabulary.
+
+        Args:
+            icos_role: Role name from ICOS SPARQL query
+
+        Returns:
+            BADM controlled vocabulary role (PI, FluxContact, DataManager, Technician, or Affiliate)
+        """
+        # Normalize role string by stripping whitespace and converting to lower case for comparison
+        normalized_role = icos_role.strip().lower()
+
+        # Return mapped role or "Affiliate" for blank/other values
+        return ICOS_ROLE_TO_BADM.get(normalized_role, "Affiliate")
+
     def _extract_team_member(self, binding: Dict[str, Any]) -> Optional[TeamMember]:
         """Extract team member information from SPARQL binding."""
         first_name = binding.get("firstName", {}).get("value", "")
@@ -191,9 +216,13 @@ class ICOSPlugin(DataHubPlugin):
         if not full_name:
             return None
 
+        # Get ICOS role and map to BADM controlled vocabulary
+        icos_role = binding.get("roleName", {}).get("value", "")
+        badm_role = self._map_icos_role_to_badm(icos_role)
+
         return TeamMember(
             team_member_name=full_name,
-            team_member_role=binding.get("roleName", {}).get("value", ""),
+            team_member_role=badm_role,
             team_member_email=binding.get("email", {}).get("value", ""),
         )
 
