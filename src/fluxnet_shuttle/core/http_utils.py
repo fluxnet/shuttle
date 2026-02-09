@@ -48,8 +48,10 @@ async def get_session() -> AsyncGenerator[aiohttp.ClientSession, None]:
         sock_read=300,  # 5 minute read timeout to avoid TLS issues
     )
     session = aiohttp.ClientSession(timeout=client_timeout)
-    yield session
-    await session.close()
+    try:
+        yield session
+    finally:
+        await session.close()
 
 
 @asynccontextmanager
