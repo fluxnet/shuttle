@@ -261,16 +261,13 @@ async def download(
         msg = f"Snapshot file {snapshot_file} does not exist."
         _log.error(msg)
         raise FLUXNETShuttleError(msg)
-    with open(snapshot_file, "r", encoding="utf-8", newline="\n") as f:
-        run_data: List[Any] = f.readlines()
-    run_data = [line.strip().split(",") for line in run_data]
-    fields = run_data[0]
-    sites = {}
-    for line in run_data[1:]:
-        site = {}
-        for i, field in enumerate(fields):
-            site[field] = line[i]
-        sites[site["site_id"]] = site
+    with open(snapshot_file, "r", encoding="utf-8", newline="") as f:
+        reader = csv.reader(f)
+        fields = next(reader)
+        sites = {}
+        for line in reader:
+            site = {field: line[i] for i, field in enumerate(fields)}
+            sites[site["site_id"]] = site
     _log.debug(f"Loaded {len(sites)} sites from snapshot file")
 
     # If no site IDs specified, download all sites from snapshot
