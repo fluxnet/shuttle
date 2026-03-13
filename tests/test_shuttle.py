@@ -698,6 +698,36 @@ class TestDownload:
         assert "No filename found for site US-TEST" in caplog.text
         assert "Skipping download" in caplog.text
 
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle.shuttle._download_dataset")
+    @patch("os.path.exists")
+    @patch(
+        "builtins.open",
+        mock_open(
+            read_data="site_id,data_hub,download_link,fluxnet_product_name\n"
+            "US-Ha1,AmeriFlux,http://example.com/US-Ha1.zip,US-Ha1.zip\n"
+            "US-MMS,AmeriFlux,http://example.com/US-MMS.zip,US-MMS.zip\n"
+        ),
+    )
+    async def test_download_partial_failure_continues(self, mock_exists, mock_download, caplog):
+        """Test that a failed download does not stop other downloads."""
+        mock_exists.return_value = True
+
+        async def mock_side_effect(*_args, **kwargs):
+            if kwargs.get("site_id") == "US-Ha1":
+                raise FLUXNETShuttleError("Failed to download")
+            return "US-MMS.zip"
+
+        mock_download.side_effect = mock_side_effect
+
+        with caplog.at_level("ERROR", logger="fluxnet_shuttle.shuttle"):
+            result = await download(["US-Ha1", "US-MMS"], "test.csv")
+
+        # Only the successful download should be in results
+        assert result == ["US-MMS.zip"]
+        assert mock_download.call_count == 2
+        assert "Failed to download US-Ha1.zip for site US-Ha1" in caplog.text
+
 
 class TestListall:
     """Test cases for the listall function."""
