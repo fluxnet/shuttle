@@ -322,8 +322,16 @@ async def download(
         )
         for job in download_jobs
     ]
-    downloaded_filenames = await asyncio.gather(*tasks)
-    _log.info(f"Downloaded data for {len(site_ids)} sites: {site_ids}")
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    downloaded_filenames: list[str] = []
+    for job, result in zip(download_jobs, results):
+        if isinstance(result, BaseException):
+            _log.error(f"Failed to download {job['filename']} for site {job['site_id']}: {result}")
+        else:
+            downloaded_filenames.append(result)
+
+    _log.info(f"Downloaded data for {len(downloaded_filenames)}/{len(download_jobs)} sites")
     return downloaded_filenames
 
 
