@@ -246,5 +246,5 @@ class FluxnetShuttle:
         if not data_hub_config.enabled:
             raise ValueError(f"Data hub '{data_hub_name}' is disabled.")
 
-        plugin: DataHubPlugin = self.registry.create_instance(data_hub_name, **data_hub_config.__dict__)
+        plugin: DataHubPlugin = self.registry.create_instance(data_hub_name, **data_hub_config.settings)
         return plugin

@@ -215,7 +215,9 @@ class TestCLIFunctions:
     @patch("fluxnet_shuttle.main.listall")
     def test_cmd_listall_basic(self, mock_listall):
         """Test cmd_listall function."""
-        mock_listall.return_value = [{"site_id": "US-Ha1", "data_hub": "AmeriFlux", "data_url": "http://example.com"}]
+        mock_listall.return_value = [
+            {"site_id": "US-Ha1", "data_hub": "AmeriFlux", "data_url": "http://amfcdn-dev.lbl.gov"}
+        ]
 
         # Create mock args
         args = argparse.Namespace(output="test_output.csv", logfile="test.log", no_logfile=False, verbose=False)
@@ -626,12 +628,12 @@ class TestCLIFunctions:
         from fluxnet_shuttle.main import _prompt_user_info
 
         # Mock user inputs in sequence
-        mock_input.side_effect = ["John Doe", "john@example.com", "2", "Testing the download system"]
+        mock_input.side_effect = ["John Doe", "john@amfcdn-dev.lbl.gov", "2", "Testing the download system"]
 
         result = _prompt_user_info(quiet=False)
 
         assert result["ameriflux"]["user_name"] == "John Doe"
-        assert result["ameriflux"]["user_email"] == "john@example.com"
+        assert result["ameriflux"]["user_email"] == "john@amfcdn-dev.lbl.gov"
         assert result["ameriflux"]["intended_use"] == 2  # Model
         assert result["ameriflux"]["description"] == "Testing the download system"
 
@@ -658,7 +660,7 @@ class TestCLIFunctions:
         from fluxnet_shuttle.main import _prompt_user_info
 
         # Mock invalid input followed by valid inputs
-        mock_input.side_effect = ["Test User", "test@example.com", "invalid", "Test description"]
+        mock_input.side_effect = ["Test User", "test@amfcdn-dev.lbl.gov", "invalid", "Test description"]
 
         result = _prompt_user_info(quiet=False)
 
@@ -673,7 +675,7 @@ class TestCLIFunctions:
         from fluxnet_shuttle.main import _prompt_user_info
 
         # Mock out-of-range input
-        mock_input.side_effect = ["User", "user@example.com", "99", "Description"]
+        mock_input.side_effect = ["User", "user@amfcdn-dev.lbl.gov", "99", "Description"]
 
         result = _prompt_user_info(quiet=False)
 
@@ -700,12 +702,12 @@ class TestCLIFunctions:
         from fluxnet_shuttle.main import _prompt_user_info
 
         # User provides name and email but skips intended_use and description
-        mock_input.side_effect = ["Jane Smith", "jane@example.com", "", ""]
+        mock_input.side_effect = ["Jane Smith", "jane@amfcdn-dev.lbl.gov", "", ""]
 
         result = _prompt_user_info(quiet=False)
 
         assert result["ameriflux"]["user_name"] == "Jane Smith"
-        assert result["ameriflux"]["user_email"] == "jane@example.com"
+        assert result["ameriflux"]["user_email"] == "jane@amfcdn-dev.lbl.gov"
         # Empty fields are not included
         assert "intended_use" not in result["ameriflux"]
         assert "description" not in result["ameriflux"]
@@ -716,11 +718,11 @@ class TestCLIFunctions:
         from fluxnet_shuttle.main import _prompt_user_info
 
         # Mock inputs with extra whitespace
-        mock_input.side_effect = ["  John Doe  ", "  john@example.com  ", "1", "  Test  "]
+        mock_input.side_effect = ["  John Doe  ", "  john@amfcdn-dev.lbl.gov  ", "1", "  Test  "]
 
         result = _prompt_user_info(quiet=False)
 
         # Should strip whitespace
         assert result["ameriflux"]["user_name"] == "John Doe"
-        assert result["ameriflux"]["user_email"] == "john@example.com"
+        assert result["ameriflux"]["user_email"] == "john@amfcdn-dev.lbl.gov"
         assert result["ameriflux"]["description"] == "Test"

@@ -35,7 +35,8 @@ from ..shuttle import (
 
 logger = logging.getLogger(__name__)
 
-# TERN data endpoints
+# Default TERN data endpoint.
+# Can be overridden in config.yaml under ``data_hubs.tern.base_url``.
 TERN_BASE_URL = "https://dap.tern.org.au/thredds/fileServer/ecosystem_process/fluxnet/"
 TERN_BIF_METADATA_URL = f"{TERN_BASE_URL}BIF_all_sites.csv"
 TERN_PRODUCT_METADATA_URL = f"{TERN_BASE_URL}TERN_THREDDS_catalogue.csv"
@@ -323,10 +324,12 @@ class TERNPlugin(DataHubPlugin):
         Raises:
             PluginError: If fetching or parsing fails
         """
-        logger.info(f"Fetching BIF metadata from {TERN_BIF_METADATA_URL}")
+        base_url = self.config.get("base_url", TERN_BASE_URL)
+        bif_metadata_url = f"{base_url}BIF_all_sites.csv"
+        logger.info(f"Fetching BIF metadata from {bif_metadata_url}")
 
         try:
-            async with self._session_request("GET", TERN_BIF_METADATA_URL) as response:
+            async with self._session_request("GET", bif_metadata_url) as response:
                 content = await response.text()
 
                 # Parse BIF content
@@ -362,10 +365,12 @@ class TERNPlugin(DataHubPlugin):
         Raises:
             PluginError: If fetching or parsing fails
         """
-        logger.info(f"Fetching product metadata from {TERN_PRODUCT_METADATA_URL}")
+        base_url = self.config.get("base_url", TERN_BASE_URL)
+        product_metadata_url = f"{base_url}TERN_THREDDS_catalogue.csv"
+        logger.info(f"Fetching product metadata from {product_metadata_url}")
 
         try:
-            async with self._session_request("GET", TERN_PRODUCT_METADATA_URL) as response:
+            async with self._session_request("GET", product_metadata_url) as response:
                 content = await response.text()
 
                 # Parse product metadata (returns all products per site, no selection yet)

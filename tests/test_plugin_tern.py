@@ -608,10 +608,10 @@ AU-Lox,19,UTC_OFFSET,UTC_OFFSET,invalid_offset"""
         content = """SITE_ID,GROUP_ID,VARIABLE_GROUP,VARIABLE,DATAVALUE
 AU-Lox,16,TEAM_MEMBER,TEAM_MEMBER_NAME,First Member
 AU-Lox,16,TEAM_MEMBER,TEAM_MEMBER_ROLE,PI
-AU-Lox,16,TEAM_MEMBER,TEAM_MEMBER_EMAIL,first@example.com
+AU-Lox,16,TEAM_MEMBER,TEAM_MEMBER_EMAIL,first@amfcdn-dev.lbl.gov
 AU-Lox,16,TEAM_MEMBER,TEAM_MEMBER_NAME,Second Member
 AU-Lox,16,TEAM_MEMBER,TEAM_MEMBER_ROLE,Technician
-AU-Lox,16,TEAM_MEMBER,TEAM_MEMBER_EMAIL,second@example.com"""
+AU-Lox,16,TEAM_MEMBER,TEAM_MEMBER_EMAIL,second@amfcdn-dev.lbl.gov"""
 
         parser = tern.BIFParser()
         parsed_data = parser.parse_bif_content(content)

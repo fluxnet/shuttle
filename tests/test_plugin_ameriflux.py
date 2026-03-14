@@ -107,7 +107,7 @@ class TestAmeriFluxPlugin:
             "data_urls": [
                 {
                     "site_id": "US-XYZ",
-                    "url": "http://example.com/US-XYZ_invalidformat.zip",
+                    "url": "http://amfcdn-dev.lbl.gov/US-XYZ_invalidformat.zip",
                 }
             ]
         }
@@ -150,7 +150,10 @@ class TestAmeriFluxPlugin:
         }
         mock_get_links.return_value = {
             "data_urls": [
-                {"site_id": "US-ABC", "url": "http://example.com/AMF_US-ABC_FLUXNET_2005-2012_v3_r7.zip"},
+                {
+                    "site_id": "US-ABC",
+                    "url": "http://amfcdn-dev.lbl.gov/AMF_US-ABC_FLUXNET_2005-2012_v3_r7.zip",
+                },
                 # Missing entry for US-DEF to simulate failure
             ]
         }
@@ -161,7 +164,10 @@ class TestAmeriFluxPlugin:
 
         assert len(sites) == 1
         assert sites[0].site_info.site_id == "US-ABC"
-        assert str(sites[0].product_data.download_link) == "http://example.com/AMF_US-ABC_FLUXNET_2005-2012_v3_r7.zip"
+        assert (
+            str(sites[0].product_data.download_link)
+            == "http://amfcdn-dev.lbl.gov/AMF_US-ABC_FLUXNET_2005-2012_v3_r7.zip"
+        )
         assert sites[0].site_info.data_hub == "AmeriFlux"
         assert sites[0].site_info.location_lat == 40.0  # From metadata
         assert sites[0].site_info.location_long == -100.0  # From metadata
@@ -235,7 +241,7 @@ class TestAmeriFluxPlugin:
         mock_response.raise_for_status.side_effect = None
         mock_request.return_value.__aenter__.return_value = mock_response
 
-        metadata = await ameriflux.AmeriFluxPlugin()._get_site_metadata(api_url="http://example.com")
+        metadata = await ameriflux.AmeriFluxPlugin()._get_site_metadata(api_url="http://amfcdn-dev.lbl.gov")
         assert "US-Tst" in metadata
         assert "US-EXM" in metadata
         assert metadata["US-Tst"]["grp_location"]["location_lat"] == "40.0"
@@ -248,7 +254,7 @@ class TestAmeriFluxPlugin:
     async def test__get_site_metadata_failure(self, mock_request):
         """Test _get_site_metadata raises PluginError on failure."""
         with pytest.raises(PluginError) as exc_info:
-            await ameriflux.AmeriFluxPlugin()._get_site_metadata(api_url="http://example.com")
+            await ameriflux.AmeriFluxPlugin()._get_site_metadata(api_url="http://amfcdn-dev.lbl.gov")
 
         assert "ameriflux" in str(exc_info.value).lower()
         assert mock_request.call_count == 1  # Ensure the request was attempted
@@ -261,7 +267,9 @@ class TestAmeriFluxPlugin:
     async def test__get_download_links_with_failure(self, mock_request):
         """Test _get_download_links raises PluginError on failure."""
         with pytest.raises(PluginError) as exc_info:
-            await ameriflux.AmeriFluxPlugin()._get_download_links(base_url="http://example.com", site_ids=["US-Tst"])
+            await ameriflux.AmeriFluxPlugin()._get_download_links(
+                base_url="http://amfcdn-dev.lbl.gov", site_ids=["US-Tst"]
+            )
 
         assert "ameriflux" in str(exc_info.value).lower()
         assert mock_request.call_count == 1  # Ensure the request was attempted
@@ -276,23 +284,36 @@ class TestAmeriFluxPlugin:
 
         async def mock_json():
             return {
-                "data_urls": [{"site_id": "US-Tst", "url": "http://example.com/AMF_US-Tst_FLUXNET_2005-2012_v3_r7.zip"}]
+                "data_urls": [
+                    {
+                        "site_id": "US-Tst",
+                        "url": "http://amfcdn-dev.lbl.gov/AMF_US-Tst_FLUXNET_2005-2012_v3_r7.zip",
+                    }
+                ]
             }
 
         mock_response.json = mock_json
 
         links = await ameriflux.AmeriFluxPlugin()._get_download_links(
-            base_url="http://example.com", site_ids=["US-Tst"]
+            base_url="http://amfcdn-dev.lbl.gov", site_ids=["US-Tst"]
         )
         assert links == {
-            "data_urls": [{"site_id": "US-Tst", "url": "http://example.com/AMF_US-Tst_FLUXNET_2005-2012_v3_r7.zip"}]
+            "data_urls": [
+                {
+                    "site_id": "US-Tst",
+                    "url": "http://amfcdn-dev.lbl.gov/AMF_US-Tst_FLUXNET_2005-2012_v3_r7.zip",
+                }
+            ]
         }
 
     def test_parse_response_with_invalid_format(self):
         """Test _parse_response method skips invalid entries and continues processing."""
         sample_response = {
             "data_urls": [
-                {"site_id": "US-Tst", "url": "http://example.com/AMF_US-Tst_FLUXNET_2005-2012_v3_r7.zip"},
+                {
+                    "site_id": "US-Tst",
+                    "url": "http://amfcdn-dev.lbl.gov/AMF_US-Tst_FLUXNET_2005-2012_v3_r7.zip",
+                },
                 {
                     "site_id": "",
                 },  # Invalid format - missing 'url' key (should be skipped)
@@ -316,15 +337,24 @@ class TestAmeriFluxPlugin:
         assert results[0].site_info.site_id == "US-Tst"
         assert results[0].product_data.first_year == 2005
         assert results[0].product_data.last_year == 2012
-        assert str(results[0].product_data.download_link) == "http://example.com/AMF_US-Tst_FLUXNET_2005-2012_v3_r7.zip"
+        assert (
+            str(results[0].product_data.download_link)
+            == "http://amfcdn-dev.lbl.gov/AMF_US-Tst_FLUXNET_2005-2012_v3_r7.zip"
+        )
         assert results[0].site_info.data_hub == "AmeriFlux"
 
     def test_parse_response_filters_sites_without_publish_years(self):
         """Test _parse_response filters out sites with no publish years and invalid filenames."""
         sample_response = {
             "data_urls": [
-                {"site_id": "US-Tst", "url": "http://example.com/AMF_US-Tst_FLUXNET_2005-2007_v1_r0.zip"},
-                {"site_id": "US-NODATA", "url": "http://example.com/AMF_US-NODATA_FLUXNET_2010-2015_v1_r0.zip"},
+                {
+                    "site_id": "US-Tst",
+                    "url": "http://amfcdn-dev.lbl.gov/AMF_US-Tst_FLUXNET_2005-2007_v1_r0.zip",
+                },
+                {
+                    "site_id": "US-NODATA",
+                    "url": "http://amfcdn-dev.lbl.gov/AMF_US-NODATA_FLUXNET_2010-2015_v1_r0.zip",
+                },
             ]
         }
         site_metadata = {
@@ -384,7 +414,10 @@ class TestAmeriFluxPlugin:
         """Test _parse_response handles invalid lat/lon values gracefully."""
         sample_response = {
             "data_urls": [
-                {"site_id": "US-Tst", "url": "http://example.com/AMF_US-Tst_FLUXNET_2005-2006_v1_r0.zip"},
+                {
+                    "site_id": "US-Tst",
+                    "url": "http://amfcdn-dev.lbl.gov/AMF_US-Tst_FLUXNET_2005-2006_v1_r0.zip",
+                },
             ]
         }
         site_metadata = {
@@ -413,7 +446,7 @@ class TestAmeriFluxPlugin:
         with pytest.raises(ValueError) as exc_info:
             plugin._build_product_data(
                 [],
-                "http://example.com/test.zip",
+                "http://amfcdn-dev.lbl.gov/test.zip",
                 product_id="test-id",
                 citation="test citation",
                 oneflux_code_version="v1",
@@ -437,7 +470,9 @@ class TestAmeriFluxPlugin:
                 "grp_publish_fluxnet": [2020, 2021],
             }
         }
-        mock_get_links.return_value = {"data_urls": [{"site_id": "US-Tst", "url": "http://example.com/test.zip"}]}
+        mock_get_links.return_value = {
+            "data_urls": [{"site_id": "US-Tst", "url": "http://amfcdn-dev.lbl.gov/test.zip"}]
+        }
         mock_get_citations.return_value = {"US-Tst": "Citation for US-Tst"}
 
         plugin = ameriflux.AmeriFluxPlugin()
@@ -480,9 +515,18 @@ class TestAmeriFluxPlugin:
         }
         mock_get_links.return_value = {
             "data_urls": [
-                {"site_id": "US-Ts1", "url": "http://example.com/AMF_US-Ts1_FLUXNET_2010-2012_v1_r0.zip"},
-                {"site_id": "US-Ts2", "url": "http://example.com/AMF_US-Ts2_FLUXNET_2020-2021_v1_r0.zip"},
-                {"site_id": "US-Ts3", "url": "http://example.com/AMF_US-Ts3_FLUXNET_2020-2021_v1_r0.zip"},
+                {
+                    "site_id": "US-Ts1",
+                    "url": "http://amfcdn-dev.lbl.gov/AMF_US-Ts1_FLUXNET_2010-2012_v1_r0.zip",
+                },
+                {
+                    "site_id": "US-Ts2",
+                    "url": "http://amfcdn-dev.lbl.gov/AMF_US-Ts2_FLUXNET_2020-2021_v1_r0.zip",
+                },
+                {
+                    "site_id": "US-Ts3",
+                    "url": "http://amfcdn-dev.lbl.gov/AMF_US-Ts3_FLUXNET_2020-2021_v1_r0.zip",
+                },
             ]
         }
         mock_get_citations.return_value = {
@@ -666,7 +710,7 @@ class TestAmeriFluxPlugin:
         mock_response.json = mock_json
 
         citations = await ameriflux.AmeriFluxPlugin()._get_citations(
-            base_url="http://example.com/", site_ids=["US-Ha1", "US-MMS"]
+            base_url="http://amfcdn-dev.lbl.gov/", site_ids=["US-Ha1", "US-MMS"]
         )
         assert citations == {"US-Ha1": "Citation for US-Ha1", "US-MMS": "Citation for US-MMS"}
 
@@ -678,7 +722,7 @@ class TestAmeriFluxPlugin:
     async def test__get_citations_failure(self, mock_request):
         """Test _get_citations handles failure gracefully and returns empty dict."""
         citations = await ameriflux.AmeriFluxPlugin()._get_citations(
-            base_url="http://example.com/", site_ids=["US-Ha1"]
+            base_url="http://amfcdn-dev.lbl.gov/", site_ids=["US-Ha1"]
         )
 
         assert citations == {}  # Should return empty dict on failure
@@ -692,7 +736,7 @@ class TestAmeriFluxPlugin:
     async def test__get_citations_generic_exception(self, mock_request):
         """Test _get_citations handles generic exceptions gracefully."""
         citations = await ameriflux.AmeriFluxPlugin()._get_citations(
-            base_url="http://example.com/", site_ids=["US-Ha1"]
+            base_url="http://amfcdn-dev.lbl.gov/", site_ids=["US-Ha1"]
         )
 
         assert citations == {}  # Should return empty dict on generic exception
@@ -722,7 +766,12 @@ class TestAmeriFluxPlugin:
             }
         }
         mock_get_links.return_value = {
-            "data_urls": [{"site_id": "US-Tst", "url": "http://example.com/AMF_US-Tst_FLUXNET_2020-2020_v1_r0.zip"}]
+            "data_urls": [
+                {
+                    "site_id": "US-Tst",
+                    "url": "http://amfcdn-dev.lbl.gov/AMF_US-Tst_FLUXNET_2020-2020_v1_r0.zip",
+                }
+            ]
         }
         mock_get_citations.return_value = {"US-Tst": "Citation for US-Tst"}
 
@@ -742,7 +791,10 @@ class TestAmeriFluxPlugin:
         """Test that debug logging is triggered when publish years are missing."""
         sample_response = {
             "data_urls": [
-                {"site_id": "US-NoY", "url": "http://example.com/AMF_US-NoY_FLUXNET_2020-2021_v1_r0.zip"},
+                {
+                    "site_id": "US-NoY",
+                    "url": "http://amfcdn-dev.lbl.gov/AMF_US-NoY_FLUXNET_2020-2021_v1_r0.zip",
+                },
             ]
         }
         site_metadata = {
@@ -795,7 +847,7 @@ class TestAmeriFluxPlugin:
         result = await plugin._log_download_request(
             zip_filenames=["file1.zip", "file2.zip"],
             user_name="Test User",
-            user_email="test@example.com",
+            user_email="test@amfcdn-dev.lbl.gov",
             intended_use=1,
             description="Test download",
         )
@@ -825,7 +877,7 @@ class TestAmeriFluxPlugin:
         mock_get_session.return_value.__aexit__ = AsyncMock(return_value=False)
 
         result = await plugin._log_download_request(
-            zip_filenames=["file1.zip"], user_name="Test User", user_email="test@example.com"
+            zip_filenames=["file1.zip"], user_name="Test User", user_email="test@amfcdn-dev.lbl.gov"
         )
 
         assert result is False
@@ -840,7 +892,7 @@ class TestAmeriFluxPlugin:
         mock_get_session.side_effect = Exception("Network error")
 
         result = await plugin._log_download_request(
-            zip_filenames=["file1.zip"], user_name="Test User", user_email="test@example.com"
+            zip_filenames=["file1.zip"], user_name="Test User", user_email="test@amfcdn-dev.lbl.gov"
         )
 
         assert result is False
@@ -870,12 +922,12 @@ class TestAmeriFluxPlugin:
         chunks = []
         async for chunk in plugin.download_file(
             site_id="US-Ha1",
-            download_link="https://example.com/file.zip",
+            download_link="https://amfcdn-dev.lbl.gov/file.zip",
             filename="test.zip",
             user_info={
                 "ameriflux": {
                     "user_name": "Test User",
-                    "user_email": "test@example.com",
+                    "user_email": "test@amfcdn-dev.lbl.gov",
                     "intended_use": 1,
                     "description": "Test download",
                 }
@@ -888,7 +940,7 @@ class TestAmeriFluxPlugin:
         mock_log_download.assert_called_once_with(
             zip_filenames=["test.zip"],
             user_name="Test User",
-            user_email="test@example.com",
+            user_email="test@amfcdn-dev.lbl.gov",
             intended_use=1,
             description="Test download",
         )
@@ -919,12 +971,12 @@ class TestAmeriFluxPlugin:
             chunks = []
             async for chunk in plugin.download_file(
                 site_id="US-Ha1",
-                download_link="https://example.com/file.zip",
+                download_link="https://amfcdn-dev.lbl.gov/file.zip",
                 filename="test.zip",
                 user_info={
                     "ameriflux": {
                         "user_name": "Test User",
-                        "user_email": "test@example.com",
+                        "user_email": "test@amfcdn-dev.lbl.gov",
                     }
                 },
             ):
@@ -954,7 +1006,7 @@ class TestAmeriFluxPlugin:
         # Call without user tracking - should not attempt logging
         chunks = []
         async for chunk in plugin.download_file(
-            site_id="US-Ha1", download_link="https://example.com/file.zip", filename="test.zip"
+            site_id="US-Ha1", download_link="https://amfcdn-dev.lbl.gov/file.zip", filename="test.zip"
         ):
             chunks.append(chunk)
         assert chunks == [b"test content"]

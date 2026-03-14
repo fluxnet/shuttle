@@ -51,7 +51,7 @@ Example:
     >>> product_data = DataFluxnetProduct(
     ...     first_year=2005,
     ...     last_year=2025,
-    ...     download_link="https://example.com/data.zip",
+    ...     download_link="https://amfcdn-dev.lbl.gov/data.zip",
     ...     product_id="10.17190/AMF/1871137",
     ...     product_citation="J. William Munger (2025), AmeriFlux FLUXNET citation ...",
     ...     product_source_network="AMF",

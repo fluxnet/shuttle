@@ -39,7 +39,10 @@ from ..shuttle import (
 
 logger = logging.getLogger(__name__)
 
-# Constants from original ameriflux module
+# Default AmeriFlux API endpoints.
+# Each constant below can be overridden per-deployment in config.yaml
+# under ``data_hubs.ameriflux.<key>``.  The plugin reads overrides via
+# ``self.config.get("<key>", DEFAULT)`` with these values as fallbacks.
 AMERIFLUX_BASE_URL = "https://amfcdn.lbl.gov/"
 AMERIFLUX_BASE_PATH = "api/v2/"
 AMERIFLUX_SITE_INFO_PATH = "site_info_display/AmeriFlux"
@@ -103,7 +106,9 @@ class AmeriFluxPlugin(DataHubPlugin):
         """
         logger.info("Fetching AmeriFlux sites...")
 
-        api_url = f"{AMERIFLUX_BASE_URL}{AMERIFLUX_BASE_PATH}"
+        base_url = self.config.get("base_url", AMERIFLUX_BASE_URL)
+        base_path = self.config.get("base_path", AMERIFLUX_BASE_PATH)
+        api_url = f"{base_url}{base_path}"
 
         try:
             site_metadata = await self._get_site_metadata(api_url)
@@ -145,8 +150,9 @@ class AmeriFluxPlugin(DataHubPlugin):
 
     async def _get_site_metadata(self, api_url: str) -> Dict[str, Any]:
         """Get site metadata including lat, lon, IGBP from v2 site_info_display endpoint."""
+        site_info_path = self.config.get("site_info_path", AMERIFLUX_SITE_INFO_PATH)
         try:
-            async with self._session_request("GET", f"{api_url}{AMERIFLUX_SITE_INFO_PATH}") as response:
+            async with self._session_request("GET", f"{api_url}{site_info_path}") as response:
                 data = await response.json()
                 # Create a dictionary indexed by site_id for quick lookup
                 site_dict = {}
@@ -164,7 +170,8 @@ class AmeriFluxPlugin(DataHubPlugin):
 
     async def _get_download_links(self, base_url: str, site_ids: List[str]) -> Dict[str, Any]:
         """Get download links for specified AmeriFlux sites using v2 shuttle endpoint."""
-        url_post_query = f"{base_url}{AMERIFLUX_DOWNLOAD_PATH}"
+        download_path = self.config.get("download_path", AMERIFLUX_DOWNLOAD_PATH)
+        url_post_query = f"{base_url}{download_path}"
 
         # V2 endpoint requires only: user_id, data_product, data_variant, site_ids
         json_query = {
@@ -196,7 +203,8 @@ class AmeriFluxPlugin(DataHubPlugin):
         Returns:
             Dictionary mapping site_id to citation string
         """
-        url_post_query = f"{base_url}{AMERIFLUX_CITATIONS_PATH}"
+        citations_path = self.config.get("citations_path", AMERIFLUX_CITATIONS_PATH)
+        url_post_query = f"{base_url}{citations_path}"
 
         json_query = {"site_ids": site_ids}
 
@@ -497,7 +505,10 @@ class AmeriFluxPlugin(DataHubPlugin):
             logger.warning("No filenames provided for AmeriFlux download tracking")
             return False
 
-        api_url = f"{AMERIFLUX_BASE_URL}{AMERIFLUX_BASE_PATH}{AMERIFLUX_LOG_PATH}"
+        base_url = self.config.get("base_url", AMERIFLUX_BASE_URL)
+        base_path = self.config.get("base_path", AMERIFLUX_BASE_PATH)
+        log_path = self.config.get("log_path", AMERIFLUX_LOG_PATH)
+        api_url = f"{base_url}{base_path}{log_path}"
 
         # Build tracking data payload with required fields
         tracking_data: Dict[str, Any] = {
