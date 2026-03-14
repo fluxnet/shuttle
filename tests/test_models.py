@@ -41,7 +41,7 @@ def sample_product_data():
     return DataFluxnetProduct(
         first_year=2018,
         last_year=2023,
-        download_link="https://example.com/dataset.zip",
+        download_link="https://amfcdn-dev.lbl.gov/dataset.zip",
         product_citation="Test citation",
         product_id="test-id-123",
         oneflux_code_version="v1",
@@ -173,7 +173,7 @@ def test_data_fluxnet_product_valid_creation(sample_product_data):
     """Test creating a valid DataFluxnetProduct instance."""
     assert sample_product_data.first_year == 2018
     assert sample_product_data.last_year == 2023
-    assert str(sample_product_data.download_link) == "https://example.com/dataset.zip"
+    assert str(sample_product_data.download_link) == "https://amfcdn-dev.lbl.gov/dataset.zip"
 
 
 def test_data_fluxnet_product_year_validation():
@@ -184,7 +184,7 @@ def test_data_fluxnet_product_year_validation():
         product = DataFluxnetProduct(
             first_year=first_year,
             last_year=last_year,
-            download_link="https://example.com/dataset.zip",
+            download_link="https://amfcdn-dev.lbl.gov/dataset.zip",
             product_citation="Test citation",
             product_id="test-id",
             oneflux_code_version="v1",
@@ -199,7 +199,7 @@ def test_data_fluxnet_product_year_validation():
         DataFluxnetProduct(
             first_year=1899,  # Below minimum
             last_year=2000,
-            download_link="https://example.com/dataset.zip",
+            download_link="https://amfcdn-dev.lbl.gov/dataset.zip",
             product_citation="Test citation",
             product_id="test-id",
             oneflux_code_version="v1",
@@ -211,7 +211,7 @@ def test_data_fluxnet_product_year_validation():
         DataFluxnetProduct(
             first_year=2000,
             last_year=2101,  # Above maximum
-            download_link="https://example.com/dataset.zip",
+            download_link="https://amfcdn-dev.lbl.gov/dataset.zip",
             product_citation="Test citation",
             product_id="test-id",
             oneflux_code_version="v1",
@@ -224,7 +224,7 @@ def test_data_fluxnet_product_year_validation():
         DataFluxnetProduct(
             first_year=2023,
             last_year=2020,
-            download_link="https://example.com/dataset.zip",
+            download_link="https://amfcdn-dev.lbl.gov/dataset.zip",
             product_citation="Test citation",
             product_id="test-id",
             oneflux_code_version="v1",
@@ -237,7 +237,7 @@ def test_data_fluxnet_product_url_validation():
     """Test download link URL validation."""
     # Valid URLs
     valid_urls = [
-        "https://example.com/dataset.zip",
+        "https://amfcdn-dev.lbl.gov/dataset.zip",
         "http://ameriflux.lbl.gov/data/dataset.tar.gz",
         "https://icos-cp.eu/data/file.nc",
     ]
@@ -258,7 +258,7 @@ def test_data_fluxnet_product_url_validation():
     invalid_urls = [
         "not-a-url",
         "just-text",
-        "www.example.com",  # Missing protocol
+        "www.amfcdn-dev.lbl.gov",  # Missing protocol
         "ftp://server.com/data.zip",  # FTP not supported by HttpUrl
         "",
     ]
@@ -299,7 +299,7 @@ def test_fluxnet_dataset_metadata_nested_validation():
             product_data=DataFluxnetProduct(
                 first_year=2018,
                 last_year=2023,
-                download_link="https://example.com/dataset.zip",
+                download_link="https://amfcdn-dev.lbl.gov/dataset.zip",
                 product_citation="Test citation",
                 product_id="test-id",
                 oneflux_code_version="v1",
@@ -322,7 +322,7 @@ def test_fluxnet_dataset_metadata_nested_validation():
             product_data=DataFluxnetProduct(
                 first_year=2023,
                 last_year=2020,  # Invalid range
-                download_link="https://example.com/dataset.zip",
+                download_link="https://amfcdn-dev.lbl.gov/dataset.zip",
                 product_citation="Test citation",
                 product_id="test-id",
                 oneflux_code_version="v1",
@@ -352,7 +352,7 @@ def test_product_data_json_serialization(sample_product_data):
     json_data = sample_product_data.model_dump(mode="json")
     assert json_data["first_year"] == 2018
     assert json_data["last_year"] == 2023
-    assert json_data["download_link"] == "https://example.com/dataset.zip"
+    assert json_data["download_link"] == "https://amfcdn-dev.lbl.gov/dataset.zip"
 
     # Test round-trip
     reconstructed = DataFluxnetProduct(**json_data)

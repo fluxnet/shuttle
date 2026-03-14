@@ -67,7 +67,7 @@ class MockSuccessPlugin:
             product_data = DataFluxnetProduct(
                 first_year=2019,
                 last_year=2020,
-                download_link="https://example.com/success.zip",
+                download_link="https://amfcdn-dev.lbl.gov/success.zip",
                 product_citation="Test citation",
                 product_id="test-id",
                 oneflux_code_version="v1",

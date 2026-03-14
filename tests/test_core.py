@@ -45,7 +45,7 @@ class MockDataHubPlugin(DataHubPlugin):
         product_data = DataFluxnetProduct(
             first_year=2020,
             last_year=2021,
-            download_link="https://example.com/test.zip",
+            download_link="https://amfcdn-dev.lbl.gov/test.zip",
             product_citation="Test citation",
             product_id="test-id",
             oneflux_code_version="v1",
@@ -152,7 +152,7 @@ class TestDataHubPlugin:
     async def test_session_request_success(self, mock_session_request):
         """Test successful _session_request call."""
         plugin = MockDataHubPlugin()
-        url = "https://api.example.com/data"
+        url = "https://amfcdn-dev.lbl.gov/api/data"
 
         # Mock the response
         mock_response = AsyncMock()
@@ -174,7 +174,7 @@ class TestDataHubPlugin:
     async def test_session_request_client_error(self, mock_session_request):
         """Test _session_request handling of aiohttp.ClientError."""
         plugin = MockDataHubPlugin()
-        url = "https://api.example.com/data"
+        url = "https://amfcdn-dev.lbl.gov/api/data"
 
         # Make session_request raise a ClientError when entered
         mock_session_request.return_value.__aenter__.side_effect = aiohttp.ClientConnectionError("Connection failed")
@@ -193,7 +193,7 @@ class TestDataHubPlugin:
     async def test_session_request_unexpected_error(self, mock_session_request):
         """Test _session_request handling of unexpected errors."""
         plugin = MockDataHubPlugin()
-        url = "https://api.example.com/data"
+        url = "https://amfcdn-dev.lbl.gov/api/data"
 
         # Make session_request raise a generic exception
         mock_session_request.side_effect = ValueError("Unexpected error")
@@ -212,7 +212,7 @@ class TestDataHubPlugin:
     async def test_default_download_file(self, mock_session_request):
         """Test default download_stream implementation in base class."""
         plugin = MockDataHubPlugin()
-        download_link = "https://example.com/file.zip"
+        download_link = "https://amfcdn-dev.lbl.gov/file.zip"
 
         # Mock the response with content
         mock_response = AsyncMock()
@@ -295,6 +295,70 @@ class TestShuttleConfig:
         assert "ameriflux" in config.data_hubs
         assert "icos" in config.data_hubs
         assert "tern" in config.data_hubs
+
+    def test_data_hub_config_settings(self):
+        """Test DataHubConfig stores plugin-specific settings."""
+        hub_config = DataHubConfig(enabled=True, settings={"base_url": "https://amfcdn-dev.lbl.gov/"})
+
+        assert hub_config.enabled is True
+        assert hub_config.settings["base_url"] == "https://amfcdn-dev.lbl.gov/"
+
+    def test_parse_data_hub_config_with_extra_keys(self):
+        """Test _parse_data_hub_config separates enabled from settings."""
+        data = {"enabled": True, "base_url": "https://amfcdn-dev.lbl.gov/", "api_path": "v2/"}
+        hub_config = ShuttleConfig._parse_data_hub_config(data)
+
+        assert hub_config.enabled is True
+        assert hub_config.settings == {"base_url": "https://amfcdn-dev.lbl.gov/", "api_path": "v2/"}
+
+    def test_load_from_file_merges_settings(self, tmp_path):
+        """Test that load_from_file merges plugin settings with defaults."""
+        config_path = tmp_path / "override.yaml"
+        config_path.write_text("""
+            data_hubs:
+              ameriflux:
+                base_url: "https://amfcdn-dev.lbl.gov/"
+            """)
+
+        config = ShuttleConfig.load_from_file(config_path)
+
+        # Ameriflux should have the overridden base_url
+        assert config.data_hubs["ameriflux"].settings["base_url"] == "https://amfcdn-dev.lbl.gov/"
+        # Should still be enabled (default)
+        assert config.data_hubs["ameriflux"].enabled is True
+        # Other hubs should still exist from defaults
+        assert "icos" in config.data_hubs
+        assert "tern" in config.data_hubs
+
+    def test_load_from_file_new_data_hub(self, tmp_path):
+        """Test that load_from_file can add a new data hub not in defaults."""
+        config_path = tmp_path / "new_hub.yaml"
+        config_path.write_text("""
+            data_hubs:
+              custom_hub:
+                enabled: true
+                api_url: "https://amfcdn-dev.lbl.gov/"
+            """)
+
+        config = ShuttleConfig.load_from_file(config_path)
+
+        assert "custom_hub" in config.data_hubs
+        assert config.data_hubs["custom_hub"].enabled is True
+        assert config.data_hubs["custom_hub"].settings["api_url"] == "https://amfcdn-dev.lbl.gov/"
+        # Defaults should still be present
+        assert "ameriflux" in config.data_hubs
+
+    def test_default_config_loads_plugin_settings(self):
+        """Test that default config loads plugin-specific settings from config.yaml."""
+        config = ShuttleConfig.load_default()
+
+        # AmeriFlux should have settings from config.yaml
+        assert "base_url" in config.data_hubs["ameriflux"].settings
+        assert config.data_hubs["ameriflux"].settings["base_url"] == "https://amfcdn.lbl.gov/"
+        # ICOS should have api_url
+        assert config.data_hubs["icos"].settings["api_url"] == "https://meta.icos-cp.eu/sparql"
+        # TERN should have base_url
+        assert "base_url" in config.data_hubs["tern"].settings
 
 
 class TestExceptions:

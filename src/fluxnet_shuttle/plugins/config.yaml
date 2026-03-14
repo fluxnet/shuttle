@@ -1,5 +1,11 @@
 # Default FLUXNET Shuttle Configuration
 # ====================================
+#
+# To override these defaults, create a custom YAML file and load it with:
+#   config = ShuttleConfig.load_from_file(Path("my-config.yaml"))
+#   shuttle = FluxnetShuttle(config=config)
+#
+# Only the keys you specify are overridden; everything else keeps its default.
 
 # Global settings
 parallel_requests: 3
@@ -8,9 +14,17 @@ parallel_requests: 3
 data_hubs:
   ameriflux:
     enabled: true
+    base_url: "https://amfcdn.lbl.gov/"
+    base_path: "api/v2/"
+    site_info_path: "site_info_display/AmeriFlux"
+    download_path: "amf_shuttle_data_files_and_manifest"
+    log_path: "log_shuttle_data_request"
+    citations_path: "citations/FLUXNET"
 
   icos:
     enabled: true
+    api_url: "https://meta.icos-cp.eu/sparql"
 
   tern:
     enabled: true
+    base_url: "https://dap.tern.org.au/thredds/fileServer/ecosystem_process/fluxnet/"

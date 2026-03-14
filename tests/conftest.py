@@ -12,8 +12,8 @@ import pytest
 def temp_csv_file():
     """Create a temporary CSV file for testing."""
     content = "site_id,data_hub,filename,download_link\n"
-    content += "US-TEST,AmeriFlux,test_ameriflux.zip,http://example.com/ameriflux.zip\n"
-    content += "IT-TEST,ICOS,test_icos.zip,http://example.com/icos.zip\n"
+    content += "US-TEST,AmeriFlux,test_ameriflux.zip,http://amfcdn-dev.lbl.gov/ameriflux.zip\n"
+    content += "IT-TEST,ICOS,test_icos.zip,http://amfcdn-dev.lbl.gov/icos.zip\n"
 
     with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
         f.write(content)
@@ -44,11 +44,11 @@ def sample_ameriflux_api_response():
         "data_urls": [
             {
                 "site_id": "US-TEST1",
-                "url": "http://example.com/FLX_US-TEST1_FLUXNET2015_FULLSET_" "2020-2023_1.zip",
+                "url": "http://amfcdn-dev.lbl.gov/FLX_US-TEST1_FLUXNET2015_FULLSET_" "2020-2023_1.zip",
             },
             {
                 "site_id": "US-TEST2",
-                "url": "http://example.com/FLX_US-TEST2_FLUXNET2015_FULLSET_" "2019-2022_2.zip",
+                "url": "http://amfcdn-dev.lbl.gov/FLX_US-TEST2_FLUXNET2015_FULLSET_" "2019-2022_2.zip",
             },
         ]
     }

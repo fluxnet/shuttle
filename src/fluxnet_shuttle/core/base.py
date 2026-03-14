@@ -218,7 +218,7 @@ class DataHubPlugin(ABC):
 
         Example:
             >>> try:
-            ...     with await self._session_request('GET', 'https://api.example.com/data') as response:
+            ...     with await self._session_request('GET', 'https://amfcdn-dev.lbl.gov/api/data') as response:
             ...         data = await response.json()
             ... except PluginError as e:
             ...     print(f"Error occurred: {e}")

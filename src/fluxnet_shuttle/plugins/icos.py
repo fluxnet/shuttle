@@ -31,7 +31,8 @@ from ..shuttle import (
 
 logger = logging.getLogger(__name__)
 
-# Constants from original ICOS module
+# Default ICOS SPARQL endpoint.
+# Can be overridden in config.yaml under ``data_hubs.icos.api_url``.
 ICOS_API_URL = "https://meta.icos-cp.eu/sparql"
 
 # Mapping from ICOS SPARQL team member roles to BADM controlled vocabulary

@@ -29,9 +29,16 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DataHubConfig:
-    """Configuration for a specific data hub."""
+    """Configuration for a specific data hub.
+
+    Stores the ``enabled`` flag plus any additional plugin-specific
+    settings (e.g. ``base_url``, ``api_url``).  Extra keys supplied
+    at construction time are kept in the ``settings`` dict and are
+    forwarded to the plugin instance via ``self.config``.
+    """
 
     enabled: bool = True
+    settings: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -73,7 +80,7 @@ class ShuttleConfig:
             config = cls()
             if "data_hubs" in config_dict:
                 for data_hub_name, data_hub_data in config_dict["data_hubs"].items():
-                    config.data_hubs[data_hub_name] = DataHubConfig(**data_hub_data)
+                    config.data_hubs[data_hub_name] = cls._parse_data_hub_config(data_hub_data)
 
             # Update other settings
             for key, value in config_dict.items():
@@ -110,7 +117,15 @@ class ShuttleConfig:
 
             if "data_hubs" in config_dict:
                 for data_hub_name, data_hub_data in config_dict["data_hubs"].items():
-                    config.data_hubs[data_hub_name] = DataHubConfig(**data_hub_data)
+                    if data_hub_name in config.data_hubs:
+                        # Merge: override only the keys specified in the file
+                        existing = config.data_hubs[data_hub_name]
+                        if "enabled" in data_hub_data:
+                            existing.enabled = data_hub_data["enabled"]
+                        override_settings = {k: v for k, v in data_hub_data.items() if k != "enabled"}
+                        existing.settings.update(override_settings)
+                    else:
+                        config.data_hubs[data_hub_name] = cls._parse_data_hub_config(data_hub_data)
 
             for key, value in config_dict.items():
                 if key != "data_hubs" and hasattr(config, key):
@@ -142,10 +157,22 @@ class ShuttleConfig:
         config = cls()
 
         for data_hub_name, data_hub_data in config_dict["data_hubs"].items():
-            config.data_hubs[data_hub_name] = DataHubConfig(**data_hub_data)
+            config.data_hubs[data_hub_name] = cls._parse_data_hub_config(data_hub_data)
 
         for key, value in config_dict.items():
             if key != "data_hubs" and hasattr(config, key):
                 setattr(config, key, value)
 
         return config
+
+    @staticmethod
+    def _parse_data_hub_config(data: Dict[str, Any]) -> "DataHubConfig":
+        """Parse a data hub config dict into a DataHubConfig.
+
+        Known fields (``enabled``) are set as dataclass attributes.
+        All other keys are stored in the ``settings`` dict so they
+        can be forwarded to the plugin instance.
+        """
+        enabled = data.get("enabled", True)
+        settings = {k: v for k, v in data.items() if k != "enabled"}
+        return DataHubConfig(enabled=enabled, settings=settings)

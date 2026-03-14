@@ -22,7 +22,7 @@ class TestExtractFilenameFromUrl:
 
     def test_simple_url_without_query_params(self):
         """Test URL without query parameters."""
-        url = "https://example.com/path/to/file.zip"
+        url = "https://amfcdn-dev.lbl.gov/path/to/file.zip"
         result = _extract_filename_from_url(url)
         assert result == "file.zip"
 
@@ -43,13 +43,13 @@ class TestExtractFilenameFromUrl:
 
     def test_url_with_encoded_characters(self):
         """Test URL with percent-encoded characters."""
-        url = "https://example.com/path/file%20name.zip"
+        url = "https://amfcdn-dev.lbl.gov/path/file%20name.zip"
         result = _extract_filename_from_url(url)
         assert result == "file name.zip"
 
     def test_url_with_multiple_query_params(self):
         """Test URL with multiple query parameters."""
-        url = "https://example.com/download/data.csv?param1=value1&param2=value2"
+        url = "https://amfcdn-dev.lbl.gov/download/data.csv?param1=value1&param2=value2"
         result = _extract_filename_from_url(url)
         assert result == "data.csv"
 
@@ -79,7 +79,7 @@ class TestExtractFluxnetFilenameMetadata:
 
     def test_valid_filename_with_url(self):
         """Test extracting metadata from full URL."""
-        url = "https://example.com/AMF_AR-Bal_FLUXNET_2012-2013_v3_r7.zip"
+        url = "https://amfcdn-dev.lbl.gov/AMF_AR-Bal_FLUXNET_2012-2013_v3_r7.zip"
         source_network, version, first_year, last_year, run = extract_fluxnet_filename_metadata(url)
         assert source_network == "AMF"
         assert version == "v3"
@@ -142,7 +142,7 @@ class TestValidateFluxnetFilenameFormat:
 
     def test_valid_format_with_url(self):
         """Test valid filename within URL."""
-        url = "https://example.com/AMF_AR-Bal_FLUXNET_2012-2013_v3_r7.zip"
+        url = "https://amfcdn-dev.lbl.gov/AMF_AR-Bal_FLUXNET_2012-2013_v3_r7.zip"
         assert validate_fluxnet_filename_format(url) is True
 
     def test_invalid_format(self):
@@ -181,7 +181,7 @@ class TestDownloadDataset:
             patch.object(AmeriFluxPlugin, "download_file", side_effect=mock_download_file) as mock_download_file,
             patch("builtins.open", mock_open()),
         ):
-            result = await _download_dataset("US-TEST", "AmeriFlux", "test.zip", "http://example.com/test.zip")
+            result = await _download_dataset("US-TEST", "AmeriFlux", "test.zip", "http://amfcdn-dev.lbl.gov/test.zip")
 
             assert result == "./test.zip"
 
@@ -218,7 +218,9 @@ class TestDownloadDataset:
             patch.object(ICOSPlugin, "download_file", side_effect=mock_download_file) as mock_download_file,
             patch("builtins.open", mock_open()),
         ):
-            result = await _download_dataset("FI-HYY", "ICOS", "metadata_file.zip", "http://example.com/download")
+            result = await _download_dataset(
+                "FI-HYY", "ICOS", "metadata_file.zip", "http://amfcdn-dev.lbl.gov/download"
+            )
 
             # Should use filename from metadata (the one passed as argument)
             assert result == "./metadata_file.zip"
@@ -234,7 +236,7 @@ class TestDownloadDataset:
             mock_download_file.side_effect = PluginError("ameriflux", "HTTP 404 Not Found")
 
             with pytest.raises(FLUXNETShuttleError, match="Failed to download"):
-                await _download_dataset("US-TEST", "AmeriFlux", "test.zip", "http://example.com/test.zip")
+                await _download_dataset("US-TEST", "AmeriFlux", "test.zip", "http://amfcdn-dev.lbl.gov/test.zip")
 
     @pytest.mark.asyncio
     async def test_download_failure_500(self):
@@ -247,7 +249,7 @@ class TestDownloadDataset:
             mock_download_file.side_effect = PluginError("icos", "HTTP 500 Internal Server Error")
 
             with pytest.raises(FLUXNETShuttleError, match="Failed to download"):
-                await _download_dataset("FI-HYY", "ICOS", "test.zip", "http://example.com/test.zip")
+                await _download_dataset("FI-HYY", "ICOS", "test.zip", "http://amfcdn-dev.lbl.gov/test.zip")
 
     @pytest.mark.asyncio
     async def test_file_writing(self):
@@ -264,7 +266,7 @@ class TestDownloadDataset:
             patch.object(AmeriFluxPlugin, "download_file", side_effect=mock_download_file) as mock_download_file,
             patch("builtins.open", mock_open()) as mock_file,
         ):
-            await _download_dataset("US-TEST", "AmeriFlux", "output.zip", "http://example.com/file.zip")
+            await _download_dataset("US-TEST", "AmeriFlux", "output.zip", "http://amfcdn-dev.lbl.gov/file.zip")
 
             # Verify file was opened for writing
             mock_file.assert_called_once_with("./output.zip", "wb")
@@ -282,7 +284,7 @@ class TestDownloadDataset:
             mock_download_file.side_effect = Exception("Network error")
 
             with pytest.raises(FLUXNETShuttleError, match="Failed to download"):
-                await _download_dataset("US-TEST", "AmeriFlux", "test.zip", "http://example.com/test.zip")
+                await _download_dataset("US-TEST", "AmeriFlux", "test.zip", "http://amfcdn-dev.lbl.gov/test.zip")
 
     @pytest.mark.asyncio
     async def test_file_overwrite_warning(self):
@@ -306,7 +308,7 @@ class TestDownloadDataset:
             # Download to the same location
             with patch("fluxnet_shuttle.shuttle._log") as mock_log:
                 result = await _download_dataset(
-                    "US-TEST", "AmeriFlux", "existing.zip", "http://example.com/test.zip", tmpdir
+                    "US-TEST", "AmeriFlux", "existing.zip", "http://amfcdn-dev.lbl.gov/test.zip", tmpdir
                 )
 
                 # Check that warning was logged
@@ -327,7 +329,7 @@ class TestDownloadDataset:
                 FLUXNETShuttleError,
                 match="Failed to download UnknownHub file for site US-TEST.*Data hub 'unknownhub' not configured",
             ):
-                await _download_dataset("US-TEST", "UnknownHub", "test.zip", "http://example.com/test.zip")
+                await _download_dataset("US-TEST", "UnknownHub", "test.zip", "http://amfcdn-dev.lbl.gov/test.zip")
 
     @pytest.mark.asyncio
     async def test_download_with_user_info_kwargs(self):
@@ -346,14 +348,14 @@ class TestDownloadDataset:
             user_info = {
                 "ameriflux": {
                     "user_name": "Test User",
-                    "user_email": "test@example.com",
+                    "user_email": "test@amfcdn-dev.lbl.gov",
                     "intended_use": 1,
                     "description": "Test",
                 }
             }
 
             result = await _download_dataset(
-                "US-TEST", "ameriflux", "test.zip", "http://example.com/test.zip", user_info=user_info
+                "US-TEST", "ameriflux", "test.zip", "http://amfcdn-dev.lbl.gov/test.zip", user_info=user_info
             )
 
             # Verify plugin's download_file was called with user_info in kwargs
@@ -389,14 +391,14 @@ class TestFluxnetShuttleDownload:
             async for chunk in shuttle.download_dataset(
                 site_id="US-Ha1",
                 data_hub="ameriflux",
-                download_link="https://example.com/test.zip",
+                download_link="https://amfcdn-dev.lbl.gov/test.zip",
                 filename="test.zip",
             ):
                 chunks.append(chunk)
 
             assert chunks == [b"test data"]
             mock_download_file.assert_called_once_with(
-                site_id="US-Ha1", download_link="https://example.com/test.zip", filename="test.zip"
+                site_id="US-Ha1", download_link="https://amfcdn-dev.lbl.gov/test.zip", filename="test.zip"
             )
 
     @pytest.mark.asyncio
@@ -409,7 +411,7 @@ class TestFluxnetShuttleDownload:
         # Test with invalid data hub
         with pytest.raises(ValueError, match="Data hub 'invalidhub' not configured"):
             async for _ in shuttle.download_dataset(
-                site_id="US-TEST", data_hub="invalidhub", download_link="https://example.com/test.zip"
+                site_id="US-TEST", data_hub="invalidhub", download_link="https://amfcdn-dev.lbl.gov/test.zip"
             ):
                 pass  # Should not reach here
 
@@ -429,7 +431,7 @@ class TestFluxnetShuttleDownload:
 
             with pytest.raises(Exception, match="Download failed"):
                 async for _ in shuttle.download_dataset(
-                    site_id="US-Ha1", data_hub="ameriflux", download_link="https://example.com/test.zip"
+                    site_id="US-Ha1", data_hub="ameriflux", download_link="https://amfcdn-dev.lbl.gov/test.zip"
                 ):
                     pass  # Should not reach here
 
@@ -449,7 +451,7 @@ class TestFluxnetShuttleDownload:
 
             with pytest.raises(Exception, match="Download failed"):
                 async for _ in shuttle.download_dataset(
-                    site_id="US-Ha1", data_hub="ameriflux", download_link="https://example.com/test.zip"
+                    site_id="US-Ha1", data_hub="ameriflux", download_link="https://amfcdn-dev.lbl.gov/test.zip"
                 ):
                     pass  # Should not reach here
 
@@ -472,7 +474,7 @@ class TestFluxnetShuttleDownload:
         with patch.object(shuttle, "_get_plugin_instance", return_value=NoDownloadPlugin()):
             with pytest.raises(AttributeError, match="does not have 'download_file' method"):
                 async for _ in shuttle.download_dataset(
-                    site_id="US-Ha1", data_hub="ameriflux", download_link="https://example.com/test.zip"
+                    site_id="US-Ha1", data_hub="ameriflux", download_link="https://amfcdn-dev.lbl.gov/test.zip"
                 ):
                     pass  # Should not reach here
 
@@ -487,8 +489,8 @@ class TestDownload:
         snapshot_file = tmp_path / "snapshot.csv"
         snapshot_file.write_text(
             "data_hub,site_id,first_year,last_year,download_link,fluxnet_product_name\n"
-            "AmeriFlux,US-Ha1,2000,2020,https://example.com/US-Ha1.zip,US-Ha1.zip\n"
-            "AmeriFlux,US-MMS,2005,2021,https://example.com/US-MMS.zip,US-MMS.zip\n"
+            "AmeriFlux,US-Ha1,2000,2020,https://amfcdn-dev.lbl.gov/US-Ha1.zip,US-Ha1.zip\n"
+            "AmeriFlux,US-MMS,2005,2021,https://amfcdn-dev.lbl.gov/US-MMS.zip,US-MMS.zip\n"
         )
 
         # Mock the _download_dataset function to return coroutines
@@ -526,7 +528,7 @@ class TestDownload:
         "builtins.open",
         mock_open(
             read_data="site_id,data_hub,download_link,fluxnet_product_name\n"
-            "US-TEST,AmeriFlux,http://example.com/test.zip,test.zip\n"
+            "US-TEST,AmeriFlux,http://amfcdn-dev.lbl.gov/test.zip,test.zip\n"
         ),
     )
     async def test_download_ameriflux_site_success(self, mock_exists, mock_download):
@@ -545,7 +547,7 @@ class TestDownload:
             site_id="US-TEST",
             data_hub="AmeriFlux",
             filename="test.zip",
-            download_link="http://example.com/test.zip",
+            download_link="http://amfcdn-dev.lbl.gov/test.zip",
             output_dir=".",
         )
 
@@ -556,7 +558,7 @@ class TestDownload:
         "builtins.open",
         mock_open(
             read_data="site_id,data_hub,download_link,fluxnet_product_name\n"
-            "FI-HYY,ICOS,http://example.com/test.zip,test.zip\n"
+            "FI-HYY,ICOS,http://amfcdn-dev.lbl.gov/test.zip,test.zip\n"
         ),
     )
     async def test_download_icos_site_success(self, mock_exists, mock_download):
@@ -575,7 +577,7 @@ class TestDownload:
             site_id="FI-HYY",
             data_hub="ICOS",
             filename="test.zip",
-            download_link="http://example.com/test.zip",
+            download_link="http://amfcdn-dev.lbl.gov/test.zip",
             output_dir=".",
         )
 
@@ -586,7 +588,7 @@ class TestDownload:
         "builtins.open",
         mock_open(
             read_data="site_id,data_hub,download_link,fluxnet_product_name\n"
-            "US-TEST,AmeriFlux,http://example.com/file.zip?=fluxnetshuttle,file.zip\n"
+            "US-TEST,AmeriFlux,http://amfcdn-dev.lbl.gov/file.zip?=fluxnetshuttle,file.zip\n"
         ),
     )
     async def test_download_with_query_params_in_url(self, mock_exists, mock_download):
@@ -606,7 +608,7 @@ class TestDownload:
             site_id="US-TEST",
             data_hub="AmeriFlux",
             filename="file.zip",
-            download_link="http://example.com/file.zip?=fluxnetshuttle",
+            download_link="http://amfcdn-dev.lbl.gov/file.zip?=fluxnetshuttle",
             output_dir=".",
         )
 
@@ -614,7 +616,9 @@ class TestDownload:
     @patch("os.path.exists")
     @patch(
         "builtins.open",
-        mock_open(read_data="site_id,data_hub,download_link\n" "US-TEST,AmeriFlux,http://example.com/test.zip\n"),
+        mock_open(
+            read_data="site_id,data_hub,download_link\n" "US-TEST,AmeriFlux,http://amfcdn-dev.lbl.gov/test.zip\n"
+        ),
     )
     async def test_download_site_not_in_snapshot_file_raises_error(self, mock_exists):
         """Test that download raises error when site not in snapshot file."""
@@ -629,7 +633,7 @@ class TestDownload:
         # Create temporary CSV file
         with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as tmp_file:
             tmp_file.write("site_id,data_hub,download_link\n")
-            tmp_file.write("US-Ha1,AmeriFlux,http://example.com/test.zip\n")
+            tmp_file.write("US-Ha1,AmeriFlux,http://amfcdn-dev.lbl.gov/test.zip\n")
             temp_filename = tmp_file.name
 
         try:
@@ -647,7 +651,7 @@ class TestDownload:
         "builtins.open",
         mock_open(
             read_data="site_id,data_hub,download_link,fluxnet_product_name\n"
-            "US-TEST,ameriflux,http://example.com/test.zip,test.zip\n"
+            "US-TEST,ameriflux,http://amfcdn-dev.lbl.gov/test.zip,test.zip\n"
         ),
     )
     async def test_download_with_user_info(self, mock_exists, mock_download):
@@ -663,7 +667,7 @@ class TestDownload:
         user_info = {
             "ameriflux": {
                 "user_name": "Test User",
-                "user_email": "test@example.com",
+                "user_email": "test@amfcdn-dev.lbl.gov",
                 "intended_use": 1,
                 "description": "Test download",
             }
@@ -682,7 +686,9 @@ class TestDownload:
     @patch("os.path.exists")
     @patch(
         "builtins.open",
-        mock_open(read_data="site_id,data_hub,download_link\n" "US-TEST,ameriflux,http://example.com/test.zip\n"),
+        mock_open(
+            read_data="site_id,data_hub,download_link\n" "US-TEST,ameriflux,http://amfcdn-dev.lbl.gov/test.zip\n"
+        ),
     )
     async def test_download_missing_filename_skips_site(self, mock_exists, caplog):
         """Test download skips sites with missing fluxnet_product_name."""
@@ -764,7 +770,7 @@ class TestListall:
                 product_data=MagicMock(
                     first_year=2000,
                     last_year=2020,
-                    download_link="http://example.com/test.zip",
+                    download_link="http://amfcdn-dev.lbl.gov/test.zip",
                     product_citation="Test citation",
                     product_id="test-id",
                     oneflux_code_version="v1",
@@ -772,7 +778,7 @@ class TestListall:
                     model_dump=lambda: {
                         "first_year": 2000,
                         "last_year": 2020,
-                        "download_link": "http://example.com/test.zip",
+                        "download_link": "http://amfcdn-dev.lbl.gov/test.zip",
                         "product_citation": "Test citation",
                         "product_id": "test-id",
                         "oneflux_code_version": "v1",
@@ -802,7 +808,7 @@ class TestListall:
                 product_data=MagicMock(
                     first_year=2005,
                     last_year=2018,
-                    download_link="http://example.com/icos.zip",
+                    download_link="http://amfcdn-dev.lbl.gov/icos.zip",
                     product_citation="ICOS citation",
                     product_id="icos-id",
                     oneflux_code_version="v2",
@@ -810,7 +816,7 @@ class TestListall:
                     model_dump=lambda: {
                         "first_year": 2005,
                         "last_year": 2018,
-                        "download_link": "http://example.com/icos.zip",
+                        "download_link": "http://amfcdn-dev.lbl.gov/icos.zip",
                         "product_citation": "ICOS citation",
                         "product_id": "icos-id",
                         "oneflux_code_version": "v2",
