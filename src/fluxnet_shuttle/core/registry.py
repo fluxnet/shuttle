@@ -17,13 +17,15 @@ This module provides the plugin registry for managing data hub plugins
 and error collection capabilities.
 """
 
+import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, AsyncGenerator, Dict, List, Type
+from typing import Any, AsyncGenerator, Dict, List, Optional, Type
 
 from ..models import ErrorSummary, FluxnetDatasetMetadata, PluginErrorDetail
 from .base import DataHubPlugin
+from .config import ShuttleConfig
 
 logger = logging.getLogger(__name__)
 
@@ -46,13 +48,24 @@ class ErrorCollectingIterator:
     from multiple plugins while isolating and collecting any errors that occur.
     """
 
-    def __init__(self, plugins: Dict[str, DataHubPlugin], operation: str, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        plugins: Dict[str, DataHubPlugin],
+        operation: str,
+        plugin_timeouts: Optional[Dict[str, float]] = None,
+        default_timeout: float = ShuttleConfig.plugin_timeout,
+        **kwargs: Any,
+    ) -> None:
         """
         Initialize the error collecting iterator.
 
         Args:
             plugins: Dictionary of plugin instances to iterate over
             operation: The operation being performed (e.g., 'get_sites')
+            plugin_timeouts: Optional per-plugin timeout in seconds. Keys are plugin names,
+                values are timeout durations. Plugins not in this dict use the default_timeout.
+            default_timeout: Default timeout in seconds for plugins not in plugin_timeouts.
+                Defaults to ShuttleConfig.plugin_timeout.
             **kwargs: Arguments to pass to the plugin operation
         """
         self.plugins = plugins
@@ -62,6 +75,8 @@ class ErrorCollectingIterator:
         self._results_count = 0
         self._plugin_iterators: Dict[str, AsyncGenerator[FluxnetDatasetMetadata, None]] = {}
         self._completed_plugins: set[str] = set()
+        self._plugin_timeouts: Dict[str, float] = plugin_timeouts or {}
+        self._default_timeout: float = default_timeout
 
     def __aiter__(self) -> "ErrorCollectingIterator":
         """Return self as the async iterator."""
@@ -121,10 +136,19 @@ class ErrorCollectingIterator:
         while self._plugin_iterators:
             # Try each plugin iterator
             for plugin_name in list(self._plugin_iterators.keys()):
+                timeout = self._plugin_timeouts.get(plugin_name, self._default_timeout)
                 try:
-                    result = await self._plugin_iterators[plugin_name].__anext__()
+                    result = await asyncio.wait_for(
+                        self._plugin_iterators[plugin_name].__anext__(),
+                        timeout=timeout,
+                    )
                     self._results_count += 1
                     return result
+                except asyncio.TimeoutError:
+                    logger.warning(f"Plugin '{plugin_name}' timed out after {timeout}s")
+                    self.add_error(plugin_name, TimeoutError(f"Timed out after {timeout}s"), self.operation)
+                    del self._plugin_iterators[plugin_name]
+                    self._completed_plugins.add(plugin_name)
                 except StopAsyncIteration:
                     # This plugin is done
                     del self._plugin_iterators[plugin_name]
