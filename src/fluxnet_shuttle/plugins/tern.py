@@ -18,6 +18,7 @@ from collections import defaultdict
 from io import StringIO
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
+from fluxnet_shuttle.core.config import DEFAULT_FLUXNET_SHUTTLE_REFERER
 from fluxnet_shuttle.core.exceptions import PluginError
 
 from ..core.base import DataHubPlugin
@@ -328,8 +329,9 @@ class TERNPlugin(DataHubPlugin):
         bif_metadata_url = f"{base_url}BIF_all_sites.csv"
         logger.info(f"Fetching BIF metadata from {bif_metadata_url}")
 
+        headers = {"Referer": self.config.get("fluxnet_shuttle_referer", DEFAULT_FLUXNET_SHUTTLE_REFERER)}
         try:
-            async with self._session_request("GET", bif_metadata_url) as response:
+            async with self._session_request("GET", bif_metadata_url, headers=headers) as response:
                 content = await response.text()
 
                 # Parse BIF content
@@ -369,8 +371,9 @@ class TERNPlugin(DataHubPlugin):
         product_metadata_url = f"{base_url}TERN_THREDDS_catalogue.csv"
         logger.info(f"Fetching product metadata from {product_metadata_url}")
 
+        headers = {"Referer": self.config.get("fluxnet_shuttle_referer", DEFAULT_FLUXNET_SHUTTLE_REFERER)}
         try:
-            async with self._session_request("GET", product_metadata_url) as response:
+            async with self._session_request("GET", product_metadata_url, headers=headers) as response:
                 content = await response.text()
 
                 # Parse product metadata (returns all products per site, no selection yet)

@@ -17,6 +17,7 @@ import logging
 from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Tuple
 
 from ..core.base import DataHubPlugin
+from ..core.config import DEFAULT_FLUXNET_SHUTTLE_REFERER
 from ..core.decorators import async_to_sync_generator
 from ..models import (
     BadmSiteGeneralInfo,
@@ -141,8 +142,12 @@ class ICOSPlugin(DataHubPlugin):
         # Get configuration parameters
         api_url = self.config.get("api_url", ICOS_API_URL)
 
+        headers = {
+            "Accept": "application/json",
+            "Referer": self.config.get("fluxnet_shuttle_referer", DEFAULT_FLUXNET_SHUTTLE_REFERER),
+        }
         async with self._session_request(
-            "POST", api_url, data={"query": ICOS_SPARQL_QUERY}, headers={"Accept": "application/json"}
+            "POST", api_url, data={"query": ICOS_SPARQL_QUERY}, headers=headers
         ) as response:
             data = await response.json()
 

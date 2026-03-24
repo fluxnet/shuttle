@@ -10,6 +10,7 @@
 # Global settings
 parallel_requests: 3
 plugin_timeout: 25  # seconds — must be under gunicorn's 30s worker timeout
+fluxnet_shuttle_referer: "local_shuttle"
 
 # Data hub-specific configurations
 data_hubs:
