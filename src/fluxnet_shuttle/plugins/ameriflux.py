@@ -21,6 +21,7 @@ from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, cast
 import aiohttp
 from pydantic import HttpUrl
 
+from fluxnet_shuttle.core.config import DEFAULT_FLUXNET_SHUTTLE_REFERER
 from fluxnet_shuttle.core.exceptions import PluginError
 
 from ..core.base import DataHubPlugin
@@ -50,7 +51,6 @@ AMERIFLUX_DOWNLOAD_PATH = "amf_shuttle_data_files_and_manifest"
 AMERIFLUX_LOG_PATH = "log_shuttle_data_request"
 AMERIFLUX_CITATIONS_PATH = "citations/FLUXNET"
 AMERIFLUX_HEADERS = {"Content-Type": "application/json"}
-FLUXNET_SHUTTLE_REPO_URL = "https://github.com/fluxnet/shuttle"
 
 
 class IntendedUse(Enum):
@@ -532,7 +532,7 @@ class AmeriFluxPlugin(DataHubPlugin):
         # Add referrer header to identify fluxnet-shuttle
         headers = {
             **AMERIFLUX_HEADERS,
-            "Referer": FLUXNET_SHUTTLE_REPO_URL,
+            "Referer": self.config.get("fluxnet_shuttle_referer", DEFAULT_FLUXNET_SHUTTLE_REFERER),
         }
 
         try:

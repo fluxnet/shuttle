@@ -26,6 +26,11 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
+# Default configuration values (overridden by config.yaml at runtime)
+DEFAULT_PARALLEL_REQUESTS = 3
+DEFAULT_PLUGIN_TIMEOUT = 25.0
+DEFAULT_FLUXNET_SHUTTLE_REFERER = "local_shuttle"
+
 
 @dataclass
 class DataHubConfig:
@@ -47,8 +52,9 @@ class ShuttleConfig:
     """Main shuttle configuration."""
 
     data_hubs: Dict[str, DataHubConfig] = field(default_factory=dict)
-    parallel_requests: int = 3
-    plugin_timeout: float = 25.0
+    parallel_requests: int = DEFAULT_PARALLEL_REQUESTS
+    plugin_timeout: float = DEFAULT_PLUGIN_TIMEOUT
+    fluxnet_shuttle_referer: str = DEFAULT_FLUXNET_SHUTTLE_REFERER
 
     @classmethod
     def load_default(cls) -> "ShuttleConfig":
@@ -147,7 +153,9 @@ class ShuttleConfig:
     def _get_hardcoded_defaults(cls) -> Dict[str, Any]:
         """Get hardcoded default configuration."""
         return {
-            "parallel_requests": 3,
+            "parallel_requests": DEFAULT_PARALLEL_REQUESTS,
+            "plugin_timeout": DEFAULT_PLUGIN_TIMEOUT,
+            "fluxnet_shuttle_referer": DEFAULT_FLUXNET_SHUTTLE_REFERER,
             "data_hubs": {
                 "ameriflux": {"enabled": True},
                 "icos": {"enabled": True},
