@@ -44,8 +44,8 @@ async def get_session() -> AsyncGenerator[aiohttp.ClientSession, None]:
     # ----------------------------------------------------------------------
     client_timeout = aiohttp.ClientTimeout(
         total=None,  # no global deadline
-        sock_connect=60,  # allow slow TLS handshakes on a busy network
-        sock_read=300,  # 5 minute read timeout to avoid TLS issues
+        sock_connect=30,  # allow slow TLS handshakes on a busy network
+        sock_read=120,  # 2 minute read timeout to avoid TLS issues
     )
     session = aiohttp.ClientSession(timeout=client_timeout)
     try:

@@ -96,8 +96,18 @@ class FluxnetShuttle:
             # For async generators, just return without yielding anything
             return
 
+        # Build per-plugin timeout map from config
+        default_timeout = self.config.plugin_timeout
+        plugin_timeouts: Dict[str, float] = {
+            name: self.config.data_hubs[name].plugin_timeout or default_timeout
+            for name in plugins
+            if name in self.config.data_hubs
+        }
+
         # Create error collecting iterator
-        error_collector = ErrorCollectingIterator(plugins, "get_sites", **filters)
+        error_collector = ErrorCollectingIterator(
+            plugins, "get_sites", plugin_timeouts=plugin_timeouts, default_timeout=default_timeout, **filters
+        )
         self._last_error_collector = error_collector
 
         # Yield results using async iterator

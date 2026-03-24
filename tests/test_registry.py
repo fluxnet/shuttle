@@ -2,6 +2,8 @@
 Test Registry
 """
 
+import asyncio
+
 import pytest
 
 from fluxnet_shuttle.core.base import DataHubPlugin
@@ -201,3 +203,58 @@ class TestPluginRegistry:
         assert errors.total_errors == 4
         assert errors.total_results == 0
         assert len(errors.errors) == 4
+
+    @pytest.mark.asyncio
+    async def test_plugin_timeout_per_plugin(self):
+        """Test that per-plugin timeout overrides the default and slow plugin is timed out."""
+
+        class SlowPlugin(DummyPlugin):
+            @property
+            def name(self):
+                return "slow"
+
+            @async_to_sync_generator
+            async def get_sites(self, **filters):
+                await asyncio.sleep(10)
+                yield {"id": 0, "name": "Site 0"}
+
+        plugins = {"slow": SlowPlugin(), "dummy": DummyPlugin()}
+        iterator = ErrorCollectingIterator(plugins, "get_sites", plugin_timeouts={"slow": 0.1, "dummy": 60})
+        results = []
+        async for item in iterator:
+            results.append(item)
+
+        # dummy should succeed, slow should timeout
+        assert len(results) == 3  # 3 results from dummy
+        errors = iterator.get_error_summary()
+        assert errors.total_errors == 1
+        assert errors.errors[0].data_hub == "slow"
+        assert "Timed out after 0.1s" in errors.errors[0].error
+
+    @pytest.mark.asyncio
+    async def test_fast_plugin_unaffected_by_slow_timeout(self):
+        """Test that a fast plugin's results are returned even when a slow plugin times out."""
+
+        class SlowPlugin(DummyPlugin):
+            @property
+            def name(self):
+                return "slow"
+
+            @async_to_sync_generator
+            async def get_sites(self, **filters):
+                await asyncio.sleep(10)
+                yield {"id": 99, "name": "Never reached"}
+
+        plugins = {"dummy": DummyPlugin(), "slow": SlowPlugin()}
+        iterator = ErrorCollectingIterator(plugins, "get_sites", plugin_timeouts={"slow": 0.1, "dummy": 60})
+        results = []
+        async for item in iterator:
+            results.append(item)
+
+        # All 3 dummy results should be present
+        assert len(results) == 3
+        assert all(r["name"].startswith("Site") for r in results)
+        # Slow plugin should have timed out
+        errors = iterator.get_error_summary()
+        assert errors.total_errors == 1
+        assert "Timed out" in errors.errors[0].error
