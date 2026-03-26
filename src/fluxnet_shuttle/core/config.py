@@ -20,7 +20,7 @@ library, including loading default and custom configurations.
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import yaml
 
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 # Default configuration values (overridden by config.yaml at runtime)
 DEFAULT_PARALLEL_REQUESTS = 3
-DEFAULT_PLUGIN_TIMEOUT = 25.0
+DEFAULT_GLOBAL_TIMEOUT = 60.0
 DEFAULT_FLUXNET_SHUTTLE_REFERER = "local_shuttle"
 
 
@@ -43,7 +43,6 @@ class DataHubConfig:
     """
 
     enabled: bool = True
-    plugin_timeout: Optional[float] = None
     settings: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -53,7 +52,7 @@ class ShuttleConfig:
 
     data_hubs: Dict[str, DataHubConfig] = field(default_factory=dict)
     parallel_requests: int = DEFAULT_PARALLEL_REQUESTS
-    plugin_timeout: float = DEFAULT_PLUGIN_TIMEOUT
+    global_timeout: float = DEFAULT_GLOBAL_TIMEOUT
     fluxnet_shuttle_referer: str = DEFAULT_FLUXNET_SHUTTLE_REFERER
 
     @classmethod
@@ -128,11 +127,9 @@ class ShuttleConfig:
                     if data_hub_name in config.data_hubs:
                         # Merge: override only the keys specified in the file
                         existing = config.data_hubs[data_hub_name]
-                        known_fields = {"enabled", "plugin_timeout"}
+                        known_fields = {"enabled"}
                         if "enabled" in data_hub_data:
                             existing.enabled = data_hub_data["enabled"]
-                        if "plugin_timeout" in data_hub_data:
-                            existing.plugin_timeout = data_hub_data["plugin_timeout"]
                         override_settings = {k: v for k, v in data_hub_data.items() if k not in known_fields}
                         existing.settings.update(override_settings)
                     else:
@@ -154,7 +151,7 @@ class ShuttleConfig:
         """Get hardcoded default configuration."""
         return {
             "parallel_requests": DEFAULT_PARALLEL_REQUESTS,
-            "plugin_timeout": DEFAULT_PLUGIN_TIMEOUT,
+            "global_timeout": DEFAULT_GLOBAL_TIMEOUT,
             "fluxnet_shuttle_referer": DEFAULT_FLUXNET_SHUTTLE_REFERER,
             "data_hubs": {
                 "ameriflux": {"enabled": True},
@@ -182,12 +179,11 @@ class ShuttleConfig:
     def _parse_data_hub_config(data: Dict[str, Any]) -> "DataHubConfig":
         """Parse a data hub config dict into a DataHubConfig.
 
-        Known fields (``enabled``, ``plugin_timeout``) are set as
-        dataclass attributes.  All other keys are stored in the
-        ``settings`` dict so they can be forwarded to the plugin instance.
+        Known fields (``enabled``) are set as dataclass attributes.
+        All other keys are stored in the ``settings`` dict so they
+        can be forwarded to the plugin instance.
         """
-        known_fields = {"enabled", "plugin_timeout"}
+        known_fields = {"enabled"}
         enabled = data.get("enabled", True)
-        plugin_timeout = data.get("plugin_timeout", None)
         settings = {k: v for k, v in data.items() if k not in known_fields}
-        return DataHubConfig(enabled=enabled, plugin_timeout=plugin_timeout, settings=settings)
+        return DataHubConfig(enabled=enabled, settings=settings)
