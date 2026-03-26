@@ -9,7 +9,7 @@
 
 # Global settings
 parallel_requests: 3
-plugin_timeout: 25  # seconds — must be under gunicorn's 30s worker timeout
+global_timeout: 60  # seconds — hard deadline for the entire plugin iteration
 fluxnet_shuttle_referer: "local_shuttle"
 
 # Data hub-specific configurations
@@ -29,5 +29,4 @@ data_hubs:
 
   tern:
     enabled: true
-    plugin_timeout: 15
     base_url: "https://dap.tern.org.au/thredds/fileServer/ecosystem_process/fluxnet/"

@@ -348,19 +348,16 @@ class TestShuttleConfig:
         # Defaults should still be present
         assert "ameriflux" in config.data_hubs
 
-    def test_load_from_file_overrides_plugin_timeout(self, tmp_path):
-        """Test that load_from_file can override plugin_timeout for a data hub."""
+    def test_load_from_file_overrides_global_timeout(self, tmp_path):
+        """Test that load_from_file can override global_timeout."""
         config_path = tmp_path / "timeout.yaml"
         config_path.write_text("""
-            data_hubs:
-              ameriflux:
-                plugin_timeout: 90
+            global_timeout: 90
             """)
 
         config = ShuttleConfig.load_from_file(config_path)
 
-        assert config.data_hubs["ameriflux"].plugin_timeout == 90
-        assert config.data_hubs["ameriflux"].enabled is True
+        assert config.global_timeout == 90
 
     def test_default_config_loads_plugin_settings(self):
         """Test that default config loads plugin-specific settings from config.yaml."""
