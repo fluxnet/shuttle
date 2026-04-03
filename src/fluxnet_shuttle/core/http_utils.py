@@ -16,36 +16,40 @@ HTTP utilities for making API requests and handling responses
 
 import logging
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator
+from typing import Any, AsyncGenerator, Optional
 
 import aiohttp
+
+from .config import HttpTimeoutConfig
 
 _logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def get_session() -> AsyncGenerator[aiohttp.ClientSession, None]:
+async def get_session(
+    http_timeouts: Optional[HttpTimeoutConfig] = None,
+) -> AsyncGenerator[aiohttp.ClientSession, None]:
     """
-    Create and return an aiohttp ClientSession with a specified timeout.
-    The session is configured to handle slow TLS handshakes and disables the
-    default 5-second idle read timeout.
+    Create and return an aiohttp ClientSession with configurable timeouts.
+
+    Parameters
+    ----------
+    http_timeouts : HttpTimeoutConfig, optional
+        Timeout settings to apply to the session.  When *None* the
+        hardcoded defaults from :class:`HttpTimeoutConfig` are used.
 
     Returns
     -------
     aiohttp.ClientSession
         An instance of aiohttp ClientSession with the specified timeout.
     """
-    # ----------------------------------------------------------------------
-    # Choose a *very* permissive timeout to allow for large uploads, matches
-    # the default requests timeout behavior.  The key setting is:
-    #    - total=None → no overall deadline
-    #    - sock_connect → a generous connect timeout (60 s is usually enough)
-    #    - sock_read=300 → 5 minute read timeout to avoid TLS issues on slow networks
-    # ----------------------------------------------------------------------
+    if http_timeouts is None:
+        http_timeouts = HttpTimeoutConfig()
+
     client_timeout = aiohttp.ClientTimeout(
-        total=None,  # no global deadline
-        sock_connect=30,  # allow slow TLS handshakes on a busy network
-        sock_read=120,  # 2 minute read timeout to avoid TLS issues
+        total=http_timeouts.total,
+        sock_connect=http_timeouts.sock_connect,
+        sock_read=http_timeouts.sock_read,
     )
     session = aiohttp.ClientSession(timeout=client_timeout)
     try:

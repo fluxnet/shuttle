@@ -97,12 +97,7 @@ class FluxnetShuttle:
             return
 
         # Create error collecting iterator
-        error_collector = ErrorCollectingIterator(
-            plugins,
-            "get_sites",
-            global_timeout=self.config.global_timeout,
-            **filters,
-        )
+        error_collector = ErrorCollectingIterator(plugins, "get_sites", **filters)
         self._last_error_collector = error_collector
 
         # Yield results using async iterator

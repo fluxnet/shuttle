@@ -2,8 +2,6 @@
 Test Registry
 """
 
-import asyncio
-
 import pytest
 
 from fluxnet_shuttle.core.base import DataHubPlugin
@@ -205,129 +203,50 @@ class TestPluginRegistry:
         assert len(errors.errors) == 4
 
     @pytest.mark.asyncio
-    async def test_global_timeout_kills_slow_plugin(self):
-        """Test that global timeout kills a slow plugin while fast plugin results are kept."""
+    async def test_multiple_plugins_all_complete(self):
+        """Test that multiple plugins all yield their results without any timeout wrapping."""
 
-        class SlowPlugin(DummyPlugin):
+        class AnotherPlugin(DummyPlugin):
             @property
             def name(self):
-                return "slow"
+                return "another"
 
             @async_to_sync_generator
             async def get_sites(self, **filters):
-                await asyncio.sleep(10)
-                yield {"id": 0, "name": "Never"}
+                for i in range(2):
+                    yield {"id": i + 10, "name": f"Other Site {i}"}
 
-        plugins = {"dummy": DummyPlugin(), "slow": SlowPlugin()}
-        iterator = ErrorCollectingIterator(plugins, "get_sites", global_timeout=0.3)
+        plugins = {"dummy": DummyPlugin(), "another": AnotherPlugin()}
+        iterator = ErrorCollectingIterator(plugins, "get_sites")
         results = []
         async for item in iterator:
             results.append(item)
 
-        # dummy finishes fast, slow plugin killed by global deadline
-        assert len(results) == 3
-        assert all(r["name"].startswith("Site") for r in results)
-        errors = iterator.get_error_summary()
-        assert errors.total_errors == 1
-        assert errors.errors[0].data_hub == "slow"
-        assert "Global deadline exceeded" in errors.errors[0].error
-
-    @pytest.mark.asyncio
-    async def test_global_timeout_kills_all_remaining(self):
-        """Test that global timeout kills all plugins still running."""
-
-        class SlowPlugin1(DummyPlugin):
-            @property
-            def name(self):
-                return "slow1"
-
-            @async_to_sync_generator
-            async def get_sites(self, **filters):
-                await asyncio.sleep(10)
-                yield {"id": 0, "name": "Never"}
-
-        class SlowPlugin2(DummyPlugin):
-            @property
-            def name(self):
-                return "slow2"
-
-            @async_to_sync_generator
-            async def get_sites(self, **filters):
-                await asyncio.sleep(10)
-                yield {"id": 0, "name": "Never"}
-
-        plugins = {"dummy": DummyPlugin(), "slow1": SlowPlugin1(), "slow2": SlowPlugin2()}
-        iterator = ErrorCollectingIterator(plugins, "get_sites", global_timeout=0.3)
-        results = []
-        async for item in iterator:
-            results.append(item)
-
-        # dummy finishes fast, both slow plugins killed by global deadline
-        assert len(results) == 3
-        errors = iterator.get_error_summary()
-        assert errors.total_errors == 2
-        error_hubs = {e.data_hub for e in errors.errors}
-        assert error_hubs == {"slow1", "slow2"}
-        for e in errors.errors:
-            assert "Global deadline exceeded" in e.error
-
-    @pytest.mark.asyncio
-    async def test_aclose_called_on_timeout(self):
-        """Test that aclose() is called on timed-out plugin iterators."""
-
-        class SlowPlugin(DummyPlugin):
-            @property
-            def name(self):
-                return "slow"
-
-            @async_to_sync_generator
-            async def get_sites(self, **filters):
-                await asyncio.sleep(10)
-                yield {"id": 0, "name": "Never"}
-
-        plugins = {"slow": SlowPlugin()}
-        iterator = ErrorCollectingIterator(plugins, "get_sites", global_timeout=0.1)
-
-        # Wrap _kill_plugin to track aclose calls
-        original_kill = iterator._kill_plugin
-        kill_called_for = []
-
-        async def tracking_kill(plugin_name, error):
-            kill_called_for.append(plugin_name)
-            await original_kill(plugin_name, error)
-
-        iterator._kill_plugin = tracking_kill
-
-        results = []
-        async for item in iterator:
-            results.append(item)
-
-        assert len(results) == 0
-        assert "slow" in kill_called_for, "_kill_plugin (which calls aclose) should have been called"
-        errors = iterator.get_error_summary()
-        assert errors.total_errors == 1
-
-    @pytest.mark.asyncio
-    async def test_all_plugins_finish_within_deadline(self):
-        """Test that all plugins complete when they finish before the global deadline."""
-
-        class SlowPlugin(DummyPlugin):
-            @property
-            def name(self):
-                return "slow"
-
-            @async_to_sync_generator
-            async def get_sites(self, **filters):
-                await asyncio.sleep(0.2)
-                yield {"id": 0, "name": "Slow Site"}
-
-        plugins = {"dummy": DummyPlugin(), "slow": SlowPlugin()}
-        iterator = ErrorCollectingIterator(plugins, "get_sites", global_timeout=5.0)
-        results = []
-        async for item in iterator:
-            results.append(item)
-
-        # Both plugins should complete
-        assert len(results) == 4  # 3 from dummy + 1 from slow
+        assert len(results) == 5  # 3 from dummy + 2 from another
         errors = iterator.get_error_summary()
         assert errors.total_errors == 0
+
+    @pytest.mark.asyncio
+    async def test_iterator_isolates_plugin_errors(self):
+        """Test that an error in one plugin does not prevent other plugins from yielding."""
+
+        class ErrorPlugin(DummyPlugin):
+            @property
+            def name(self):
+                return "error"
+
+            @async_to_sync_generator
+            async def get_sites(self, **filters):
+                raise RuntimeError("plugin failure")
+                yield  # pragma: no cover
+
+        plugins = {"dummy": DummyPlugin(), "error": ErrorPlugin()}
+        iterator = ErrorCollectingIterator(plugins, "get_sites")
+        results = []
+        async for item in iterator:
+            results.append(item)
+
+        assert len(results) == 3  # all 3 from dummy
+        errors = iterator.get_error_summary()
+        assert errors.total_errors == 1
+        assert errors.errors[0].data_hub == "error"

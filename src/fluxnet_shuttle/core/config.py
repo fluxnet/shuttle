@@ -20,7 +20,7 @@ library, including loading default and custom configurations.
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import yaml
 
@@ -28,8 +28,21 @@ logger = logging.getLogger(__name__)
 
 # Default configuration values (overridden by config.yaml at runtime)
 DEFAULT_PARALLEL_REQUESTS = 3
-DEFAULT_GLOBAL_TIMEOUT = 60.0
 DEFAULT_FLUXNET_SHUTTLE_REFERER = "local_shuttle"
+
+# Default HTTP timeout values (used when config.yaml omits http_timeouts)
+DEFAULT_HTTP_TIMEOUT_TOTAL: Optional[float] = None
+DEFAULT_HTTP_SOCK_CONNECT: float = 30.0
+DEFAULT_HTTP_SOCK_READ: float = 120.0
+
+
+@dataclass
+class HttpTimeoutConfig:
+    """HTTP timeout settings applied to all plugin requests."""
+
+    total: Optional[float] = DEFAULT_HTTP_TIMEOUT_TOTAL
+    sock_connect: float = DEFAULT_HTTP_SOCK_CONNECT
+    sock_read: float = DEFAULT_HTTP_SOCK_READ
 
 
 @dataclass
@@ -52,8 +65,8 @@ class ShuttleConfig:
 
     data_hubs: Dict[str, DataHubConfig] = field(default_factory=dict)
     parallel_requests: int = DEFAULT_PARALLEL_REQUESTS
-    global_timeout: float = DEFAULT_GLOBAL_TIMEOUT
     fluxnet_shuttle_referer: str = DEFAULT_FLUXNET_SHUTTLE_REFERER
+    http_timeouts: HttpTimeoutConfig = field(default_factory=HttpTimeoutConfig)
 
     @classmethod
     def load_default(cls) -> "ShuttleConfig":
@@ -91,7 +104,15 @@ class ShuttleConfig:
 
             # Update other settings
             for key, value in config_dict.items():
-                if key != "data_hubs" and hasattr(config, key):
+                if key == "data_hubs":
+                    continue
+                if key == "http_timeouts" and isinstance(value, dict):
+                    config.http_timeouts = HttpTimeoutConfig(
+                        total=value.get("total", DEFAULT_HTTP_TIMEOUT_TOTAL),
+                        sock_connect=value.get("sock_connect", DEFAULT_HTTP_SOCK_CONNECT),
+                        sock_read=value.get("sock_read", DEFAULT_HTTP_SOCK_READ),
+                    )
+                elif hasattr(config, key):
                     setattr(config, key, value)
 
             return config
@@ -136,7 +157,15 @@ class ShuttleConfig:
                         config.data_hubs[data_hub_name] = cls._parse_data_hub_config(data_hub_data)
 
             for key, value in config_dict.items():
-                if key != "data_hubs" and hasattr(config, key):
+                if key == "data_hubs":
+                    continue
+                if key == "http_timeouts" and isinstance(value, dict):
+                    config.http_timeouts = HttpTimeoutConfig(
+                        total=value.get("total", DEFAULT_HTTP_TIMEOUT_TOTAL),
+                        sock_connect=value.get("sock_connect", DEFAULT_HTTP_SOCK_CONNECT),
+                        sock_read=value.get("sock_read", DEFAULT_HTTP_SOCK_READ),
+                    )
+                elif hasattr(config, key):
                     setattr(config, key, value)
 
             logger.info(f"Loaded configuration from {config_path}")
@@ -151,7 +180,6 @@ class ShuttleConfig:
         """Get hardcoded default configuration."""
         return {
             "parallel_requests": DEFAULT_PARALLEL_REQUESTS,
-            "global_timeout": DEFAULT_GLOBAL_TIMEOUT,
             "fluxnet_shuttle_referer": DEFAULT_FLUXNET_SHUTTLE_REFERER,
             "data_hubs": {
                 "ameriflux": {"enabled": True},
