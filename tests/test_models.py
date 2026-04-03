@@ -377,11 +377,13 @@ def test_plugin_error_detail_valid_creation():
         data_hub="ameriflux",
         operation="get_sites",
         error="Connection timeout",
+        error_type="TimeoutError",
         timestamp=timestamp,
     )
     assert error_detail.data_hub == "ameriflux"
     assert error_detail.operation == "get_sites"
     assert error_detail.error == "Connection timeout"
+    assert error_detail.error_type == "TimeoutError"
     assert error_detail.timestamp == timestamp
 
 
@@ -400,6 +402,7 @@ def test_plugin_error_detail_timestamp_validation():
             data_hub="ameriflux",
             operation="get_sites",
             error="Test error",
+            error_type="ValueError",
             timestamp=timestamp,
         )
         assert error_detail.timestamp == timestamp
@@ -417,6 +420,7 @@ def test_plugin_error_detail_timestamp_validation():
                 data_hub="ameriflux",
                 operation="get_sites",
                 error="Test error",
+                error_type="ValueError",
                 timestamp=timestamp,
             )
         assert "timestamp must be in ISO format" in str(exc_info.value)
@@ -427,6 +431,7 @@ def test_plugin_error_detail_timestamp_validation():
             data_hub="ameriflux",
             operation="get_sites",
             error="Test error",
+            error_type="ValueError",
             timestamp="",
         )
 
@@ -449,13 +454,28 @@ def test_plugin_error_detail_min_length_validation():
 
     # Empty strings should fail
     with pytest.raises(ValidationError):
-        PluginErrorDetail(data_hub="", operation="get_sites", error="Test error", timestamp=timestamp)
+        PluginErrorDetail(
+            data_hub="", operation="get_sites", error="Test error", error_type="ValueError", timestamp=timestamp
+        )
 
     with pytest.raises(ValidationError):
-        PluginErrorDetail(data_hub="ameriflux", operation="", error="Test error", timestamp=timestamp)
+        PluginErrorDetail(
+            data_hub="ameriflux", operation="", error="Test error", error_type="ValueError", timestamp=timestamp
+        )
 
     with pytest.raises(ValidationError):
-        PluginErrorDetail(data_hub="ameriflux", operation="get_sites", error="", timestamp=timestamp)
+        PluginErrorDetail(
+            data_hub="ameriflux", operation="get_sites", error="", error_type="ValueError", timestamp=timestamp
+        )
+
+    with pytest.raises(ValidationError):
+        PluginErrorDetail(
+            data_hub="ameriflux",
+            operation="get_sites",
+            error="Test error",
+            error_type="",
+            timestamp=timestamp,
+        )
 
 
 # Tests for ErrorSummary
@@ -466,6 +486,7 @@ def test_error_summary_valid_creation():
         data_hub="ameriflux",
         operation="get_sites",
         error="Connection timeout",
+        error_type="TimeoutError",
         timestamp=timestamp,
     )
     error_summary = ErrorSummary(
@@ -499,12 +520,14 @@ def test_error_summary_multiple_errors():
             data_hub="ameriflux",
             operation="get_sites",
             error="Connection timeout",
+            error_type="TimeoutError",
             timestamp=timestamp,
         ),
         PluginErrorDetail(
             data_hub="icos",
             operation="get_sites",
             error="API rate limit exceeded",
+            error_type="ClientResponseError",
             timestamp=timestamp,
         ),
     ]
@@ -525,6 +548,7 @@ def test_error_summary_non_negative_validation():
         data_hub="ameriflux",
         operation="get_sites",
         error="Test error",
+        error_type="ValueError",
         timestamp=timestamp,
     )
 
@@ -544,6 +568,7 @@ def test_error_summary_json_serialization():
         data_hub="ameriflux",
         operation="get_sites",
         error="Connection timeout",
+        error_type="TimeoutError",
         timestamp=timestamp,
     )
     error_summary = ErrorSummary(

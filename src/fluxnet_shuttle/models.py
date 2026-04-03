@@ -277,6 +277,7 @@ class PluginErrorDetail(BaseModel):
         data_hub (str): Data hub/plugin name where the error occurred
         operation (str): Operation being performed when the error occurred
         error (str): Error message or description
+        error_type (str): Exception class name (e.g. "TimeoutError", "PluginError")
         timestamp (str): ISO format timestamp when the error occurred
     """
 
@@ -287,6 +288,8 @@ class PluginErrorDetail(BaseModel):
     operation: str = Field(..., description="Operation being performed when the error occurred", min_length=1)
 
     error: str = Field(..., description="Error message or description", min_length=1)
+
+    error_type: str = Field(..., description="Exception class name (e.g. 'TimeoutError', 'PluginError')", min_length=1)
 
     timestamp: str = Field(..., description="ISO format timestamp when the error occurred")
 

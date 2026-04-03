@@ -176,6 +176,7 @@ class ErrorCollectingIterator:
                 data_hub=error.plugin_name,
                 operation=error.operation,
                 error=str(error.error),
+                error_type=type(error.error).__name__,
                 timestamp=error.timestamp.isoformat(),
             )
             for error in self.errors
