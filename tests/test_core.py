@@ -13,7 +13,14 @@ import aiohttp
 import pytest
 
 from fluxnet_shuttle.core.base import DataHubPlugin
-from fluxnet_shuttle.core.config import DataHubConfig, ShuttleConfig
+from fluxnet_shuttle.core.config import (
+    DEFAULT_HTTP_SOCK_CONNECT,
+    DEFAULT_HTTP_SOCK_READ,
+    DEFAULT_HTTP_TIMEOUT_TOTAL,
+    DataHubConfig,
+    HttpTimeoutConfig,
+    ShuttleConfig,
+)
 from fluxnet_shuttle.core.decorators import async_to_sync, async_to_sync_generator
 from fluxnet_shuttle.core.exceptions import FLUXNETShuttleError, PluginError
 from fluxnet_shuttle.models import BadmSiteGeneralInfo, DataFluxnetProduct, FluxnetDatasetMetadata
@@ -348,16 +355,46 @@ class TestShuttleConfig:
         # Defaults should still be present
         assert "ameriflux" in config.data_hubs
 
-    def test_load_from_file_overrides_global_timeout(self, tmp_path):
-        """Test that load_from_file can override global_timeout."""
+    def test_http_timeout_config_defaults(self):
+        """Test that HttpTimeoutConfig uses correct hardcoded defaults."""
+        tc = HttpTimeoutConfig()
+
+        assert tc.total == DEFAULT_HTTP_TIMEOUT_TOTAL
+        assert tc.sock_connect == DEFAULT_HTTP_SOCK_CONNECT
+        assert tc.sock_read == DEFAULT_HTTP_SOCK_READ
+
+    def test_http_timeout_config_custom_values(self):
+        """Test HttpTimeoutConfig with custom values."""
+        tc = HttpTimeoutConfig(total=60.0, sock_connect=10.0, sock_read=300.0)
+
+        assert tc.total == 60.0
+        assert tc.sock_connect == 10.0
+        assert tc.sock_read == 300.0
+
+    def test_load_from_file_overrides_http_timeouts(self, tmp_path):
+        """Test that load_from_file parses http_timeouts section."""
         config_path = tmp_path / "timeout.yaml"
         config_path.write_text("""
-            global_timeout: 90
+            http_timeouts:
+              total: null
+              sock_connect: 10
+              sock_read: 300
             """)
 
         config = ShuttleConfig.load_from_file(config_path)
 
-        assert config.global_timeout == 90
+        assert config.http_timeouts.total is None
+        assert config.http_timeouts.sock_connect == 10
+        assert config.http_timeouts.sock_read == 300
+
+    def test_default_config_has_http_timeouts(self):
+        """Test that default config includes HttpTimeoutConfig with defaults."""
+        config = ShuttleConfig.load_default()
+
+        assert isinstance(config.http_timeouts, HttpTimeoutConfig)
+        assert config.http_timeouts.total == DEFAULT_HTTP_TIMEOUT_TOTAL
+        assert config.http_timeouts.sock_connect == DEFAULT_HTTP_SOCK_CONNECT
+        assert config.http_timeouts.sock_read == DEFAULT_HTTP_SOCK_READ
 
     def test_default_config_loads_plugin_settings(self):
         """Test that default config loads plugin-specific settings from config.yaml."""

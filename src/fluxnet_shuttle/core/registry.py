@@ -17,16 +17,13 @@ This module provides the plugin registry for managing data hub plugins
 and error collection capabilities.
 """
 
-import asyncio
 import logging
-import time
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, AsyncGenerator, Dict, List, Optional, Type
+from typing import Any, AsyncGenerator, Dict, List, Type
 
 from ..models import ErrorSummary, FluxnetDatasetMetadata, PluginErrorDetail
 from .base import DataHubPlugin
-from .config import ShuttleConfig
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +50,6 @@ class ErrorCollectingIterator:
         self,
         plugins: Dict[str, DataHubPlugin],
         operation: str,
-        global_timeout: float = ShuttleConfig.global_timeout,
         **kwargs: Any,
     ) -> None:
         """
@@ -62,8 +58,6 @@ class ErrorCollectingIterator:
         Args:
             plugins: Dictionary of plugin instances to iterate over
             operation: The operation being performed (e.g., 'get_sites')
-            global_timeout: Hard deadline in seconds for the entire iteration.
-                When expired, all remaining plugins are killed and their errors logged.
             **kwargs: Arguments to pass to the plugin operation
         """
         self.plugins = plugins
@@ -73,61 +67,10 @@ class ErrorCollectingIterator:
         self._results_count = 0
         self._plugin_iterators: Dict[str, AsyncGenerator[FluxnetDatasetMetadata, None]] = {}
         self._completed_plugins: set[str] = set()
-        self._global_timeout: float = global_timeout
-        self._global_start_time: Optional[float] = None
 
     def __aiter__(self) -> "ErrorCollectingIterator":
         """Return self as the async iterator."""
         return self
-
-    async def _kill_plugin(self, plugin_name: str, error: Exception) -> None:
-        """Kill a plugin iterator, close it, and record the error."""
-        plugin_iter = self._plugin_iterators.pop(plugin_name, None)
-        self._completed_plugins.add(plugin_name)
-        self.add_error(plugin_name, error, self.operation)
-        if plugin_iter is not None:
-            try:
-                await plugin_iter.aclose()
-            except Exception:
-                pass  # best-effort cleanup
-
-    async def _kill_all_plugins(self, reason: str) -> None:
-        """Kill all remaining plugin iterators with the given reason."""
-        for name in list(self._plugin_iterators):
-            await self._kill_plugin(name, TimeoutError(reason))
-
-    def _global_remaining(self) -> float:
-        """Return seconds left on the global deadline."""
-        assert self._global_start_time is not None
-        return self._global_timeout - (time.monotonic() - self._global_start_time)
-
-    def _init_plugin(self, plugin_name: str, plugin: DataHubPlugin) -> None:
-        """Validate and initialise a single plugin iterator. Errors are recorded internally."""
-        if not hasattr(plugin, self.operation):
-            logger.warning(f"Plugin '{plugin_name}' does not have operation '{self.operation}'")
-            self.add_error(plugin_name, AttributeError(f"Operation '{self.operation}' not found"), self.operation)
-            self._completed_plugins.add(plugin_name)
-            return
-        if not callable(getattr(plugin, self.operation)):
-            logger.warning(f"Plugin '{plugin_name}' operation '{self.operation}' is not callable")
-            self.add_error(
-                plugin_name,
-                TypeError(f"Operation '{self.operation}' is not callable"),
-                self.operation,
-            )
-            self._completed_plugins.add(plugin_name)
-            return
-        iterator = getattr(plugin, self.operation)(**self.kwargs)
-        if not hasattr(iterator, "__aiter__"):
-            logger.warning(f"Plugin '{plugin_name}' operation '{self.operation}' is not an async generator")
-            self.add_error(
-                plugin_name,
-                TypeError(f"Operation '{self.operation}' is not an async generator"),
-                self.operation,
-            )
-            self._completed_plugins.add(plugin_name)
-            return
-        self._plugin_iterators[plugin_name] = getattr(plugin, self.operation)(**self.kwargs).__aiter__()
 
     async def __anext__(self) -> FluxnetDatasetMetadata:
         """
@@ -139,50 +82,63 @@ class ErrorCollectingIterator:
         Raises:
             StopAsyncIteration: When no more results are available
         """
-        # Start global clock on first call
-        if self._global_start_time is None:
-            self._global_start_time = time.monotonic()
-
-        # Check global deadline (may fire if deadline expired between __anext__ calls)
-        remaining = self._global_remaining()
-        if remaining <= 0:  # pragma: no cover
-            await self._kill_all_plugins(f"Global deadline exceeded ({self._global_timeout}s)")
-            raise StopAsyncIteration
-
         # Initialize iterators for plugins that haven't been started
         for plugin_name, plugin in self.plugins.items():
             if plugin_name not in self._plugin_iterators and plugin_name not in self._completed_plugins:
                 try:
-                    self._init_plugin(plugin_name, plugin)
+                    # check if plugin has the requested operation
+                    if not hasattr(plugin, self.operation):
+                        logger.warning(f"Plugin '{plugin_name}' does not have operation '{self.operation}'")
+                        self.add_error(
+                            plugin_name, AttributeError(f"Operation '{self.operation}' not found"), self.operation
+                        )
+                        self._completed_plugins.add(plugin_name)
+                        continue
+                    # now check if it's callable and is an async generator as expected
+                    if not callable(getattr(plugin, self.operation)):
+                        logger.warning(f"Plugin '{plugin_name}' operation '{self.operation}' is not callable")
+                        self.add_error(
+                            plugin_name,
+                            TypeError(f"Operation '{self.operation}' is not callable"),
+                            self.operation,
+                        )
+                        self._completed_plugins.add(plugin_name)
+                        continue
+                    # Initialize the async generator
+                    iterator = getattr(plugin, self.operation)(**self.kwargs)
+                    if not hasattr(iterator, "__aiter__"):
+                        logger.warning(f"Plugin '{plugin_name}' operation '{self.operation}' is not an async generator")
+                        self.add_error(
+                            plugin_name,
+                            TypeError(f"Operation '{self.operation}' is not an async generator"),
+                            self.operation,
+                        )
+                        self._completed_plugins.add(plugin_name)
+                        continue
+                    self._plugin_iterators[plugin_name] = getattr(plugin, self.operation)(**self.kwargs).__aiter__()
                 except Exception as e:  # pragma: no cover
+                    # should not happen, but just in case
                     logger.warning(f"Error initializing plugin '{plugin_name}': {e}")
                     self.add_error(plugin_name, e, self.operation)
                     self._completed_plugins.add(plugin_name)
 
         # Try to get next result from any plugin
         while self._plugin_iterators:
+            # Try each plugin iterator
             for plugin_name in list(self._plugin_iterators.keys()):
-                remaining = self._global_remaining()
-                if remaining <= 0:
-                    await self._kill_all_plugins(f"Global deadline exceeded ({self._global_timeout}s)")
-                    raise StopAsyncIteration
-
                 try:
-                    result = await asyncio.wait_for(
-                        self._plugin_iterators[plugin_name].__anext__(),
-                        timeout=remaining,
-                    )
+                    result = await self._plugin_iterators[plugin_name].__anext__()
                     self._results_count += 1
                     return result
-                except asyncio.TimeoutError:
-                    await self._kill_plugin(
-                        plugin_name, TimeoutError(f"Global deadline exceeded ({self._global_timeout}s)")
-                    )
                 except StopAsyncIteration:
+                    # This plugin is done
                     del self._plugin_iterators[plugin_name]
                     self._completed_plugins.add(plugin_name)
                 except Exception as e:
-                    await self._kill_plugin(plugin_name, e)
+                    # Error in this plugin
+                    self.add_error(plugin_name, e, self.operation)
+                    del self._plugin_iterators[plugin_name]
+                    self._completed_plugins.add(plugin_name)
 
         # No more results from any plugin
         raise StopAsyncIteration

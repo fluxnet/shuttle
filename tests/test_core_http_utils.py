@@ -11,11 +11,45 @@ from unittest.mock import AsyncMock, patch
 import aiohttp
 import pytest
 
-from fluxnet_shuttle.core.http_utils import session_request
+from fluxnet_shuttle.core.config import HttpTimeoutConfig
+from fluxnet_shuttle.core.http_utils import get_session, session_request
 
 
 class TestHTTPUtils:
     """Test suite for HTTP utility functions."""
+
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle.core.http_utils.aiohttp.ClientSession")
+    async def test_get_session_default_timeouts(self, mock_session_cls):
+        """Test get_session uses HttpTimeoutConfig defaults when no arg given."""
+        mock_session = AsyncMock()
+        mock_session_cls.return_value = mock_session
+
+        async with get_session() as session:
+            assert session is mock_session
+
+        call_kwargs = mock_session_cls.call_args.kwargs
+        timeout = call_kwargs["timeout"]
+        assert timeout.total is None
+        assert timeout.sock_connect == 30
+        assert timeout.sock_read == 120
+
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle.core.http_utils.aiohttp.ClientSession")
+    async def test_get_session_custom_timeouts(self, mock_session_cls):
+        """Test get_session applies custom HttpTimeoutConfig values."""
+        mock_session = AsyncMock()
+        mock_session_cls.return_value = mock_session
+
+        tc = HttpTimeoutConfig(total=60.0, sock_connect=5.0, sock_read=200.0)
+        async with get_session(http_timeouts=tc) as session:
+            assert session is mock_session
+
+        call_kwargs = mock_session_cls.call_args.kwargs
+        timeout = call_kwargs["timeout"]
+        assert timeout.total == 60.0
+        assert timeout.sock_connect == 5.0
+        assert timeout.sock_read == 200.0
 
     @pytest.mark.asyncio
     @patch("fluxnet_shuttle.core.http_utils.aiohttp.ClientSession.request")
