@@ -250,3 +250,48 @@ class TestPluginRegistry:
         errors = iterator.get_error_summary()
         assert errors.total_errors == 1
         assert errors.errors[0].data_hub == "error"
+
+    @pytest.mark.asyncio
+    async def test_error_type_preserved_in_error_summary(self):
+        """Test that error_type in get_error_summary() matches the exception class name."""
+
+        class ErrorPlugin(DummyPlugin):
+            @async_to_sync_generator
+            async def get_sites(self, **filters):
+                raise ValueError("something went wrong")
+                yield  # pragma: no cover
+
+        plugins = {"error": ErrorPlugin()}
+        iterator = ErrorCollectingIterator(plugins, "get_sites")
+        async for _ in iterator:
+            pass
+
+        errors = iterator.get_error_summary()
+        assert errors.total_errors == 1
+        assert errors.errors[0].error_type == "ValueError"
+
+    @pytest.mark.asyncio
+    async def test_error_type_timeout_error(self):
+        """Test that TimeoutError class name is preserved in error_type."""
+        plugins = {"dummy": DummyPlugin()}
+        iterator = ErrorCollectingIterator(plugins, "get_sites")
+        iterator.add_error("dummy", TimeoutError("timed out"), "get_sites")
+
+        errors = iterator.get_error_summary()
+        assert any(e.error_type == "TimeoutError" for e in errors.errors)
+
+    @pytest.mark.asyncio
+    async def test_error_type_attribute_error(self):
+        """Test that AttributeError class name is preserved when operation is missing."""
+
+        class NoOpPlugin(DummyPlugin):
+            pass  # no 'missing_op' method
+
+        plugins = {"dummy": NoOpPlugin()}
+        iterator = ErrorCollectingIterator(plugins, "missing_op")
+        async for _ in iterator:
+            pass
+
+        errors = iterator.get_error_summary()
+        assert errors.total_errors == 1
+        assert errors.errors[0].error_type == "AttributeError"
