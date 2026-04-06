@@ -80,6 +80,7 @@ different plugin implementations.
 
 """
 
+import asyncio
 import logging
 from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
@@ -237,9 +238,14 @@ class DataHubPlugin(ABC):
                 response.raise_for_status()  # Raise an error for bad responses (4xx and 5xx)
 
                 yield response
+        except (TimeoutError, asyncio.TimeoutError) as e:
+            _logger.error(f"HTTP request timed out: {e}")
+            raise exceptions.HttpTimeoutError(
+                plugin_name=self.name, message="HTTP request timed out", original_error=e
+            ) from e
         except aiohttp.ClientError as e:
             _logger.error(f"HTTP request failed: {e}")
-            raise exceptions.PluginError(
+            raise exceptions.NetworkError(
                 plugin_name=self.name, message="Failed to make HTTP request", original_error=e
             ) from e
         except Exception as e:

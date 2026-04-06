@@ -6,6 +6,7 @@ import pytest
 
 from fluxnet_shuttle.core.base import DataHubPlugin
 from fluxnet_shuttle.core.decorators import async_to_sync_generator
+from fluxnet_shuttle.core.exceptions import HttpTimeoutError, NetworkError
 from fluxnet_shuttle.core.registry import ErrorCollectingIterator, PluginRegistry
 
 
@@ -272,13 +273,31 @@ class TestPluginRegistry:
 
     @pytest.mark.asyncio
     async def test_error_type_timeout_error(self):
-        """Test that TimeoutError class name is preserved in error_type."""
+        """Test that HttpTimeoutError class name is preserved in error_type."""
         plugins = {"dummy": DummyPlugin()}
         iterator = ErrorCollectingIterator(plugins, "get_sites")
-        iterator.add_error("dummy", TimeoutError("timed out"), "get_sites")
+        iterator.add_error(
+            "dummy",
+            HttpTimeoutError("dummy", "HTTP request timed out", original_error=TimeoutError("timed out")),
+            "get_sites",
+        )
 
         errors = iterator.get_error_summary()
-        assert any(e.error_type == "TimeoutError" for e in errors.errors)
+        assert any(e.error_type == "HttpTimeoutError" for e in errors.errors)
+
+    @pytest.mark.asyncio
+    async def test_error_type_network_error(self):
+        """Test that NetworkError class name is preserved in error_type."""
+        plugins = {"dummy": DummyPlugin()}
+        iterator = ErrorCollectingIterator(plugins, "get_sites")
+        iterator.add_error(
+            "dummy",
+            NetworkError("dummy", "Failed to make HTTP request", original_error=ConnectionError("refused")),
+            "get_sites",
+        )
+
+        errors = iterator.get_error_summary()
+        assert any(e.error_type == "NetworkError" for e in errors.errors)
 
     @pytest.mark.asyncio
     async def test_error_type_attribute_error(self):
