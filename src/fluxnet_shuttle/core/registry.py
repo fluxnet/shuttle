@@ -252,7 +252,11 @@ class PluginRegistry:
         """
         return list(self._plugins.keys())
 
-    def create_instance(self, name: str, **config: Any) -> DataHubPlugin:
+    def create_instance(
+        self,
+        name: str,
+        **config: Any,
+    ) -> DataHubPlugin:
         """
         Create an instance of a plugin.
 

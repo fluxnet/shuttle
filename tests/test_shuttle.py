@@ -711,8 +711,8 @@ class TestDownload:
         "builtins.open",
         mock_open(
             read_data="site_id,data_hub,download_link,fluxnet_product_name\n"
-            "US-Ha1,AmeriFlux,http://example.com/US-Ha1.zip,US-Ha1.zip\n"
-            "US-MMS,AmeriFlux,http://example.com/US-MMS.zip,US-MMS.zip\n"
+            "US-Ha1,AmeriFlux,http://amfcdn-dev.lbl.gov/US-Ha1.zip,US-Ha1.zip\n"
+            "US-MMS,AmeriFlux,http://amfcdn-dev.lbl.gov/US-MMS.zip,US-MMS.zip\n"
         ),
     )
     async def test_download_partial_failure_continues(self, mock_exists, mock_download, caplog):

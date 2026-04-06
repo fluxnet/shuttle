@@ -52,6 +52,29 @@ class TestHTTPUtils:
         assert timeout.sock_read == 200.0
 
     @pytest.mark.asyncio
+    async def test_session_request_forwards_http_timeouts(self):
+        """Test session_request passes http_timeouts to get_session."""
+        tc = HttpTimeoutConfig(total=5.0, sock_connect=2.0, sock_read=10.0)
+
+        mock_response = AsyncMock()
+        mock_response.raise_for_status.return_value = None
+
+        mock_session = AsyncMock(spec=aiohttp.ClientSession)
+        mock_session.request.return_value.__aenter__.return_value = mock_response
+        mock_session.close = AsyncMock()
+
+        with patch("fluxnet_shuttle.core.http_utils.get_session") as mock_get_session:
+            mock_ctx = AsyncMock()
+            mock_ctx.__aenter__.return_value = mock_session
+            mock_ctx.__aexit__.return_value = None
+            mock_get_session.return_value = mock_ctx
+
+            async with session_request("GET", "https://amfcdn-dev.lbl.gov", http_timeouts=tc) as response:
+                assert response is mock_response
+
+            mock_get_session.assert_called_once_with(http_timeouts=tc)
+
+    @pytest.mark.asyncio
     @patch("fluxnet_shuttle.core.http_utils.aiohttp.ClientSession.request")
     async def test_session_request_success(self, mock_request):
         """Test successful HTTP GET request."""
