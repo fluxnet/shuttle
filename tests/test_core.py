@@ -174,7 +174,7 @@ class TestDataHubPlugin:
             data = await response.json()
             assert data["data"] == "test"
 
-        mock_session_request.assert_called_once_with("GET", url)
+        mock_session_request.assert_called_once_with("GET", url, http_timeouts=None)
 
     @pytest.mark.asyncio
     @patch("fluxnet_shuttle.core.base.session_request")
@@ -239,7 +239,26 @@ class TestDataHubPlugin:
         assert chunks == [b"test file content"]
 
         # Verify GET request was made to download link
-        mock_session_request.assert_called_once_with("GET", download_link)
+        mock_session_request.assert_called_once_with("GET", download_link, http_timeouts=None)
+
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle.core.base.session_request")
+    async def test_session_request_forwards_http_timeouts(self, mock_session_request):
+        """Test that _session_request forwards http_timeouts to session_request."""
+        tc = HttpTimeoutConfig(total=5.0, sock_connect=2.0, sock_read=10.0)
+        plugin = MockDataHubPlugin(config={"http_timeouts": tc})
+        url = "https://amfcdn-dev.lbl.gov/api/data"
+
+        mock_response = AsyncMock()
+        mock_response.json.return_value = {"data": "test"}
+        mock_response.raise_for_status.return_value = None
+        mock_session_request.return_value.__aenter__.return_value = mock_response
+        mock_session_request.return_value.__aexit__.return_value = None
+
+        async with plugin._session_request("GET", url) as response:
+            await response.json()
+
+        mock_session_request.assert_called_once_with("GET", url, http_timeouts=tc)
 
 
 class TestShuttleConfig:

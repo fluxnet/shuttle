@@ -248,6 +248,7 @@ class FluxnetShuttle:
 
         settings = {
             "fluxnet_shuttle_referer": self.config.fluxnet_shuttle_referer,
+            "http_timeouts": self.config.http_timeouts,
             **data_hub_config.settings,
         }
         plugin: DataHubPlugin = self.registry.create_instance(data_hub_name, **settings)

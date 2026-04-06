@@ -62,6 +62,7 @@ async def get_session(
 async def session_request(
     method: str,
     url: str,
+    http_timeouts: Optional[HttpTimeoutConfig] = None,
     **kwargs: Any,
 ) -> AsyncGenerator[aiohttp.ClientResponse, None]:
     """
@@ -73,6 +74,9 @@ async def session_request(
         The HTTP method to use (e.g., 'GET', 'POST').
     url : str
         The URL to which the request is sent.
+    http_timeouts : HttpTimeoutConfig, optional
+        Timeout settings to apply to the session.  When *None* the
+        hardcoded defaults from :class:`HttpTimeoutConfig` are used.
     **kwargs
         Additional keyword arguments to pass to the session's request method.
 
@@ -87,7 +91,7 @@ async def session_request(
         If an error occurs during the HTTP request.
     """
     try:
-        async with get_session() as session:
+        async with get_session(http_timeouts=http_timeouts) as session:
             async with session.request(method, url, **kwargs) as response:
                 response.raise_for_status()  # Raise an error for bad responses (4xx and 5xx)
                 yield response

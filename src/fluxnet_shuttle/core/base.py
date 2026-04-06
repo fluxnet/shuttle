@@ -108,7 +108,10 @@ class DataHubPlugin(ABC):
         config (Dict[str, Any]): Configuration dictionary for the plugin
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self,
+        config: Optional[Dict[str, Any]] = None,
+    ):
         """
         Initialize the data hub plugin.
 
@@ -229,6 +232,7 @@ class DataHubPlugin(ABC):
 
         try:
 
+            kwargs.setdefault("http_timeouts", self.config.get("http_timeouts"))
             async with session_request(method, url, **kwargs) as response:
                 response.raise_for_status()  # Raise an error for bad responses (4xx and 5xx)
 
