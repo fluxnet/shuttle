@@ -112,6 +112,8 @@ class AmeriFluxPlugin(DataHubPlugin):
 
         try:
             site_metadata = await self._get_site_metadata(api_url)
+        except PluginError:
+            raise
         except Exception as e:
             logger.exception("Failed to retrieve AmeriFlux data: %s", e)
             raise PluginError(self.name, f"Failed to retrieve data from API: {e}", original_error=e)

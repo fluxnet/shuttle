@@ -45,3 +45,9 @@ class NetworkError(PluginError):
     """Exception raised when there's a connectivity issue."""
 
     pass
+
+
+class HttpTimeoutError(PluginError):
+    """Exception raised when a plugin HTTP request times out."""
+
+    pass

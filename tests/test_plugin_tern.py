@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from fluxnet_shuttle.core.exceptions import PluginError
+from fluxnet_shuttle.core.exceptions import HttpTimeoutError, PluginError
 from fluxnet_shuttle.plugins import tern
 
 
@@ -587,6 +587,19 @@ AU-Lox,https://data.tern.org.au/TERN_AU-Lox_FLUXNET_2008-2020_v1_r1.zip,doi:10.1
         plugin = tern.TERNPlugin()
         with pytest.raises(PluginError, match="Failed to retrieve data"):
             # Get the async generator and try to iterate
+            gen = plugin.get_sites.__wrapped__(plugin)
+            async for _ in gen:
+                pass
+
+    @patch("fluxnet_shuttle.plugins.tern.TERNPlugin._fetch_product_metadata")
+    @patch("fluxnet_shuttle.plugins.tern.TERNPlugin._fetch_bif_metadata")
+    @pytest.mark.asyncio
+    async def test_get_sites_plugin_error_not_rewrapped(self, mock_fetch_bif, mock_fetch_product):
+        """Test that PluginError subclasses propagate without re-wrapping."""
+        mock_fetch_bif.side_effect = HttpTimeoutError("tern", "HTTP request timed out")
+
+        plugin = tern.TERNPlugin()
+        with pytest.raises(HttpTimeoutError):
             gen = plugin.get_sites.__wrapped__(plugin)
             async for _ in gen:
                 pass

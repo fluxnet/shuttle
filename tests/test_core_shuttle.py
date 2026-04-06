@@ -132,7 +132,7 @@ class TestFluxnetShuttleIntegration:
         """Test that errors are properly collected from failing plugins."""
 
         # Mock the registry to include our test plugins
-        def create_instance_side_effect(name, **config):
+        def create_instance_side_effect(name, http_timeouts=None, **config):
             if name == "failing":
                 return MockFailingPlugin()
             elif name == "success":

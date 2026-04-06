@@ -311,6 +311,8 @@ class TERNPlugin(DataHubPlugin):
                 await asyncio.sleep(0.001)  # Yield control to event loop
                 yield site_data
 
+        except PluginError:
+            raise
         except Exception as e:
             logger.exception("Failed to retrieve TERN data: %s", e)
             raise PluginError(self.name, f"Failed to retrieve data: {e}", original_error=e)

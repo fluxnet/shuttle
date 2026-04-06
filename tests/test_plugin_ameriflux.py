@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from fluxnet_shuttle.core.exceptions import PluginError
+from fluxnet_shuttle.core.exceptions import HttpTimeoutError, PluginError
 from fluxnet_shuttle.plugins import ameriflux
 
 
@@ -186,6 +186,17 @@ class TestAmeriFluxPlugin:
             list(plugin.get_sites())
 
         assert "API failure" in str(excinfo.value)
+
+    @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_site_metadata")
+    def test_get_sites_plugin_error_not_rewrapped(self, mock_get_metadata):
+        """Test that PluginError subclasses propagate without re-wrapping."""
+        mock_get_metadata.side_effect = HttpTimeoutError("ameriflux", "HTTP request timed out")
+
+        plugin = ameriflux.AmeriFluxPlugin()
+        with pytest.raises(HttpTimeoutError) as excinfo:
+            list(plugin.get_sites())
+
+        assert "HTTP request timed out" in str(excinfo.value)
 
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_site_metadata")
     @patch("fluxnet_shuttle.plugins.ameriflux.AmeriFluxPlugin._get_download_links")

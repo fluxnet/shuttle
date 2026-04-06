@@ -22,7 +22,7 @@ from fluxnet_shuttle.core.config import (
     ShuttleConfig,
 )
 from fluxnet_shuttle.core.decorators import async_to_sync, async_to_sync_generator
-from fluxnet_shuttle.core.exceptions import FLUXNETShuttleError, PluginError
+from fluxnet_shuttle.core.exceptions import FLUXNETShuttleError, HttpTimeoutError, NetworkError, PluginError
 from fluxnet_shuttle.models import BadmSiteGeneralInfo, DataFluxnetProduct, FluxnetDatasetMetadata
 
 
@@ -179,14 +179,14 @@ class TestDataHubPlugin:
     @pytest.mark.asyncio
     @patch("fluxnet_shuttle.core.base.session_request")
     async def test_session_request_client_error(self, mock_session_request):
-        """Test _session_request handling of aiohttp.ClientError."""
+        """Test _session_request handling of aiohttp.ClientError raises NetworkError."""
         plugin = MockDataHubPlugin()
         url = "https://amfcdn-dev.lbl.gov/api/data"
 
         # Make session_request raise a ClientError when entered
         mock_session_request.return_value.__aenter__.side_effect = aiohttp.ClientConnectionError("Connection failed")
 
-        with pytest.raises(PluginError) as exc_info:
+        with pytest.raises(NetworkError) as exc_info:
             async with plugin._session_request("GET", url) as response:  # noqa: F841
                 pass
 
@@ -194,6 +194,24 @@ class TestDataHubPlugin:
         assert error.plugin_name == "mock"
         assert "Failed to make HTTP request" in error.message
         assert isinstance(error.original_error, aiohttp.ClientConnectionError)
+
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle.core.base.session_request")
+    async def test_session_request_timeout_error(self, mock_session_request):
+        """Test _session_request handling of TimeoutError raises HttpTimeoutError."""
+        plugin = MockDataHubPlugin()
+        url = "https://amfcdn-dev.lbl.gov/api/data"
+
+        mock_session_request.return_value.__aenter__.side_effect = TimeoutError()
+
+        with pytest.raises(HttpTimeoutError) as exc_info:
+            async with plugin._session_request("GET", url) as response:  # noqa: F841
+                pass
+
+        error = exc_info.value
+        assert error.plugin_name == "mock"
+        assert "HTTP request timed out" in error.message
+        assert isinstance(error.original_error, TimeoutError)
 
     @pytest.mark.asyncio
     @patch("fluxnet_shuttle.core.base.session_request")
