@@ -44,6 +44,59 @@ ICOS_ROLE_TO_BADM = {
     "data manager": "DataManager",
     "engineer": "Technician",
 }
+
+
+# Mapping from ICOS network codes to BADM controlled vocabulary codes.
+# Source: https://meta.icos-cp.eu/ontologies/cpmeta/EtcNetwork
+ICOS_NETWORK_TO_BADM = {
+    "AMF": "AmeriFlux",
+    "ANAEE": "ANAEE",
+    "ASF": "AsiaFlux",
+    "CAFRICA": "CarboAfrica",
+    "CEURO": "CarboEuroFlux",
+    "CEUROIP": "CarboEuropeIP",
+    "CEXTREME": "CarboExtreme",
+    "CITALY": "CarboItaly",
+    "CMONT": "Carbomont",
+    "CNF": "ChinaFLUX",
+    "CZN": "CZNet",
+    "DANUBIUS": "DANUBIUS-RI",
+    "ELTER": "eLTER",
+    "EUDB": "European Fluxes Database",
+    "EUROFLUX": "EuroFlux",
+    "FCANADA": "Fluxnet-Canada",
+    "FLX": "Unaffiliated",
+    "GHGEU": "GHG-Europe",
+    "GREENG": "GreenGrass",
+    "ICOS": "ICOS",
+    "IMECC": "IMECC",
+    "INFLUX": "INFLUX",
+    "INGOS": "InGOS",
+    "JPF": "JapanFlux",
+    "KOF": "KoFlux",
+    "LBA": "LBA",
+    "LTAR": "LTAR",
+    "LTER": "LTER",
+    "MEDFLU": "Medeflu",
+    "MEXFL": "MexFlux",
+    "NEON": "NEON",
+    "NYSM": "New York State Mesonet",
+    "OZF": "OzFlux",
+    "PAGE21": "PAGE21",
+    "PHEN": "Phenocam",
+    "SAEON": "EFTEON SAEON",
+    "SWISSF": "Swiss FluxNet",
+    "TAIFLU": "TaiwanFlux",
+    "TCOS": "TCOS-Siberia",
+    "TERENO": "TERENO",
+    "TERN": "TERN",
+    "THAIFLU": "ThaiFlux",
+    "TROPI": "TROPI-DRY",
+    "UFLUX": "UFLUX",
+    "URBFLU": "Urban Flux Network",
+    "USCCC": "USCCC",
+}
+
 ICOS_SPARQL_QUERY = """
 prefix cpmeta: <http://meta.icos-cp.eu/ontologies/cpmeta/>
 prefix prov: <http://www.w3.org/ns/prov#>
@@ -52,7 +105,7 @@ prefix geo: <http://www.opengis.net/ont/geosparql#>
 prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 select ?dobj ?hasNextVersion ?spec ?station ?stationName ?fileName ?size ?submTime
        ?timeStart ?timeEnd ?lat ?lon ?ecosystemType ?citationString
-       ?firstName ?lastName ?email ?roleName ?orgName
+       ?firstName ?lastName ?email ?roleName ?orgName ?networks
 where {
     VALUES ?spec {<http://meta.icos-cp.eu/resources/cpmeta/miscFluxnetArchiveProduct>}
     ?dobj cpmeta:hasObjectSpec ?spec .
@@ -83,6 +136,11 @@ where {
     # Get citation string
     OPTIONAL {
         ?dobj cpmeta:hasCitationString ?citationString .
+    }
+
+    # Get network affiliations
+    OPTIONAL {
+        ?station cpmeta:hasAssociatedNetwork ?networks .
     }
 
     # Get team member information
@@ -181,7 +239,13 @@ class ICOSPlugin(DataHubPlugin):
                         "filename": binding.get("fileName", {}).get("value", ""),
                         "dobj_uri": dobj_uri,
                         "team_members": [],
+                        "network_uris": set(),
                     }
+
+                # Collect network URI if present
+                network_uri = binding.get("networks", {}).get("value", "")
+                if network_uri:
+                    sites_data[dobj_uri]["network_uris"].add(network_uri)
 
                 # Extract and add team member if present
                 team_member = self._extract_team_member(binding)
@@ -193,6 +257,36 @@ class ICOSPlugin(DataHubPlugin):
                 continue
 
         return sites_data
+
+    def _map_network_to_badm(self, network_uri: str) -> Optional[str]:
+        """
+        Map an ICOS network URI to a BADM network controlled vocabulary code.
+
+        ICOS provides network affiliations as URIs in the format:
+        http://meta.icos-cp.eu/resources/networks/ETC/<CODE>
+
+        The BADM code is extracted from the last path segment of the URI
+        and validated against BADM_NETWORK_CODES.
+
+        Args:
+            network_uri: ICOS network URI string
+
+        Returns:
+            BADM network code, or None if the code is not recognized
+        """
+        if not network_uri:
+            return None
+
+        # Extract the network code from the URI (last path segment)
+        code = network_uri.split("/")[-1]
+        if not code:
+            return None
+
+        badm_code = ICOS_NETWORK_TO_BADM.get(code)
+        if badm_code is None:
+            logger.debug(f"Unknown ICOS network code for BADM mapping: {code}")
+            return None
+        return badm_code
 
     def _map_icos_role_to_badm(self, icos_role: str) -> str:
         """
@@ -300,6 +394,11 @@ class ICOSPlugin(DataHubPlugin):
                     )
                     continue
 
+                # Translate network URIs to BADM controlled vocabulary codes
+                networks = sorted(
+                    code for uri in site_data["network_uris"] if (code := self._map_network_to_badm(uri)) is not None
+                )
+
                 site_info = BadmSiteGeneralInfo(
                     site_id=station_id,
                     site_name=site_data["station_name"],
@@ -307,7 +406,7 @@ class ICOSPlugin(DataHubPlugin):
                     location_lat=location_lat,
                     location_long=location_long,
                     igbp=igbp,
-                    network=[],  # Update when network information is available from SPARQL
+                    network=networks,
                     group_team_member=site_data["team_members"],
                 )
 
