@@ -508,6 +508,120 @@ class TestICOSPlugin:
         assert "Skipping site DE-Tst - no citation available" in caplog.text
         assert "support@fluxnet.org" in caplog.text
 
+    def test_network_to_badm_mapping(self):
+        """Test ICOS network URI to BADM controlled vocabulary mapping."""
+        plugin = ICOSPlugin()
+
+        # Test known network URIs (real format from SPARQL endpoint)
+        assert plugin._map_network_to_badm("http://meta.icos-cp.eu/resources/networks/ETC/ICOS") == "ICOS"
+        assert plugin._map_network_to_badm("http://meta.icos-cp.eu/resources/networks/ETC/AMF") == "AmeriFlux"
+        assert plugin._map_network_to_badm("http://meta.icos-cp.eu/resources/networks/ETC/ASF") == "AsiaFlux"
+        assert plugin._map_network_to_badm("http://meta.icos-cp.eu/resources/networks/ETC/TERN") == "TERN"
+        assert plugin._map_network_to_badm("http://meta.icos-cp.eu/resources/networks/ETC/CNF") == "ChinaFLUX"
+
+        # Test unknown network code
+        assert plugin._map_network_to_badm("http://meta.icos-cp.eu/resources/networks/ETC/UNKNOWN") is None
+
+        # Test empty/blank inputs
+        assert plugin._map_network_to_badm("") is None
+        assert plugin._map_network_to_badm("http://meta.icos-cp.eu/resources/networks/ETC/") is None
+
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle.plugins.icos.DataHubPlugin._session_request")
+    async def test_async_get_sites_with_network_affiliations(self, mock_request):
+        """Test async get_sites with network affiliation information from SPARQL."""
+        mock_response = AsyncMock()
+        mock_response.json.return_value = {
+            "results": {
+                "bindings": [
+                    {
+                        "dobj": {"value": "https://meta.icos-cp.eu/objects/test123"},
+                        "station": {"value": "https://meta.icos-cp.eu/stations/DE-Hte"},
+                        "stationName": {"value": "Huetelmoor"},
+                        "fileName": {"value": "FLX_DE-Hte_FLUXNET_2009-2018_v1_r0.zip"},
+                        "lat": {"value": "54.21"},
+                        "lon": {"value": "12.18"},
+                        "ecosystemType": {"value": "http://meta.icos-cp.eu/ontologies/cpmeta/igbp_WET"},
+                        "timeStart": {"value": "2009-01-01T00:00:00Z"},
+                        "timeEnd": {"value": "2018-12-31T23:59:59Z"},
+                        "citationString": {"value": "Test citation"},
+                        "networks": {"value": "http://meta.icos-cp.eu/resources/networks/ETC/ICOS"},
+                    },
+                    {
+                        "dobj": {"value": "https://meta.icos-cp.eu/objects/test123"},
+                        "station": {"value": "https://meta.icos-cp.eu/stations/DE-Hte"},
+                        "stationName": {"value": "Huetelmoor"},
+                        "fileName": {"value": "FLX_DE-Hte_FLUXNET_2009-2018_v1_r0.zip"},
+                        "lat": {"value": "54.21"},
+                        "lon": {"value": "12.18"},
+                        "ecosystemType": {"value": "http://meta.icos-cp.eu/ontologies/cpmeta/igbp_WET"},
+                        "timeStart": {"value": "2009-01-01T00:00:00Z"},
+                        "timeEnd": {"value": "2018-12-31T23:59:59Z"},
+                        "citationString": {"value": "Test citation"},
+                        "networks": {"value": "http://meta.icos-cp.eu/resources/networks/ETC/ELTER"},
+                    },
+                ]
+            }
+        }
+        mock_request.return_value.__aenter__.return_value = mock_response
+
+        plugin = ICOSPlugin()
+        sites = []
+        async for site in plugin.get_sites():
+            sites.append(site)
+
+        assert len(sites) == 1
+        site = sites[0]
+        assert site.site_info.site_id == "DE-Hte"
+        # Network codes should be sorted alphabetically (BADM vocabulary)
+        assert site.site_info.network == ["ICOS", "eLTER"]
+
+    @pytest.mark.asyncio
+    @patch("fluxnet_shuttle.plugins.icos.DataHubPlugin._session_request")
+    async def test_async_get_sites_with_unknown_network(self, mock_request):
+        """Test that unknown network URIs are excluded from the network list."""
+        mock_response = AsyncMock()
+        mock_response.json.return_value = {
+            "results": {
+                "bindings": [
+                    {
+                        "dobj": {"value": "https://meta.icos-cp.eu/objects/test123"},
+                        "station": {"value": "https://meta.icos-cp.eu/stations/DE-Hte"},
+                        "stationName": {"value": "Huetelmoor"},
+                        "fileName": {"value": "FLX_DE-Hte_FLUXNET_2009-2018_v1_r0.zip"},
+                        "lat": {"value": "54.21"},
+                        "lon": {"value": "12.18"},
+                        "timeStart": {"value": "2009-01-01T00:00:00Z"},
+                        "timeEnd": {"value": "2018-12-31T23:59:59Z"},
+                        "citationString": {"value": "Test citation"},
+                        "networks": {"value": "http://meta.icos-cp.eu/resources/networks/ETC/ICOS"},
+                    },
+                    {
+                        "dobj": {"value": "https://meta.icos-cp.eu/objects/test123"},
+                        "station": {"value": "https://meta.icos-cp.eu/stations/DE-Hte"},
+                        "stationName": {"value": "Huetelmoor"},
+                        "fileName": {"value": "FLX_DE-Hte_FLUXNET_2009-2018_v1_r0.zip"},
+                        "lat": {"value": "54.21"},
+                        "lon": {"value": "12.18"},
+                        "timeStart": {"value": "2009-01-01T00:00:00Z"},
+                        "timeEnd": {"value": "2018-12-31T23:59:59Z"},
+                        "citationString": {"value": "Test citation"},
+                        "networks": {"value": "http://meta.icos-cp.eu/resources/networks/ETC/UNKNOWN"},
+                    },
+                ]
+            }
+        }
+        mock_request.return_value.__aenter__.return_value = mock_response
+
+        plugin = ICOSPlugin()
+        sites = []
+        async for site in plugin.get_sites():
+            sites.append(site)
+
+        assert len(sites) == 1
+        # Only the known network should be included (translated to BADM)
+        assert sites[0].site_info.network == ["ICOS"]  # ICOS maps to "ICOS" in BADM
+
     @pytest.mark.asyncio
     @patch("fluxnet_shuttle.plugins.icos.DataHubPlugin._session_request")
     @patch("fluxnet_shuttle.plugins.icos.FluxnetDatasetMetadata")
