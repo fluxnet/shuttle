@@ -31,9 +31,9 @@ DEFAULT_PARALLEL_REQUESTS = 3
 DEFAULT_FLUXNET_SHUTTLE_REFERER = "local_shuttle"
 
 # Default HTTP timeout values (used when config.yaml omits http_timeouts)
-DEFAULT_HTTP_TIMEOUT_TOTAL: Optional[float] = None
-DEFAULT_HTTP_SOCK_CONNECT: float = 30.0
-DEFAULT_HTTP_SOCK_READ: float = 120.0
+DEFAULT_HTTP_TIMEOUT_TOTAL: Optional[float] = None  # no global deadline
+DEFAULT_HTTP_SOCK_CONNECT: float = 60.0  # allow slow TLS handshakes on a busy network
+DEFAULT_HTTP_SOCK_READ: float = 300.0  # 5 minute read timeout to avoid TLS issues
 
 
 @dataclass
