@@ -11,7 +11,12 @@ from unittest.mock import AsyncMock, patch
 import aiohttp
 import pytest
 
-from fluxnet_shuttle.core.config import HttpTimeoutConfig
+from fluxnet_shuttle.core.config import (
+    DEFAULT_HTTP_SOCK_CONNECT,
+    DEFAULT_HTTP_SOCK_READ,
+    DEFAULT_HTTP_TIMEOUT_TOTAL,
+    HttpTimeoutConfig,
+)
 from fluxnet_shuttle.core.http_utils import get_session, session_request
 
 
@@ -30,9 +35,13 @@ class TestHTTPUtils:
 
         call_kwargs = mock_session_cls.call_args.kwargs
         timeout = call_kwargs["timeout"]
-        assert timeout.total is None
-        assert timeout.sock_connect == 30
-        assert timeout.sock_read == 120
+
+        if DEFAULT_HTTP_TIMEOUT_TOTAL is None:
+            assert timeout.total is None
+        else:
+            assert timeout.total == DEFAULT_HTTP_TIMEOUT_TOTAL
+        assert timeout.sock_connect == DEFAULT_HTTP_SOCK_CONNECT
+        assert timeout.sock_read == DEFAULT_HTTP_SOCK_READ
 
     @pytest.mark.asyncio
     @patch("fluxnet_shuttle.core.http_utils.aiohttp.ClientSession")
