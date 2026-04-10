@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 # Default configuration values (overridden by config.yaml at runtime)
 DEFAULT_PARALLEL_REQUESTS = 3
+DEFAULT_DOWNLOAD_BATCH_SIZE = 10
 DEFAULT_FLUXNET_SHUTTLE_REFERER = "local_shuttle"
 
 # Default HTTP timeout values (used when config.yaml omits http_timeouts)
@@ -65,6 +66,7 @@ class ShuttleConfig:
 
     data_hubs: Dict[str, DataHubConfig] = field(default_factory=dict)
     parallel_requests: int = DEFAULT_PARALLEL_REQUESTS
+    download_batch_size: int = DEFAULT_DOWNLOAD_BATCH_SIZE
     fluxnet_shuttle_referer: str = DEFAULT_FLUXNET_SHUTTLE_REFERER
     http_timeouts: HttpTimeoutConfig = field(default_factory=HttpTimeoutConfig)
 
@@ -180,6 +182,7 @@ class ShuttleConfig:
         """Get hardcoded default configuration."""
         return {
             "parallel_requests": DEFAULT_PARALLEL_REQUESTS,
+            "download_batch_size": DEFAULT_DOWNLOAD_BATCH_SIZE,
             "fluxnet_shuttle_referer": DEFAULT_FLUXNET_SHUTTLE_REFERER,
             "data_hubs": {
                 "ameriflux": {"enabled": True},

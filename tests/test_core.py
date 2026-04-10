@@ -287,6 +287,7 @@ class TestShuttleConfig:
         config = ShuttleConfig._create_default_config()
 
         assert config.parallel_requests == 3  # Hardcoded default
+        assert config.download_batch_size == 10  # Hardcoded default
         assert "ameriflux" in config.data_hubs
         assert "icos" in config.data_hubs
         assert "tern" in config.data_hubs
@@ -432,6 +433,20 @@ class TestShuttleConfig:
         assert config.http_timeouts.total == DEFAULT_HTTP_TIMEOUT_TOTAL
         assert config.http_timeouts.sock_connect == DEFAULT_HTTP_SOCK_CONNECT
         assert config.http_timeouts.sock_read == DEFAULT_HTTP_SOCK_READ
+
+    def test_load_from_file_custom_download_batch_size(self, tmp_path):
+        """Test that a custom download_batch_size in config.yaml is read properly."""
+        config_path = tmp_path / "custom_batch.yaml"
+        config_path.write_text("""
+            download_batch_size: 25
+            """)
+
+        config = ShuttleConfig.load_from_file(config_path)
+
+        assert config.download_batch_size == 25
+        # Other defaults should be preserved
+        assert config.parallel_requests == 3
+        assert "ameriflux" in config.data_hubs
 
     def test_default_config_loads_plugin_settings(self):
         """Test that default config loads plugin-specific settings from config.yaml."""

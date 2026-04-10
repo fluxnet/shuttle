@@ -9,6 +9,7 @@
 
 # Global settings
 parallel_requests: 3
+download_batch_size: 10  # number of concurrent downloads per batch
 fluxnet_shuttle_referer: "local_shuttle"
 
 # HTTP timeout settings (applied to all plugins)

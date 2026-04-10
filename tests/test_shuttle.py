@@ -734,6 +734,37 @@ class TestDownload:
         assert mock_download.call_count == 2
         assert "Failed to download US-Ha1.zip for site US-Ha1" in caplog.text
 
+    @pytest.mark.asyncio
+    async def test_download_processes_in_batches(self, tmp_path):
+        """Test that download processes sites in batches according to download_batch_size."""
+        snapshot_file = tmp_path / "snapshot.csv"
+        snapshot_file.write_text(
+            "data_hub,site_id,first_year,last_year,download_link,fluxnet_product_name\n"
+            "AmeriFlux,US-Ha1,2000,2020,https://amfcdn-dev.lbl.gov/US-Ha1.zip,US-Ha1.zip\n"
+            "AmeriFlux,US-MMS,2005,2021,https://amfcdn-dev.lbl.gov/US-MMS.zip,US-MMS.zip\n"
+            "AmeriFlux,US-UMB,2000,2020,https://amfcdn-dev.lbl.gov/US-UMB.zip,US-UMB.zip\n"
+            "AmeriFlux,US-Bar,2004,2021,https://amfcdn-dev.lbl.gov/US-Bar.zip,US-Bar.zip\n"
+            "AmeriFlux,US-Kon,2006,2020,https://amfcdn-dev.lbl.gov/US-Kon.zip,US-Kon.zip\n"
+        )
+
+        mock_cfg = MagicMock()
+        mock_cfg.download_batch_size = 2
+
+        with (
+            patch("fluxnet_shuttle.shuttle._download_dataset") as mock_download,
+            patch("fluxnet_shuttle.shuttle.ShuttleConfig.load_default", return_value=mock_cfg),
+        ):
+
+            async def mock_download_side_effect(*_args, **kwargs):
+                return kwargs.get("filename", "")
+
+            mock_download.side_effect = mock_download_side_effect
+
+            result = await download(site_ids=None, snapshot_file=str(snapshot_file), output_dir=str(tmp_path))
+
+        assert len(result) == 5
+        assert mock_download.call_count == 5
+
 
 class TestListall:
     """Test cases for the listall function."""
