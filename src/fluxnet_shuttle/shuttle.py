@@ -57,6 +57,7 @@ from urllib.parse import unquote, urlparse
 import aiofiles
 
 from fluxnet_shuttle import FLUXNETShuttleError
+from fluxnet_shuttle.core.config import ShuttleConfig
 from fluxnet_shuttle.core.decorators import async_to_sync
 from fluxnet_shuttle.core.shuttle import FluxnetShuttle
 
@@ -311,25 +312,31 @@ async def download(
         _log.info("No valid downloads found after processing snapshot file.")
         return []
 
-    tasks = [
-        _download_dataset(
-            site_id=job["site_id"],
-            data_hub=job["data_hub"],
-            filename=job["filename"],
-            download_link=job["download_link"],
-            output_dir=output_dir,
-            **kwargs,
-        )
-        for job in download_jobs
-    ]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
+    batch_size = ShuttleConfig.load_default().download_batch_size
+    _log.info(f"Downloading in batches of {batch_size}")
 
     downloaded_filenames: list[str] = []
-    for job, result in zip(download_jobs, results):
-        if isinstance(result, BaseException):
-            _log.error(f"Failed to download {job['filename']} for site {job['site_id']}: {result}")
-        else:
-            downloaded_filenames.append(result)
+    for i in range(0, len(download_jobs), batch_size):
+        batch = download_jobs[i : i + batch_size]
+        tasks = [
+            _download_dataset(
+                site_id=job["site_id"],
+                data_hub=job["data_hub"],
+                filename=job["filename"],
+                download_link=job["download_link"],
+                output_dir=output_dir,
+                **kwargs,
+            )
+            for job in batch
+        ]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for job, result in zip(batch, results):
+            if isinstance(result, BaseException):
+                _log.error(f"Failed to download {job['filename']} for site {job['site_id']}: {result}")
+            else:
+                downloaded_filenames.append(result)
+        batch_num = i // batch_size + 1
+        _log.info(f"Batch {batch_num} complete: {len(downloaded_filenames)} / {len(download_jobs)} downloaded so far")
 
     _log.info(f"Downloaded data for {len(downloaded_filenames)}/{len(download_jobs)} sites")
     return downloaded_filenames
