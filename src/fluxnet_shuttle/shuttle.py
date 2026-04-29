@@ -267,6 +267,10 @@ async def download(
         fields = next(reader)
         sites = {}
         for line in reader:
+            # Windows-generated snapshots can contain \r\r\n line terminators,
+            # which csv.reader surfaces as empty rows between data rows.
+            if not line:
+                continue
             site = {field: line[i] for i, field in enumerate(fields)}
             sites[site["site_id"]] = site
     _log.debug(f"Loaded {len(sites)} sites from snapshot file")
@@ -414,7 +418,9 @@ async def _write_snapshot_file(shuttle: FluxnetShuttle, fields: List[str], csv_f
     counts: Dict[str, int] = {}
     # map expansion for data hub counts
     # Write to CSV file, using asyncio file operations
-    async with aiofiles.open(csv_filename, "w", encoding="utf-8") as csvfile:
+    # newline="" is required for csv writers on Windows; without it the OS
+    # translates \n to \r\n on top of csv's own \r\n, producing \r\r\n.
+    async with aiofiles.open(csv_filename, "w", encoding="utf-8", newline="") as csvfile:
         csv_writer = csv.DictWriter(csvfile, fieldnames=fields)
         await csv_writer.writeheader()
         async for site in shuttle.get_all_sites():

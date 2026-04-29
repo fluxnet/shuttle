@@ -70,6 +70,9 @@ class TestLogConfig:
             log_config(filename=tmp_path, filename_level=logging.INFO)
             assert os.path.exists(tmp_path)
         finally:
+            for h in list(logging.root.handlers):
+                h.close()
+                logging.root.removeHandler(h)
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
 
@@ -103,6 +106,9 @@ class TestAddFileLog:
             add_file_log(tmp_path, level="invalid")
             assert os.path.exists(tmp_path)
         finally:
+            for h in list(logging.root.handlers):
+                h.close()
+                logging.root.removeHandler(h)
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
 
