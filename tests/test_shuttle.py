@@ -1,5 +1,6 @@
 """Test suite for fluxnet_shuttle.shuttle module."""
 
+import csv
 import os
 import tempfile
 from unittest.mock import AsyncMock, MagicMock, call, mock_open, patch
@@ -183,7 +184,7 @@ class TestDownloadDataset:
         ):
             result = await _download_dataset("US-TEST", "AmeriFlux", "test.zip", "http://amfcdn-dev.lbl.gov/test.zip")
 
-            assert result == "./test.zip"
+            assert result == os.path.join(".", "test.zip")
 
     @pytest.mark.asyncio
     async def test_successful_download_icos(self):
@@ -203,7 +204,7 @@ class TestDownloadDataset:
                 "FI-HYY", "ICOS", "test.zip", "https://data.icos-cp.eu/licence_accept?ids=%5B%22test%22%5D"
             )
 
-            assert result == "./test.zip"
+            assert result == os.path.join(".", "test.zip")
 
     @pytest.mark.asyncio
     async def test_successful_download_with_content_disposition(self):
@@ -223,7 +224,7 @@ class TestDownloadDataset:
             )
 
             # Should use filename from metadata (the one passed as argument)
-            assert result == "./metadata_file.zip"
+            assert result == os.path.join(".", "metadata_file.zip")
 
     @pytest.mark.asyncio
     async def test_download_failure_404(self):
@@ -269,7 +270,7 @@ class TestDownloadDataset:
             await _download_dataset("US-TEST", "AmeriFlux", "output.zip", "http://amfcdn-dev.lbl.gov/file.zip")
 
             # Verify file was opened for writing
-            mock_file.assert_called_once_with("./output.zip", "wb")
+            mock_file.assert_called_once_with(os.path.join(".", "output.zip"), "wb")
             # Verify all chunks were written
             handle = mock_file.return_value.__enter__.return_value
             assert handle.write.call_count == len(test_chunks)
@@ -365,7 +366,7 @@ class TestDownloadDataset:
             assert "user_info" in call_kwargs
             assert call_kwargs["user_info"] == user_info
             assert call_kwargs["filename"] == "test.zip"
-            assert result == "./test.zip"
+            assert result == os.path.join(".", "test.zip")
 
 
 class TestFluxnetShuttleDownload:
@@ -765,6 +766,81 @@ class TestDownload:
         assert len(result) == 5
         assert mock_download.call_count == 5
 
+    @pytest.mark.asyncio
+    async def test_download_tolerates_windows_double_cr_line_endings(self, tmp_path):
+        """Snapshots written on Windows can end up with \\r\\r\\n line terminators,
+        which csv.reader surfaces as empty rows interleaved with data rows.
+        download() should skip them instead of raising IndexError.
+
+        Regression test for #103.
+        """
+        snapshot_file = tmp_path / "snapshot.csv"
+        header = "data_hub,site_id,first_year,last_year,download_link,fluxnet_product_name"
+        rows = [
+            "AmeriFlux,US-Ha1,2000,2020,https://amfcdn-dev.lbl.gov/US-Ha1.zip,US-Ha1.zip",
+            "AmeriFlux,US-MMS,2005,2021,https://amfcdn-dev.lbl.gov/US-MMS.zip,US-MMS.zip",
+        ]
+        snapshot_file.write_bytes(("\r\r\n".join([header, *rows]) + "\r\r\n").encode("utf-8"))
+
+        with patch("fluxnet_shuttle.shuttle._download_dataset") as mock_download:
+
+            async def mock_download_side_effect(*_args, **kwargs):
+                return kwargs.get("filename", "")
+
+            mock_download.side_effect = mock_download_side_effect
+
+            result = await download(site_ids=None, snapshot_file=str(snapshot_file), output_dir=str(tmp_path))
+
+        assert result == ["US-Ha1.zip", "US-MMS.zip"]
+        assert mock_download.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_download_round_trip_text_mode_csv(self, tmp_path):
+        """Round-trip regression test for #103.
+
+        Writes a CSV using the pre-fix pattern (text mode, no newline="").
+        On Windows this produces \\r\\r\\n line terminators that break csv.reader;
+        on Linux/macOS the file is well-formed. download() must succeed on all
+        platforms.
+        """
+        snapshot_file = tmp_path / "snapshot.csv"
+        fields = ["data_hub", "site_id", "first_year", "last_year", "download_link", "fluxnet_product_name"]
+        rows = [
+            {
+                "data_hub": "AmeriFlux",
+                "site_id": "US-Ha1",
+                "first_year": "2000",
+                "last_year": "2020",
+                "download_link": "https://amfcdn-dev.lbl.gov/US-Ha1.zip",
+                "fluxnet_product_name": "US-Ha1.zip",
+            },
+            {
+                "data_hub": "AmeriFlux",
+                "site_id": "US-MMS",
+                "first_year": "2005",
+                "last_year": "2021",
+                "download_link": "https://amfcdn-dev.lbl.gov/US-MMS.zip",
+                "fluxnet_product_name": "US-MMS.zip",
+            },
+        ]
+        with open(snapshot_file, "w", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=fields)
+            writer.writeheader()
+            for row in rows:
+                writer.writerow(row)
+
+        with patch("fluxnet_shuttle.shuttle._download_dataset") as mock_download:
+
+            async def mock_download_side_effect(*_args, **kwargs):
+                return kwargs.get("filename", "")
+
+            mock_download.side_effect = mock_download_side_effect
+
+            result = await download(site_ids=None, snapshot_file=str(snapshot_file), output_dir=str(tmp_path))
+
+        assert result == ["US-Ha1.zip", "US-MMS.zip"]
+        assert mock_download.call_count == 2
+
 
 class TestListall:
     """Test cases for the listall function."""
@@ -791,7 +867,7 @@ class TestListall:
 
         assert isinstance(result, str)
         assert result.endswith(".csv")
-        assert result == "./fluxnet_shuttle_snapshot_20251013T075248.csv"
+        assert result == os.path.join(".", "fluxnet_shuttle_snapshot_20251013T075248.csv")
 
         # Verify _write_snapshot_file was called
         assert mock_write_snapshot.called
@@ -896,7 +972,7 @@ class TestListall:
         assert result.endswith(".csv")
         assert mock_open.called
         assert mock_open.call_count == 1
-        assert mock_open.call_args[0][0] == "./fluxnet_shuttle_snapshot_20251013T075248.csv"
+        assert mock_open.call_args[0][0] == os.path.join(".", "fluxnet_shuttle_snapshot_20251013T075248.csv")
         assert mock_write_header.called
         assert mock_write_header.call_count == 1
         assert mock_write_header.call_args == call()

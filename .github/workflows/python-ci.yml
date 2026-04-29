@@ -9,9 +9,11 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
@@ -24,12 +26,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .[dev]
       - name: Lint with black
+        if: runner.os == 'Linux'
         run: black --check .
       - name: Check import sorting
+        if: runner.os == 'Linux'
         run: isort --check-only .
       - name: Lint with flake8
+        if: runner.os == 'Linux'
         run: flake8 src/fluxnet_shuttle tests
       - name: Type check with mypy
+        if: runner.os == 'Linux'
         run: mypy src/fluxnet_shuttle
       - name: Test with pytest and coverage
         run: pytest -vv --cov-report=xml

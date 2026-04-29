@@ -208,7 +208,10 @@ class TestCLIFunctions:
             assert os.path.exists(log_file)
 
         finally:
-            # Cleanup
+            # Close file handlers before unlinking (Windows can't unlink open files)
+            for h in list(logging.root.handlers):
+                h.close()
+                logging.root.removeHandler(h)
             if os.path.exists(log_file):
                 os.unlink(log_file)
 
@@ -472,16 +475,12 @@ class TestCLIFunctions:
             assert exc_info.value.code == 1
 
     def test_cmd_download_csv_read_error(self):
-        """Test cmd_download with CSV file that causes read error."""
-        # Create a temporary file that's not readable (permission error)
+        """Test cmd_download exits when reading the snapshot CSV raises."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as tmp:
             tmp.write("site_id,data_hub\nUS-Ha1,AmeriFlux\n")
             csv_file = tmp.name
 
         try:
-            # Make file unreadable
-            os.chmod(csv_file, 0o000)
-
             args = argparse.Namespace(
                 sites=None,
                 snapshot_file=csv_file,
@@ -492,34 +491,22 @@ class TestCLIFunctions:
                 verbose=False,
             )
 
-            with pytest.raises(SystemExit) as exc_info:
-                cmd_download(args)
+            with patch("fluxnet_shuttle.main.open", side_effect=PermissionError("denied")):
+                with pytest.raises(SystemExit) as exc_info:
+                    cmd_download(args)
             assert exc_info.value.code == 1
-
         finally:
-            # Restore permissions and delete
-            os.chmod(csv_file, 0o644)
             os.unlink(csv_file)
 
     def test_validate_output_directory_not_writable(self):
-        """Test _validate_output_directory with non-writable directory."""
-        import tempfile
-
+        """Test _validate_output_directory exits when the dir is not writable."""
         from fluxnet_shuttle.main import _validate_output_directory
 
-        # Create a temp directory and make it read-only
         with tempfile.TemporaryDirectory() as tmpdir:
-            test_dir = os.path.join(tmpdir, "readonly")
-            os.makedirs(test_dir)
-            os.chmod(test_dir, 0o444)  # Read-only
-
-            try:
+            with patch("fluxnet_shuttle.main.os.access", return_value=False):
                 with pytest.raises(SystemExit) as exc_info:
-                    _validate_output_directory(test_dir)
-                assert exc_info.value.code == 1
-            finally:
-                # Restore permissions for cleanup
-                os.chmod(test_dir, 0o755)
+                    _validate_output_directory(tmpdir)
+            assert exc_info.value.code == 1
 
     def test_validate_output_directory_does_not_exist(self):
         """Test _validate_output_directory with non-existent directory."""
