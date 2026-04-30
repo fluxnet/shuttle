@@ -468,7 +468,8 @@ class TestICOSPlugin:
         assert len(sites) == 0
         # Should log info about filename validation failure
         assert (
-            "filename does not follow standard format" in caplog.text or "Error grouping ICOS site data" in caplog.text
+            "filename does not follow ONEFlux v1.3 or greater format" in caplog.text
+            or "Error grouping ICOS site data" in caplog.text
         )
 
     @pytest.mark.asyncio

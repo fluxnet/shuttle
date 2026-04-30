@@ -467,8 +467,9 @@ class TERNPlugin(DataHubPlugin):
             # Skip if validation failed
             if not version or not run:
                 logger.debug(
-                    f"Skipping product for {site_id} - filename does not follow standard format "
-                    f"(<network_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.<extension>): {filename}"
+                    f"Skipping product for {site_id} - filename does not follow ONEFlux v1.3 or greater format "
+                    f"(<network_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.<extension>): {filename}. "
+                    f"Contact data hub for data generated with earlier ONEFlux version."
                 )
                 continue
 

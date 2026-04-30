@@ -367,9 +367,9 @@ class AmeriFluxPlugin(DataHubPlugin):
                 # Validate filename format
                 if not validate_fluxnet_filename_format(download_link):
                     logger.debug(
-                        f"Skipping site {site_id} - filename does not follow standard format "
+                        f"Skipping site {site_id} - filename does not follow ONEFlux v1.3 or greater format "
                         f"(<network_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.<extension>): "
-                        f"{download_link}"
+                        f"{download_link}. Contact data hub for data generated with earlier ONEFlux version."
                     )
                     continue
 

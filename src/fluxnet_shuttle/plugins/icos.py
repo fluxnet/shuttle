@@ -367,9 +367,9 @@ class ICOSPlugin(DataHubPlugin):
                 # Validate filename format
                 if not validate_fluxnet_filename_format(filename):
                     logger.debug(
-                        f"Skipping site {station_id} - filename does not follow standard format "
+                        f"Skipping site {station_id} - filename does not follow ONEFlux v1.3 or greater format "
                         f"(<network_id>_<site_id>_FLUXNET_<year_range>_<version>_<run>.<extension>): "
-                        f"{filename}"
+                        f"{filename}. Contact data hub for data generated with earlier ONEFlux version."
                     )
                     continue
 
